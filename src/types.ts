@@ -1,7 +1,7 @@
 export type RoleId = "admin" | "reception" | "staff";
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
 export type TabId = "reception" | "staff" | "admin" | "database";
-export type AuthorizationSource = "manual" | "roster";
+export type AuthorizationSource = "manual" | "roster" | "global";
 
 export interface RoomConfig {
     id: string;
@@ -121,6 +121,8 @@ export interface FirestorePaths {
     lanesCollectionPath: string;
     roomStateCollectionPath: string;
     registryCollectionPath: string;
+    globalAccessMembersCollectionPath: string;
+    globalAccessMemberDocPath: string;
     memberDirectoryCollectionPath: string;
     accessMembersCollectionPath: string;
     accessMemberDocPath: string;
@@ -196,15 +198,18 @@ export interface AppState {
     currentRoomState: Record<string, RoomStateData>;
     dynamicAppConfig: AppConfig;
     localAdminConfig: AppConfig;
+    eventAccessMember: AccessMember | null;
     accessMember: AccessMember | null;
     selfAccessRequest: AccessRequest | null;
     accessMembersCache: AccessMember[];
     accessRequestsCache: AccessRequest[];
     isDbMigrating: boolean;
     registryCache: RegistryItem[];
+    globalAccessMember: AccessMember | null;
     unsubscribeLanes: (() => void) | null;
     unsubscribeConfig: (() => void) | null;
     unsubscribeRoomState: (() => void) | null;
+    unsubscribeGlobalAccessMember: (() => void) | null;
     unsubscribeAccessMember: (() => void) | null;
     unsubscribeAccessRequest: (() => void) | null;
     unsubscribeAccessMembers: (() => void) | null;
