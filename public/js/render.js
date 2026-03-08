@@ -1,3 +1,4 @@
+import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { updateReceptionStatus } from "./writes.js";
 function getAllLanes(context) {
     return Object.entries(context.state.currentLanesState).map(([docId, data]) => ({
@@ -5,15 +6,208 @@ function getAllLanes(context) {
         data
     }));
 }
+function escapeHtml(value) {
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+function getRoleOptions(selectedRole) {
+    return ["staff", "reception", "admin"].map((role) => {
+        return `<option value="${role}" ${selectedRole === role ? "selected" : ""}>${ROLE_LABELS[role]}</option>`;
+    }).join("");
+}
+function buildRoomAssignmentMarkup(context, selectedRoomIds, uid) {
+    const selected = new Set(selectedRoomIds);
+    return context.state.dynamicAppConfig.rooms.map((room) => `
+        <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700">
+            <input type="checkbox" data-room-assignment data-uid="${uid}" value="${room.id}" ${selected.has(room.id) ? "checked" : ""}>
+            <span>${escapeHtml(room.name)}</span>
+        </label>
+    `).join("");
+}
 // --- UI描画 (Render) ---
+export function scheduleRender(context) {
+    if (context.state.renderScheduled) {
+        return;
+    }
+    context.state.renderScheduled = true;
+    requestAnimationFrame(() => {
+        context.state.renderScheduled = false;
+        renderAllUI(context);
+    });
+}
 export function renderAllUI(context) {
+    renderAuthShell(context);
+    if (!hasApprovedAccess(context)) {
+        return;
+    }
+    renderTabVisibility(context);
     renderReceptionList(context);
     renderStaffRoomSelect(context);
-    renderStaffLaneDashboard(context, context.dom.staffRoomSelect.value);
+    const visibleRooms = getVisibleRooms(context);
+    const nextRoomId = context.dom.staffRoomSelect.value || visibleRooms[0]?.id || "";
+    context.dom.staffRoomSelect.value = nextRoomId;
+    renderStaffLaneDashboard(context, nextRoomId);
     renderAdminSettings(context);
     renderAdminLaneNames(context);
-    // ★追加: サマリーバーの描画
+    renderAccessManagement(context);
     renderRoomSummaryBar(context);
+}
+function renderAuthShell(context) {
+    const { dom, state } = context;
+    const member = state.accessMember;
+    const request = state.selfAccessRequest;
+    dom.authUserName.textContent = state.authUser?.displayName || "未ログイン";
+    dom.authUserEmail.textContent = state.authUser?.email || "アクセス権が必要です";
+    dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
+    dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
+    if (member?.isActive) {
+        dom.authStatusText.textContent = "承認済みメンバーとして利用できます。";
+        dom.authRoleBadge.textContent = ROLE_LABELS[member.role];
+        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100 border border-emerald-300/30";
+        dom.authLoginCard.classList.add("hidden");
+        dom.authPendingCard.classList.add("hidden");
+        dom.appShell.classList.remove("hidden");
+    }
+    else if (state.authUser) {
+        const status = request?.status || "pending";
+        const pendingMessage = status === "rejected"
+            ? "このアカウントの利用は停止または却下されています。管理者へ連絡してください。"
+            : "ログインは完了しました。管理者の承認後に利用できます。";
+        dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
+        dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
+        dom.authRoleBadge.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${status === "rejected"
+            ? "bg-rose-400/15 text-rose-100 border-rose-300/30"
+            : "bg-amber-300/15 text-amber-100 border-amber-200/30"}`;
+        dom.authPendingMessage.textContent = pendingMessage;
+        dom.authLoginCard.classList.add("hidden");
+        dom.authPendingCard.classList.remove("hidden");
+        dom.appShell.classList.add("hidden");
+    }
+    else {
+        dom.authStatusText.textContent = "Google アカウントでログインしてください。初回は承認待ちになります。";
+        dom.authRoleBadge.textContent = "";
+        dom.authRoleBadge.className = "hidden";
+        dom.authPendingMessage.textContent = "";
+        dom.authLoginCard.classList.remove("hidden");
+        dom.authPendingCard.classList.add("hidden");
+        dom.appShell.classList.add("hidden");
+    }
+}
+function renderTabVisibility(context) {
+    const { dom, state } = context;
+    const visibleTabs = dom.tabs.querySelectorAll("button[data-tab]");
+    visibleTabs.forEach((button) => {
+        const tabId = button.dataset.tab;
+        if (!tabId) {
+            return;
+        }
+        const isVisible = canAccessTab(context, tabId);
+        button.classList.toggle("hidden", !isVisible);
+    });
+    if (!canAccessTab(context, state.activeTab)) {
+        state.activeTab = getDefaultTab(context);
+    }
+    visibleTabs.forEach((button) => {
+        const tabId = button.dataset.tab;
+        if (!tabId) {
+            return;
+        }
+        if (state.activeTab === tabId) {
+            button.classList.add("active");
+        }
+        else {
+            button.classList.remove("active");
+        }
+    });
+    dom.tabContents.querySelectorAll(".tab-pane").forEach((pane) => {
+        pane.classList.toggle("hidden", pane.id !== `tab-${state.activeTab}`);
+    });
+}
+function renderAccessManagement(context) {
+    const { dom, state } = context;
+    if (!hasRole(context, ["admin"])) {
+        dom.adminAccessRequestList.innerHTML = '<p class="text-sm text-slate-400">管理者のみ閲覧できます。</p>';
+        dom.adminMemberList.innerHTML = '<p class="text-sm text-slate-400">管理者のみ閲覧できます。</p>';
+        return;
+    }
+    const pendingRequests = state.accessRequestsCache.filter((request) => request.status === "pending");
+    if (pendingRequests.length === 0) {
+        dom.adminAccessRequestList.innerHTML = '<p class="text-sm text-slate-400">承認待ちの申請はありません。</p>';
+    }
+    else {
+        dom.adminAccessRequestList.innerHTML = pendingRequests.map((request) => `
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm" data-request-card data-uid="${request.uid}">
+                <div class="mb-3">
+                    <p class="text-sm font-bold text-slate-800">${escapeHtml(request.displayName || "名称未設定")}</p>
+                    <p class="text-xs text-slate-500">${escapeHtml(request.email || request.uid)}</p>
+                </div>
+                <div class="grid gap-3">
+                    <label class="text-xs font-bold text-slate-600">
+                        付与ロール
+                        <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
+                            ${getRoleOptions("staff")}
+                        </select>
+                    </label>
+                    <div>
+                        <p class="mb-2 text-xs font-bold text-slate-600">担当部屋 (staff 用)</p>
+                        <div class="flex flex-wrap gap-2">
+                            ${buildRoomAssignmentMarkup(context, [], request.uid)}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button data-action="approve-access-request" data-uid="${request.uid}" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
+                            承認
+                        </button>
+                        <button data-action="reject-access-request" data-uid="${request.uid}" class="rounded-md bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">
+                            却下
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join("");
+    }
+    if (state.accessMembersCache.length === 0) {
+        dom.adminMemberList.innerHTML = '<p class="text-sm text-slate-400">登録済みメンバーがまだいません。</p>';
+        return;
+    }
+    dom.adminMemberList.innerHTML = state.accessMembersCache.map((member) => `
+        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-member-card data-uid="${member.uid}">
+            <div class="mb-3 flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-sm font-bold text-slate-800">
+                        ${escapeHtml(member.displayName || "名称未設定")}
+                        ${state.userId === member.uid ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
+                    </p>
+                    <p class="text-xs text-slate-500">${escapeHtml(member.email || member.uid)}</p>
+                </div>
+                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                    <input type="checkbox" data-active-input data-uid="${member.uid}" ${member.isActive ? "checked" : ""}>
+                    有効
+                </label>
+            </div>
+            <div class="grid gap-3">
+                <label class="text-xs font-bold text-slate-600">
+                    ロール
+                    <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
+                        ${getRoleOptions(member.role)}
+                    </select>
+                </label>
+                <div>
+                    <p class="mb-2 text-xs font-bold text-slate-600">担当部屋 (staff 用)</p>
+                    <div class="flex flex-wrap gap-2">
+                        ${buildRoomAssignmentMarkup(context, member.assignedRoomIds, member.uid)}
+                    </div>
+                </div>
+                <button data-action="save-access-member" data-uid="${member.uid}" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">
+                    権限を保存
+                </button>
+            </div>
+        </div>
+    `).join("");
 }
 /**
  * ★新規追加: 全部屋の簡易状況を表示するサマリーバー
@@ -23,40 +217,36 @@ function renderRoomSummaryBar(context) {
     const { dom, state } = context;
     const summaryBar = dom.roomSummaryBar;
     summaryBar.innerHTML = "";
-    // データを整形
+    const visibleRooms = getVisibleRooms(context);
+    if (visibleRooms.length === 0) {
+        summaryBar.innerHTML = '<div class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
+        return;
+    }
     const allLanes = Object.values(state.currentLanesState);
-    state.dynamicAppConfig.rooms.forEach((room) => {
-        // 1. 待機組数を取得
+    visibleRooms.forEach((room) => {
         const roomState = state.currentRoomState[room.id] || { waitingGroups: 0 };
         const waiting = roomState.waitingGroups || 0;
-        // 2. 空きレーンがあるかチェック (statusが 'available' のもの)
         const roomLanes = allLanes.filter((lane) => lane.roomId === room.id);
         const availableCount = roomLanes.filter((lane) => lane.status === "available").length;
-        // 3. 状態判定とスタイル決定
         let statusClass = "";
         let iconHtml = "";
         let textHtml = "";
         if (waiting > 0) {
-            // 待機あり (赤色・点滅) -> 最優先
             statusClass = "bg-red-500 text-white border-red-600 animate-pulse shadow-md";
             iconHtml = '<i class="fa-solid fa-users mr-1"></i>';
             textHtml = `待機: ${waiting}組`;
         }
         else if (availableCount > 0) {
-            // 待機なし & 空きあり (緑色) -> 案内チャンス
             statusClass = "bg-emerald-500 text-white border-emerald-600 shadow-sm";
             iconHtml = '<i class="fa-regular fa-circle-check mr-1"></i>';
             textHtml = `空き: ${availableCount}`;
         }
         else {
-            // 待機なし & 空きなし (満室・グレー)
             statusClass = "bg-gray-100 text-gray-500 border-gray-300";
             iconHtml = '<i class="fa-solid fa-ban mr-1"></i>';
             textHtml = "満室";
         }
-        // 4. チップを作成
         const chip = document.createElement("div");
-        // クリックしたらその部屋までスクロールする機能をつけると便利です
         chip.className = `flex-grow sm:flex-grow-0 px-3 py-2 rounded-md border text-xs font-bold flex items-center justify-center cursor-pointer transition transform active:scale-95 ${statusClass}`;
         chip.innerHTML = `
             <span class="mr-2 opacity-90">${room.name}</span>
@@ -64,16 +254,15 @@ function renderRoomSummaryBar(context) {
                 ${iconHtml} ${textHtml}
             </span>
         `;
-        // クリックで該当の部屋カードまでスクロール (受付タブが開いている場合)
         chip.onclick = () => {
-            // 受付タブに切り替え
+            if (!canAccessTab(context, "reception")) {
+                return;
+            }
             const receptionButton = document.querySelector('button[data-tab="reception"]');
             if (receptionButton && !receptionButton.classList.contains("active")) {
                 receptionButton.click();
             }
-            // 少し遅らせてスクロール (タブ切り替え描画待ち)
             setTimeout(() => {
-                // ダッシュボード内のカードを探す (簡易的な実装として、roomNameを含む要素を探す)
                 const cards = document.querySelectorAll(".room-dashboard-card h3");
                 for (const heading of cards) {
                     if (heading.textContent === room.name) {
@@ -82,7 +271,6 @@ function renderRoomSummaryBar(context) {
                             break;
                         }
                         card.scrollIntoView({ behavior: "smooth", block: "center" });
-                        // ハイライト演出
                         card.classList.add("ring-4", "ring-indigo-400");
                         setTimeout(() => card.classList.remove("ring-4", "ring-indigo-400"), 1000);
                         break;
@@ -111,12 +299,17 @@ function renderReceptionList(context) {
     const config = state.dynamicAppConfig;
     dom.receptionList.innerHTML = "";
     dom.receptionList.className = "dashboard-grid";
+    if (!canAccessTab(context, "reception")) {
+        dom.receptionList.innerHTML = '<div class="col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">受付権限を持つメンバーのみ表示できます。</div>';
+        return;
+    }
     if (config.rooms.length === 0) {
         dom.receptionList.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500 bg-white rounded-lg shadow">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
     const allLanes = getAllLanes(context);
-    config.rooms.forEach((room) => {
+    const clickable = hasRole(context, ["admin", "reception"]);
+    getVisibleRooms(context).forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "room-dashboard-card";
         const currentState = state.currentRoomState[room.id] || { waitingGroups: 0 };
@@ -165,7 +358,7 @@ function renderReceptionList(context) {
                         tileClass = "tile-available";
                         statusIcon = '<i class="fa-regular fa-circle-check text-2xl mb-1"></i>';
                         statusText = "空き";
-                        isClickable = true;
+                        isClickable = clickable;
                         break;
                     case "occupied":
                         tileClass = "tile-occupied";
@@ -202,7 +395,6 @@ function renderReceptionList(context) {
                     ${additionalInfo}
                 </div>
             `;
-            // オプション等のバッジ
             if (laneData.selectedOptions?.length) {
                 innerContent += '<div class="absolute top-1 right-1 text-[10px] font-bold text-blue-700 bg-white rounded px-1 shadow">Op</div>';
             }
@@ -227,6 +419,10 @@ function renderReceptionList(context) {
  * (レーン担当者画面のmodalと似た構造ですが、受付用は操作に特化させます)
  */
 export async function openReceptionLaneModal(context, laneDocId) {
+    if (!hasRole(context, ["admin", "reception"])) {
+        alert("受付権限を持つメンバーのみ操作できます。");
+        return;
+    }
     const { dom, state } = context;
     const laneData = state.currentLanesState[laneDocId];
     if (!laneData) {
@@ -234,10 +430,8 @@ export async function openReceptionLaneModal(context, laneDocId) {
         return;
     }
     const config = state.dynamicAppConfig;
-    // モーダルのタイトル設定
     const laneName = laneData.customName || `レーン ${laneData.laneNum}`;
     dom.receptionModalTitle.textContent = `${laneName}へ案内`;
-    // モーダルコンテンツを構築
     dom.receptionModalContent.innerHTML = `
         <div class="mb-4">
             <h4 class="text-sm font-bold text-gray-700 mb-2">オプションを選択:</h4>
@@ -267,9 +461,7 @@ export async function openReceptionLaneModal(context, laneDocId) {
             <i class="fa-solid fa-person-walking-arrow-right mr-2"></i> 案内中にする
         </button>
     `;
-    // モーダルを表示
     dom.receptionLaneModal.classList.remove("hidden");
-    // イベントリスナー設定
     dom.receptionModalCloseBtn.onclick = () => dom.receptionLaneModal.classList.add("hidden");
     dom.receptionLaneModal.onclick = (event) => {
         if (event.target === dom.receptionLaneModal) {
@@ -287,7 +479,6 @@ export async function openReceptionLaneModal(context, laneDocId) {
         const selectedOptions = Array.from(document.querySelectorAll(".reception-opt-chk:checked"))
             .map((checkbox) => checkbox.value);
         const receptionNotes = notesInput.value.trim() || null;
-        // 案内ステータスを更新
         await updateReceptionStatus(context, laneDocId, "guiding", null, selectedOptions, receptionNotes);
         dom.receptionLaneModal.classList.add("hidden");
         startButton.disabled = false;
@@ -298,16 +489,17 @@ export async function openReceptionLaneModal(context, laneDocId) {
  * レーン担当用ビュー (部屋選択) を描画
  */
 export function renderStaffRoomSelect(context) {
-    const { dom, state } = context;
+    const { dom } = context;
+    const visibleRooms = getVisibleRooms(context);
     const currentSelectedRoom = dom.staffRoomSelect.value;
     dom.staffRoomSelect.innerHTML = '<option value="">--- 部屋を選択してください ---</option>';
-    state.dynamicAppConfig.rooms.forEach((room) => {
+    visibleRooms.forEach((room) => {
         const option = document.createElement("option");
         option.value = room.id;
         option.textContent = room.name;
         dom.staffRoomSelect.appendChild(option);
     });
-    if (currentSelectedRoom) {
+    if (visibleRooms.some((room) => room.id === currentSelectedRoom)) {
         dom.staffRoomSelect.value = currentSelectedRoom;
     }
 }
@@ -318,8 +510,18 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
     const { dom, state } = context;
     const config = state.dynamicAppConfig;
     dom.staffLaneDashboard.innerHTML = "";
+    if (!canAccessTab(context, "staff")) {
+        dom.staffLaneDashboard.innerHTML = '<p class="text-center text-gray-500">レーン担当権限を持つメンバーのみ表示できます。</p>';
+        return;
+    }
     if (!selectedRoomId) {
-        dom.staffLaneDashboard.innerHTML = '<p class="text-center text-gray-500">上記で担当する部屋を選択してください。</p>';
+        dom.staffLaneDashboard.innerHTML = getVisibleRooms(context).length === 0
+            ? '<p class="text-center text-gray-500">担当部屋が割り当てられていません。管理者に連絡してください。</p>'
+            : '<p class="text-center text-gray-500">上記で担当する部屋を選択してください。</p>';
+        return;
+    }
+    if (!canManageRoom(context, selectedRoomId)) {
+        dom.staffLaneDashboard.innerHTML = '<p class="text-center text-gray-500">この部屋は操作できません。割り当て設定を確認してください。</p>';
         return;
     }
     const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
@@ -359,8 +561,8 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         laneElement.className = "lane-card";
         const laneDisplayName = laneData.customName || `レーン ${laneData.laneNum}`;
         const staffNameDisplay = laneData.staffName ? `担当: ${laneData.staffName}` : "担当: ---";
-        const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明" };
-        const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明" };
+        const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
+        const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
         let receptionStatusDisplay = receptionStatusConfig.name;
         let receptionStatusClass = "text-gray-500";
         let arrivalButton = "";
@@ -386,11 +588,9 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                 </button>
             `;
         }
-        else if (laneData.receptionStatus === "available") {
-            if (laneData.status === "available") {
-                receptionStatusDisplay = "案内可";
-                receptionStatusClass = "text-green-600";
-            }
+        else if (laneData.receptionStatus === "available" && laneData.status === "available") {
+            receptionStatusDisplay = "案内可";
+            receptionStatusClass = "text-green-600";
         }
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
             if (laneData.selectedOptions?.length) {
@@ -435,7 +635,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                         class="flex-1 px-3 py-2 text-sm font-medium rounded-md transition ${isCurrent
                 ? `text-white shadow ${status.colorClass}`
                 : "text-gray-700 bg-gray-100 hover:bg-gray-200"}">
-                    ${status.icon} ${status.name}
+                    <span class="mr-1 inline-flex">${status.icon}</span>${status.name}
                 </button>
             `;
         }).join("");
@@ -458,7 +658,10 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
             </div>
             
             <div class="text-center mt-2">
-                <p class="text-sm ${receptionStatusClass}">${receptionStatusDisplay}</p>
+                <p class="inline-flex items-center gap-1 text-sm ${receptionStatusClass}">
+                    <span class="inline-flex">${receptionStatusConfig.icon || ""}</span>
+                    <span>${receptionStatusDisplay}</span>
+                </p>
             </div>
 
             ${optionsDisplay}
@@ -469,7 +672,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
             
             <div class="mt-4 pt-4 border-t">
                 <p class="text-sm font-medium text-gray-700 mb-2">レーンの状況を変更:</p>
-                <div class="flex space-x-2">
+                <div class="flex flex-wrap gap-2">
                     ${statusButtons}
                 </div>
                 ${pauseReasonSelect}
@@ -486,9 +689,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
 export function renderAdminSettings(context) {
     const { dom, state } = context;
     const config = state.localAdminConfig;
-    // --- イベント基本設定 ---
     dom.adminEventNameInput.value = config.eventName || "";
-    // --- 部屋リスト ---
     dom.adminRoomList.innerHTML = "";
     if (!config.rooms || config.rooms.length === 0) {
         dom.adminRoomList.innerHTML = '<p class="text-gray-400 text-sm">部屋がありません。</p>';
@@ -530,7 +731,6 @@ export function renderAdminSettings(context) {
         `;
         dom.adminRoomList.appendChild(roomElement);
     });
-    // --- オプションリスト ---
     dom.adminOptionsList.innerHTML = "";
     if (!config.options || config.options.length === 0) {
         dom.adminOptionsList.innerHTML = '<p class="text-gray-400 text-sm">オプションがありません。</p>';
@@ -546,7 +746,6 @@ export function renderAdminSettings(context) {
         `;
         dom.adminOptionsList.appendChild(optionElement);
     });
-    // --- 休止理由リスト ---
     dom.adminPauseReasonsList.innerHTML = "";
     if (!config.pauseReasons || config.pauseReasons.length === 0) {
         dom.adminPauseReasonsList.innerHTML = '<p class="text-gray-400 text-sm">休止理由がありません。</p>';
@@ -569,6 +768,10 @@ export function renderAdminSettings(context) {
 export function renderAdminLaneNames(context) {
     const { dom, state } = context;
     dom.adminLaneList.innerHTML = "";
+    if (!hasRole(context, ["admin"])) {
+        dom.adminLaneList.innerHTML = '<p class="text-gray-400 text-sm">管理者のみ表示できます。</p>';
+        return;
+    }
     const allLanes = getAllLanes(context);
     if (allLanes.length === 0) {
         dom.adminLaneList.innerHTML = '<p class="text-gray-400 text-sm">レーンがありません。「管理設定」で部屋を保存してください。</p>';

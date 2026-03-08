@@ -1,10 +1,19 @@
 import { doc, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { canManageRoom, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 /**
  * レーン担当者がレーンの物理ステータスを更新
  */
 export async function updateLaneStatus(context, docId, newStatus) {
     const { db, dom, paths } = context;
+    const currentLane = context.state.currentLanesState[docId];
+    if (!currentLane) {
+        return;
+    }
+    if (!canManageRoom(context, currentLane.roomId)) {
+        alert("この部屋のレーンは操作できません。");
+        return;
+    }
     const staffName = dom.staffNameInput.value.trim() || null;
     if (!staffName) {
         console.warn("担当者名を入力してください。");
@@ -13,6 +22,9 @@ export async function updateLaneStatus(context, docId, newStatus) {
         return;
     }
     dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
+    if (currentLane.status === newStatus && currentLane.staffName === staffName) {
+        return;
+    }
     console.log(`Updating lane ${docId} to ${newStatus} by ${staffName}`);
     const docRef = doc(db, paths.lanesCollectionPath, docId);
     const updateData = {
@@ -38,6 +50,29 @@ export async function updateLaneStatus(context, docId, newStatus) {
 }
 export async function updateReceptionStatus(context, docId, newStatus, staffName = null, options = [], notes = null) {
     const { db, paths } = context;
+    const currentLane = context.state.currentLanesState[docId];
+    if (!currentLane) {
+        return;
+    }
+    const canGuide = hasRole(context, ["admin", "reception"]);
+    const canConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, currentLane.roomId);
+    if (newStatus === "guiding" && !canGuide) {
+        alert("受付権限を持つメンバーのみ案内操作できます。");
+        return;
+    }
+    if (newStatus === "available" && !canConfirmArrival) {
+        alert("このレーンの到着確認を行う権限がありません。");
+        return;
+    }
+    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
+        return;
+    }
+    const sameOptions = JSON.stringify(currentLane.selectedOptions || []) === JSON.stringify(options || []);
+    const sameNotes = (currentLane.receptionNotes || null) === notes;
+    const sameStaffName = (currentLane.staffName || null) === staffName;
+    if (currentLane.receptionStatus === newStatus && sameOptions && sameNotes && sameStaffName) {
+        return;
+    }
     console.log(`Updating reception status ${docId} to ${newStatus}`);
     const docRef = doc(db, paths.lanesCollectionPath, docId);
     const updateData = {
@@ -63,6 +98,14 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
 }
 export async function updateLanePauseReason(context, docId, reasonId) {
     const { db, dom, paths } = context;
+    const currentLane = context.state.currentLanesState[docId];
+    if (!currentLane) {
+        return;
+    }
+    if (!canManageRoom(context, currentLane.roomId)) {
+        alert("この部屋のレーンは操作できません。");
+        return;
+    }
     const staffName = dom.staffNameInput.value.trim() || null;
     if (!staffName) {
         console.warn("担当者名を入力してください。");
@@ -71,6 +114,9 @@ export async function updateLanePauseReason(context, docId, reasonId) {
         return;
     }
     dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
+    if ((currentLane.pauseReasonId || "") === (reasonId || "") && currentLane.staffName === staffName) {
+        return;
+    }
     console.log(`Updating pause reason ${docId} to ${reasonId} by ${staffName}`);
     const docRef = doc(db, paths.lanesCollectionPath, docId);
     try {
@@ -86,6 +132,13 @@ export async function updateLanePauseReason(context, docId, reasonId) {
 }
 export async function updateLaneCustomName(context, docId, newName) {
     const { db, paths } = context;
+    const currentLane = context.state.currentLanesState[docId];
+    if (!currentLane) {
+        return;
+    }
+    if ((currentLane.customName || "") === (newName || "")) {
+        return;
+    }
     console.log(`Updating custom name for ${docId} to '${newName}'`);
     const docRef = doc(db, paths.lanesCollectionPath, docId);
     try {
@@ -145,7 +198,15 @@ export async function saveAdminSettings(context) {
 }
 export async function updateWaitingGroups(context, roomId, newCount) {
     const { db, paths } = context;
+    if (!canManageRoom(context, roomId)) {
+        alert("この部屋の待機組数は更新できません。");
+        return;
+    }
     const safeCount = newCount < 0 ? 0 : newCount;
+    const currentCount = context.state.currentRoomState[roomId]?.waitingGroups || 0;
+    if (currentCount === safeCount) {
+        return;
+    }
     console.log(`Updating waiting groups for room ${roomId} to ${safeCount}`);
     const docRef = doc(db, paths.roomStateCollectionPath, roomId);
     try {
@@ -178,4 +239,51 @@ export async function updateEventRegistry(context) {
     catch (error) {
         console.error("Failed to update registry:", error);
     }
+}
+export async function approveAccessRequest(context, uid, role, assignedRoomIds) {
+    const { db, paths, state } = context;
+    if (!hasRole(context, ["admin"])) {
+        return;
+    }
+    const request = state.accessRequestsCache.find((item) => item.uid === uid);
+    const memberRef = doc(db, paths.accessMembersCollectionPath, uid);
+    const requestRef = doc(db, paths.accessRequestsCollectionPath, uid);
+    await setDoc(memberRef, {
+        uid,
+        email: request?.email || "",
+        displayName: request?.displayName || "",
+        role,
+        isActive: true,
+        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
+    }, { merge: true });
+    await setDoc(requestRef, {
+        status: "approved",
+        note: null,
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+}
+export async function rejectAccessRequest(context, uid) {
+    const { db, paths } = context;
+    if (!hasRole(context, ["admin"])) {
+        return;
+    }
+    await setDoc(doc(db, paths.accessRequestsCollectionPath, uid), {
+        status: "rejected",
+        updatedAt: serverTimestamp()
+    }, { merge: true });
+}
+export async function updateAccessMember(context, uid, role, isActive, assignedRoomIds) {
+    const { db, paths } = context;
+    if (!hasRole(context, ["admin"])) {
+        return;
+    }
+    await setDoc(doc(db, paths.accessMembersCollectionPath, uid), {
+        role,
+        isActive,
+        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        updatedAt: serverTimestamp()
+    }, { merge: true });
 }

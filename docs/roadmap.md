@@ -3,8 +3,9 @@
 ## 現在の優先事項
 
 1. 公開用 repository `Meidaisai-MAC` を安定運用できる状態に保つ
-2. TypeScript 化したフロントエンド分割を定着させる
-3. Firebase Hosting の deploy を GitHub Actions 経由で継続的に回す
+2. Google ログイン + Firestore Rules の権限モデルを安定運用に乗せる
+3. TypeScript 化したフロントエンド分割を定着させる
+4. Firebase Hosting / Firestore deploy を GitHub Actions 経由で継続的に回す
 
 ## 継続改善
 
@@ -17,9 +18,17 @@
 
 ### 認証と権限
 
-- `ADMIN_PASSWORD` は UI ガードのまま扱う
-- 本格的な権限制御が必要になったら Firebase Auth と Rules へ移行する
+- Firebase Auth と Firestore Rules の role モデルを維持する
+- 初期管理者 bootstrap の手順を簡略化する
+- 承認依頼時のメモ、所属、担当希望を request に持たせるか検討する
 - 秘匿が必要な設定は引き続き `.env` と GitHub Secrets に閉じ込める
+
+### コストとパフォーマンス
+
+- `staff` の購読範囲を担当部屋単位に保つ
+- 不要 write の抑制を続ける
+- 必要なら監視対象をイベント開催日単位で分割する
+- 監査ログを Firestore 本体から分離するか検討する
 
 ## 後回しにしている項目
 
@@ -46,3 +55,10 @@
 1. サーバー側で権限判定したい
 2. SEO や初回表示の都合で SSR が必要になる
 3. フロントだけでは扱いにくい API 集約が必要になる
+
+### その他の機能改善案
+
+1. 受付向けに「次に案内する部屋」を自動提案する
+2. 部屋ごとの混雑推移を簡易グラフで見られるようにする
+3. スタッフ向けに誤操作防止の undo を短時間だけ持たせる
+4. 学園祭当日の回線断対策として read-only の最終同期時刻表示を強化する

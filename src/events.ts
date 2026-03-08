@@ -6,11 +6,15 @@ import {
     writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+import { canAccessTab, hasRole } from "./access.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
-import type { AppContext, RegistryItem } from "./types.js";
+import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
+    approveAccessRequest,
+    rejectAccessRequest,
     saveAdminSettings,
+    updateAccessMember,
     updateLaneCustomName,
     updateLanePauseReason,
     updateLaneStatus,
@@ -88,6 +92,11 @@ function validateAppId(currentAppId: string, id: string): string | null {
         return "IDは半角英数字、ハイフン(-)、アンダースコア(_) のみを推奨します";
     }
     return null;
+}
+
+function collectAssignedRoomIds(root: ParentNode, uid: string): string[] {
+    return Array.from(root.querySelectorAll<HTMLInputElement>(`input[data-room-assignment][data-uid="${uid}"]:checked`))
+        .map((checkbox) => checkbox.value);
 }
 
 async function exportFullBackup(context: AppContext): Promise<void> {
@@ -326,10 +335,7 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
 
 // --- イベントリスナー設定 ---
 
-export function setupEventListeners(
-    context: AppContext,
-    checkAuthentication: () => boolean
-): void {
+export function setupEventListeners(context: AppContext): void {
     const { currentAppId, dom, state } = context;
 
     dom.tabs.addEventListener("click", (event) => {
@@ -352,20 +358,15 @@ export function setupEventListeners(
             return;
         }
 
-        // ★追加: DB管理タブを開いたとき認証チェック & データ取得
-        if (tabId === "database") {
-            if (!checkAuthentication()) {
-                event.preventDefault();
-                return;
-            }
-            void fetchAndRenderEventList(context);
+        if (!canAccessTab(context, tabId as TabId)) {
+            event.preventDefault();
+            alert("この画面を開く権限がありません。");
+            return;
         }
 
-        if (tabId === "reception" || tabId === "admin") {
-            if (!checkAuthentication()) {
-                event.preventDefault();
-                return;
-            }
+        state.activeTab = tabId as TabId;
+        if (state.activeTab === "database" && hasRole(context, ["admin"])) {
+            void fetchAndRenderEventList(context);
         }
 
         dom.tabs.querySelectorAll(".tab-button").forEach((tabButton) => {
@@ -374,7 +375,7 @@ export function setupEventListeners(
         button.classList.add("active");
 
         dom.tabContents.querySelectorAll(".tab-pane").forEach((pane) => {
-            if (pane.id === `tab-${tabId}`) {
+            if (pane.id === `tab-${state.activeTab}`) {
                 pane.classList.remove("hidden");
             } else {
                 pane.classList.add("hidden");
@@ -661,6 +662,45 @@ export function setupEventListeners(
 
         const button = target.closest("button") as HTMLButtonElement | null;
         const actionButton = button?.dataset.action ?? null;
+
+        if (actionButton === "approve-access-request" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+
+            const requestCard = button.closest('[data-request-card]');
+            const roleSelect = requestCard?.querySelector<HTMLSelectElement>(`select[data-role-input][data-uid="${uid}"]`);
+            const role = (roleSelect?.value || "staff") as RoleId;
+            const assignedRoomIds = requestCard ? collectAssignedRoomIds(requestCard, uid) : [];
+            void approveAccessRequest(context, uid, role, assignedRoomIds);
+            return;
+        }
+
+        if (actionButton === "reject-access-request" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+            void rejectAccessRequest(context, uid);
+            return;
+        }
+
+        if (actionButton === "save-access-member" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+
+            const memberCard = button.closest('[data-member-card]');
+            const roleSelect = memberCard?.querySelector<HTMLSelectElement>(`select[data-role-input][data-uid="${uid}"]`);
+            const activeInput = memberCard?.querySelector<HTMLInputElement>(`input[data-active-input][data-uid="${uid}"]`);
+            const role = (roleSelect?.value || "staff") as RoleId;
+            const isActive = activeInput?.checked ?? true;
+            const assignedRoomIds = memberCard ? collectAssignedRoomIds(memberCard, uid) : [];
+            void updateAccessMember(context, uid, role, isActive, assignedRoomIds);
+            return;
+        }
 
         // ★追加: 部屋の並び替え処理 (上へ)
         if (actionButton === "move-room-up" && button) {

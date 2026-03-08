@@ -1,3 +1,7 @@
+export type RoleId = "admin" | "reception" | "staff";
+export type AccessRequestStatus = "pending" | "approved" | "rejected";
+export type TabId = "reception" | "staff" | "admin" | "database";
+
 export interface RoomConfig {
     id: string;
     name: string;
@@ -30,6 +34,31 @@ export interface AppConfig {
     receptionStatuses: ReceptionStatusConfig[];
     options: NamedOption[];
     pauseReasons: NamedOption[];
+}
+
+export interface AccessMember {
+    uid: string;
+    email: string;
+    displayName: string;
+    role: RoleId;
+    isActive: boolean;
+    assignedRoomIds: string[];
+    createdAt?: unknown;
+    updatedAt?: unknown;
+    lastLoginAt?: unknown;
+    [key: string]: unknown;
+}
+
+export interface AccessRequest {
+    uid: string;
+    email: string;
+    displayName: string;
+    status: AccessRequestStatus;
+    note?: string | null;
+    requestedAt?: unknown;
+    lastSeenAt?: unknown;
+    updatedAt?: unknown;
+    [key: string]: unknown;
 }
 
 export interface LaneData {
@@ -70,9 +99,23 @@ export interface FirestorePaths {
     lanesCollectionPath: string;
     roomStateCollectionPath: string;
     registryCollectionPath: string;
+    accessMembersCollectionPath: string;
+    accessMemberDocPath: string;
+    accessRequestsCollectionPath: string;
+    accessRequestDocPath: string;
 }
 
 export interface DomRefs {
+    appShell: HTMLElement;
+    authLoginCard: HTMLElement;
+    authPendingCard: HTMLElement;
+    authStatusText: HTMLElement;
+    authUserName: HTMLElement;
+    authUserEmail: HTMLElement;
+    authRoleBadge: HTMLElement;
+    authPendingMessage: HTMLElement;
+    authSignInBtn: HTMLButtonElement;
+    authSignOutBtn: HTMLButtonElement;
     tabs: HTMLElement;
     tabContents: HTMLElement;
     receptionList: HTMLElement;
@@ -84,6 +127,8 @@ export interface DomRefs {
     globalEventNameText: HTMLElement;
     globalAppIdText: HTMLElement;
     adminEventNameInput: HTMLInputElement;
+    adminAccessRequestList: HTMLElement;
+    adminMemberList: HTMLElement;
     dbSearchInput: HTMLInputElement;
     dbEventList: HTMLElement;
     dbRefreshBtn: HTMLButtonElement;
@@ -116,17 +161,28 @@ export interface DomRefs {
 
 export interface AppState {
     userId: string | null;
+    authUser: any | null;
     initialAuthToken: string | null;
     isUiInitialized: boolean;
+    renderScheduled: boolean;
+    activeTab: TabId;
     currentLanesState: Record<string, LaneData>;
     currentRoomState: Record<string, RoomStateData>;
     dynamicAppConfig: AppConfig;
     localAdminConfig: AppConfig;
+    accessMember: AccessMember | null;
+    selfAccessRequest: AccessRequest | null;
+    accessMembersCache: AccessMember[];
+    accessRequestsCache: AccessRequest[];
     isDbMigrating: boolean;
     registryCache: RegistryItem[];
     unsubscribeLanes: (() => void) | null;
     unsubscribeConfig: (() => void) | null;
     unsubscribeRoomState: (() => void) | null;
+    unsubscribeAccessMember: (() => void) | null;
+    unsubscribeAccessRequest: (() => void) | null;
+    unsubscribeAccessMembers: (() => void) | null;
+    unsubscribeAccessRequests: (() => void) | null;
 }
 
 export interface AppContext {

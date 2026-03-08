@@ -15,7 +15,6 @@ FIREBASERC_PATH = ROOT / ".firebaserc"
 
 REQUIRED_KEYS = [
     "APP_ID",
-    "ADMIN_PASSWORD",
     "FIREBASE_API_KEY",
     "FIREBASE_AUTH_DOMAIN",
     "FIREBASE_PROJECT_ID",
@@ -25,6 +24,7 @@ REQUIRED_KEYS = [
 ]
 
 OPTIONAL_KEYS = [
+    "ADMIN_PASSWORD",
     "FIREBASE_MEASUREMENT_ID",
     "FIREBASE_PROJECT_ALIAS",
 ]
@@ -125,7 +125,7 @@ def write_env_js(env: dict[str, str]) -> None:
             "// Do not commit this file.",
             "",
             f'export const APP_ID = {json.dumps(env["APP_ID"], ensure_ascii=False)};',
-            f'export const ADMIN_PASSWORD = {json.dumps(env["ADMIN_PASSWORD"], ensure_ascii=False)};',
+            f'export const ADMIN_PASSWORD = {json.dumps(env.get("ADMIN_PASSWORD", "").strip(), ensure_ascii=False)};',
             "",
             "export const firebaseConfig = {",
             *firebase_lines,
