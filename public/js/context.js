@@ -34,6 +34,9 @@ function createDomRefs() {
         globalEventNameText: requireElement("global-event-name-text"),
         globalAppIdText: requireElement("global-appid-text"),
         adminEventNameInput: requireElement("admin-event-name-input"),
+        adminDirectoryImportFile: requireElement("admin-directory-import-file"),
+        adminDirectoryImportBtn: requireElement("admin-directory-import-btn"),
+        adminDirectoryImportStatus: requireElement("admin-directory-import-status"),
         adminAccessRequestList: requireElement("admin-access-request-list"),
         adminMemberList: requireElement("admin-member-list"),
         dbSearchInput: requireElement("db-search-input"),
@@ -97,6 +100,7 @@ export function createAppContext() {
     const urlParams = new URLSearchParams(window.location.search);
     const currentAppId = urlParams.get("app_id") || APP_ID;
     const privateBase = `/artifacts/${currentAppId}/private/data`;
+    const memberDirectoryCollectionPath = `${privateBase}/memberDirectory`;
     const accessMembersCollectionPath = `${privateBase}/accessMembers`;
     const accessRequestsCollectionPath = `${privateBase}/accessRequests`;
     return {
@@ -108,6 +112,7 @@ export function createAppContext() {
             lanesCollectionPath: `/artifacts/${currentAppId}/public/data/lanes`,
             roomStateCollectionPath: `/artifacts/${currentAppId}/public/data/roomState`,
             registryCollectionPath: "sys_registry",
+            memberDirectoryCollectionPath,
             accessMembersCollectionPath,
             accessMemberDocPath: `${accessMembersCollectionPath}/__SELF__`,
             accessRequestsCollectionPath,

@@ -264,9 +264,11 @@ function listenToAccessMembersChanges(context: AppContext): void {
                 uid: memberDoc.id,
                 email: data.email || "",
                 displayName: data.displayName || "",
+                grade: typeof data.grade === "string" ? data.grade : null,
                 role: data.role || "staff",
                 isActive: data.isActive !== false,
                 assignedRoomIds: Array.isArray(data.assignedRoomIds) ? data.assignedRoomIds : [],
+                authorizationSource: typeof data.authorizationSource === "string" ? data.authorizationSource : null,
                 createdAt: data.createdAt,
                 updatedAt: data.updatedAt,
                 lastLoginAt: data.lastLoginAt

@@ -34,6 +34,13 @@ function buildRoomAssignmentMarkup(context: AppContext, selectedRoomIds: string[
     `).join("");
 }
 
+function getAuthorizationSourceBadge(member: AccessMember): string {
+    if (member.authorizationSource === "roster") {
+        return '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">名簿連携</span>';
+    }
+    return '<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">手動承認</span>';
+}
+
 // --- UI描画 (Render) ---
 
 export function scheduleRender(context: AppContext): void {
@@ -88,11 +95,19 @@ function renderAuthShell(context: AppContext): void {
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.add("hidden");
         dom.appShell.classList.remove("hidden");
+    } else if (member && !member.isActive) {
+        dom.authStatusText.textContent = "このアカウントは現在利用停止です。";
+        dom.authRoleBadge.textContent = "利用停止";
+        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-rose-400/15 px-3 py-1 text-xs font-bold text-rose-100 border border-rose-300/30";
+        dom.authPendingMessage.textContent = "今年度名簿に含まれていないか、管理者が利用停止にしています。必要なら管理者へ連絡してください。";
+        dom.authLoginCard.classList.add("hidden");
+        dom.authPendingCard.classList.remove("hidden");
+        dom.appShell.classList.add("hidden");
     } else if (state.authUser) {
         const status = request?.status || "pending";
         const pendingMessage = status === "rejected"
             ? "このアカウントの利用は停止または却下されています。管理者へ連絡してください。"
-            : "ログインは完了しました。管理者の承認後に利用できます。";
+            : "ログインは完了しました。名簿登録済みなら自動承認、名簿外アカウントは管理者承認後に利用できます。";
 
         dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
         dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
@@ -106,7 +121,7 @@ function renderAuthShell(context: AppContext): void {
         dom.authPendingCard.classList.remove("hidden");
         dom.appShell.classList.add("hidden");
     } else {
-        dom.authStatusText.textContent = "Google アカウントでログインしてください。初回は承認待ちになります。";
+        dom.authStatusText.textContent = "Google アカウントでログインしてください。名簿登録済み Gmail は自動承認、名簿外アカウントは承認待ちになります。";
         dom.authRoleBadge.textContent = "";
         dom.authRoleBadge.className = "hidden";
         dom.authPendingMessage.textContent = "";
@@ -206,9 +221,11 @@ function renderAccessManagement(context: AppContext): void {
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-member-card data-uid="${member.uid}">
             <div class="mb-3 flex items-start justify-between gap-3">
                 <div>
-                    <p class="text-sm font-bold text-slate-800">
+                    <p class="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-800">
                         ${escapeHtml(member.displayName || "名称未設定")}
                         ${state.userId === member.uid ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
+                        ${getAuthorizationSourceBadge(member)}
+                        ${member.grade ? `<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">${escapeHtml(member.grade)}</span>` : ""}
                     </p>
                     <p class="text-xs text-slate-500">${escapeHtml(member.email || member.uid)}</p>
                 </div>
