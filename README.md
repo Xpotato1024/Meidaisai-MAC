@@ -19,6 +19,7 @@ Both files are gitignored and should stay out of commits.
 ## Roadmap
 
 See `docs/roadmap.md` for the current release priorities and deferred operations work.
+For deployment operations, see `docs/operations/deploy-flow.md`.
 
 ## Multi-device development
 
