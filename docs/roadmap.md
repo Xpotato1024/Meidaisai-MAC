@@ -4,7 +4,7 @@
 
 1. Publish the clean public repository as `Meidaisai-MAC`.
 2. Migrate the sanitized app into the new repository.
-3. Configure GitHub Actions variables and Firebase Hosting deploy credentials.
+3. Verify the first end-to-end Firebase Hosting deploy from GitHub Actions.
 
 ## Deferred
 

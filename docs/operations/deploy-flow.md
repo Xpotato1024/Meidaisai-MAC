@@ -5,8 +5,8 @@
 As of 2026-03-09:
 
 - GitHub repository variables for Firebase Hosting are configured.
-- `FIREBASE_SERVICE_ACCOUNT` is not configured yet.
-- Because of that, deploy workflows currently skip cleanly instead of failing.
+- `FIREBASE_SERVICE_ACCOUNT` is configured.
+- Deploy workflows are active and can publish to Firebase Hosting.
 
 ## Goal
 
@@ -94,17 +94,14 @@ gh secret set FIREBASE_SERVICE_ACCOUNT -R Xpotato1024/Meidaisai-MAC < service-ac
 On every PR:
 
 - `Validate Local Config` runs.
-- `Deploy Preview to Firebase Hosting` runs only when deploy credentials are configured.
-
-If `FIREBASE_SERVICE_ACCOUNT` is still missing, the preview deploy job will skip.
+- `Deploy Preview to Firebase Hosting` runs for non-fork pull requests.
 
 ### Production release
 
 1. Merge the PR into `main`.
 2. `Validate Local Config` runs on `main`.
 3. `Deploy Live to Firebase Hosting` runs on `main`.
-4. If deploy credentials are configured, Firebase Hosting live is updated.
-5. If deploy credentials are missing, the deploy job skips and the repository stays safe.
+4. Firebase Hosting live is updated from GitHub Actions.
 
 ## Rollback
 
@@ -113,8 +110,6 @@ Primary rollback method:
 1. Revert the bad commit on `main`.
 2. Push the revert commit.
 3. Let the live deploy workflow publish the reverted state.
-
-If deploy credentials are not configured yet, rollback is just a git revert and no Hosting change occurs until deploy is enabled.
 
 ## Manual deploy
 
