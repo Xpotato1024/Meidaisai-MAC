@@ -1,40 +1,40 @@
-# Deployment Flow
+# デプロイフロー
 
-## Status
+## 現在の状態
 
-As of 2026-03-09:
+2026-03-09 時点:
 
-- GitHub repository variables for Firebase Hosting are configured.
-- `FIREBASE_SERVICE_ACCOUNT` is configured.
-- Deploy workflows are active and can publish to Firebase Hosting.
+- GitHub repository variables は設定済み
+- `FIREBASE_SERVICE_ACCOUNT` は設定済み
+- GitHub Actions から Firebase Hosting へ deploy 可能
 
-## Goal
+## 目的
 
-Use GitHub Actions as the standard deployment path for Firebase Hosting.
-Keep local manual deploys as a secondary option only.
+Firebase Hosting の標準 deploy 経路を GitHub Actions に統一します。  
+ローカルや `code-server` からの手動 deploy は補助経路としてのみ扱います。
 
-## One-time setup
+## 初回セットアップ
 
-### 1. Local development config
+### 1. ローカル開発設定
 
-For each device:
+端末ごとに次を実施します。
 
-1. Copy `.env.example` to `.env`.
-2. Fill in the Firebase web config and app values.
-3. Run `python3 scripts/generate_local_config.py`.
+1. `.env.example` を `.env` にコピーする
+2. Firebase Web 設定とアプリ用の値を記入する
+3. `python3 scripts/generate_local_config.py` を実行する
 
-This generates:
+生成されるファイル:
 
 - `.firebaserc`
 - `public/js/env.js`
 
-Both files stay local and must not be committed.
+どちらもローカル専用で、commit しません。
 
-### 2. GitHub Actions repository variables
+### 2. GitHub Actions Variables
 
-Repository: `Xpotato1024/Meidaisai-MAC`
+対象 repository: `Xpotato1024/Meidaisai-MAC`
 
-Variables:
+登録する Variables:
 
 - `APP_ID`
 - `ADMIN_PASSWORD`
@@ -47,81 +47,84 @@ Variables:
 - `FIREBASE_MEASUREMENT_ID`
 - `FIREBASE_PROJECT_ALIAS`
 
-CLI example:
+CLI 例:
 
 ```bash
 gh variable set -R Xpotato1024/Meidaisai-MAC -f .env
 ```
 
-### 3. GitHub Actions secret
+### 3. GitHub Actions Secret
 
-Required secret:
+必須 Secret:
 
 - `FIREBASE_SERVICE_ACCOUNT`
 
-Recommended path:
+推奨手順:
 
-1. Install Firebase CLI on a trusted machine.
-2. Run `firebase login`.
-3. Run `firebase init hosting:github` in this repository once.
-4. Let Firebase create the GitHub deploy credential.
-5. If the command rewrites workflow files unnecessarily, discard only those workflow changes and keep the GitHub secret.
+1. 信頼できる端末に Firebase CLI を入れる
+2. `firebase login` を実行する
+3. この repository で `firebase init hosting:github` を 1 回だけ実行する
+4. Firebase に GitHub deploy 用 credential を作らせる
+5. workflow ファイル差分が不要なら、その差分だけを戻して Secret は残す
 
-Alternative path:
+手動で登録する場合:
 
-1. Create a Google Cloud service account for project `line-omega`.
-2. Create a JSON key for that service account.
-3. Store that JSON in GitHub as `FIREBASE_SERVICE_ACCOUNT`.
+1. 対象プロジェクト用の service account を作成する
+2. JSON key を発行する
+3. その JSON を GitHub Secret `FIREBASE_SERVICE_ACCOUNT` として登録する
 
-CLI example:
+CLI 例:
 
 ```bash
 gh secret set FIREBASE_SERVICE_ACCOUNT -R Xpotato1024/Meidaisai-MAC < service-account.json
 ```
 
-## Standard release flow
+## 標準リリースフロー
 
-### Feature work
+### 開発時
 
-1. Create a feature branch.
-2. Update code and docs together.
-3. Regenerate local config if `.env` changed.
-4. Verify the app locally.
-5. Push the branch and open a pull request.
+1. feature branch を作成する
+2. コードとドキュメントを一緒に更新する
+3. `.env` を変更した場合は `python3 scripts/generate_local_config.py` を再実行する
+4. `npm run check` と必要なローカル確認を行う
+5. branch を push して Pull Request を作成する
 
-### Pull request
+### Pull Request 時
 
-On every PR:
+PR ごとに次が走ります。
 
-- `Validate Local Config` runs.
-- `Deploy Preview to Firebase Hosting` runs for non-fork pull requests.
+- `Validate Local Config`
+- `Deploy Preview to Firebase Hosting`
 
-### Production release
+preview deploy は fork ではない PR を対象にします。
 
-1. Merge the PR into `main`.
-2. `Validate Local Config` runs on `main`.
-3. `Deploy Live to Firebase Hosting` runs on `main`.
-4. Firebase Hosting live is updated from GitHub Actions.
+### 本番反映
 
-## Rollback
+1. PR を `main` へ merge する
+2. `Validate Local Config` が `main` で実行される
+3. `Deploy Live to Firebase Hosting` が `main` で実行される
+4. Firebase Hosting の本番が更新される
 
-Primary rollback method:
+## rollback
 
-1. Revert the bad commit on `main`.
-2. Push the revert commit.
-3. Let the live deploy workflow publish the reverted state.
+基本の rollback 手順:
 
-## Manual deploy
+1. `main` に入った不具合 commit を revert する
+2. revert commit を push する
+3. live deploy workflow に差し戻した状態を再配信させる
 
-Manual deploy is not the standard path.
-Use it only for temporary verification or break-glass operations.
+## 手動 deploy
 
-Basic flow:
+手動 deploy は標準経路ではありません。  
+一時確認や緊急対応に限って使います。
 
-1. Install Firebase CLI.
-2. Run `firebase login`.
-3. Ensure `.env` is correct.
-4. Run `python3 scripts/generate_local_config.py`.
-5. Run `firebase deploy --only hosting --project line-omega`.
+基本手順:
 
-The `code-server` based manual deploy option is tracked separately in `docs/roadmap.md`.
+1. Firebase CLI を用意する
+2. `firebase login` を実行する
+3. `.env` を確認する
+4. `python3 scripts/generate_local_config.py` を実行する
+5. `npm run build` を実行する
+6. `firebase deploy --only hosting --project <project-id>` を実行する
+
+`code-server` を使う手動 deploy 案は [../roadmap.md](../roadmap.md) で別管理しています。

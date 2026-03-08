@@ -1,54 +1,72 @@
 # Meidaisai-MAC
 
-This repo is the public-ready Firebase Hosting version of the Meidaisai MAC lane management app.
+明大祭向けのレーン空き状況管理アプリです。  
+Firebase Hosting 上で動かす静的フロントエンドとして公開できる形に整理してあります。
 
-## Setup
+## 現在の方針
 
-1. Copy `.env.example` to `.env`.
-2. Fill in the Firebase web config, `APP_ID`, and `ADMIN_PASSWORD`.
-3. Run `python3 scripts/generate_local_config.py`.
-4. Serve `public/` or deploy with the Firebase CLI.
+- 配信形態は `Firebase Hosting + 静的フロントエンド` を維持します。
+- フロントエンドは `TypeScript` で責務分離し、`src/` を編集して `public/js/` を生成します。
+- `ADMIN_PASSWORD` は本格的な認証ではなく、誤操作防止用の UI ガードとして扱います。
 
-The script generates these local-only files:
+`Next.js` は現時点では採用していません。SSR、API Routes、サーバー側認証が必要になった段階で再検討する方針です。
+
+## セットアップ
+
+1. `.env.example` を `.env` としてコピーします。
+2. Firebase Web 設定、`APP_ID`、`ADMIN_PASSWORD` を記入します。
+3. `python3 scripts/generate_local_config.py` を実行します。
+4. 必要に応じて `npm install` を実行します。
+5. `npm run check` または `npm run build` を実行します。
+6. `public/` をローカル配信するか、Firebase CLI で deploy します。
+
+## ローカル生成ファイル
+
+`scripts/generate_local_config.py` は次のローカル専用ファイルを生成します。
 
 - `public/js/env.js`
 - `.firebaserc`
 
-Both files are gitignored and should stay out of commits.
+これらは Git 管理対象に含めません。`.env` も同様です。
 
-## Roadmap
+## ディレクトリ構成
 
-See `docs/roadmap.md` for the current release priorities and deferred operations work.
-For deployment operations, see `docs/operations/deploy-flow.md`.
+- `src/`
+  TypeScript の実装本体です。ここを編集します。
+- `public/js/`
+  `npm run build` で生成される配信用 JavaScript です。
+- `scripts/generate_local_config.py`
+  `.env` から `env.js` と `.firebaserc` を生成します。
+- `docs/operations/deploy-flow.md`
+  deploy 手順と GitHub Actions 運用です。
+- `docs/architecture/frontend-structure.md`
+  フロントエンドの責務分離方針です。
+- `docs/roadmap.md`
+  現在の優先事項と後回しにしている運用項目です。
 
-## Multi-device development
+## 複数端末での開発
 
-Use a separate Firebase project for each environment like `dev`, `staging`, and `prod`.
-Firebase recommends separate Firebase projects for workflow environments instead of multiple Hosting sites in one project.
+端末ごとに `.env` を持ち、必要な Firebase 環境へ切り替えて使います。
 
-For each device:
+1. `.env.example` を `.env` にコピーします。
+2. その端末で使う Firebase プロジェクトの値を `.env` に入れます。
+3. `python3 scripts/generate_local_config.py` を実行します。
+4. `npm run check` か `npm run build` を実行します。
 
-1. Copy `.env.example` to `.env`.
-2. Set the Firebase project values for the environment you want to use on that device.
-3. Run `python3 scripts/generate_local_config.py`.
-4. Deploy manually only when you need to test from that device.
-
-If you want to keep multiple local env files on one device, you can run:
+1 台の端末で複数環境を切り替える場合は、たとえば次のように使えます。
 
 - `python3 scripts/generate_local_config.py --env-file .env.dev`
 - `python3 scripts/generate_local_config.py --env-file .env.prod`
 
-Only `.env.example` should be committed. Keep `.env`, `.firebaserc`, and `public/js/env.js` local.
-
 ## CI/CD
 
-This repo includes three GitHub Actions workflows:
+GitHub Actions workflow は次の 3 本です。
 
 - `.github/workflows/validate-local-config.yml`
 - `.github/workflows/firebase-hosting-preview.yml`
 - `.github/workflows/firebase-hosting-live.yml`
 
-Set these GitHub repository Variables:
+GitHub Actions で Firebase Hosting へ自動 deploy する場合は、次の Repository Variables を設定します。
 
 - `APP_ID`
 - `ADMIN_PASSWORD`
@@ -61,21 +79,15 @@ Set these GitHub repository Variables:
 - `FIREBASE_MEASUREMENT_ID`
 - `FIREBASE_PROJECT_ALIAS`
 
-Set this GitHub repository Secret:
+さらに、次の Repository Secret が必要です。
 
 - `FIREBASE_SERVICE_ACCOUNT`
 
-These settings are only required when you want GitHub Actions to deploy to Firebase Hosting.
-Until they are configured, the preview and live deploy workflows will skip cleanly.
+未設定の間は preview/live deploy workflow は安全に `skip` されます。詳しい運用は [docs/operations/deploy-flow.md](docs/operations/deploy-flow.md) を参照してください。
 
-The preview workflow deploys PR previews for non-fork pull requests.
-The live workflow deploys to Firebase Hosting on pushes to `master` or `main`.
+## セキュリティ上の注意
 
-The Firebase Hosting docs say `firebase init hosting:github` can create the service account secret and workflow files automatically.
+`ADMIN_PASSWORD` は静的フロントエンドの都合上、ブラウザへ配信されます。  
+そのため「本物の秘匿情報」ではなく、「一般ユーザーの誤操作を防ぐための UI ガード」として扱ってください。
 
-## Security note
-
-`ADMIN_PASSWORD` is still sent to the browser because this app is a static frontend.
-Treat it as a UI guard against accidental operation, not as real security.
-
-If you need real admin-only access, move admin authentication to Firebase Auth or another server-side check and enforce it with Firestore rules.
+本格的な管理者制御が必要になった場合は、Firebase Auth やサーバー側の認可へ移行し、Firestore Rules と合わせて設計を見直す必要があります。
