@@ -29,23 +29,60 @@ jobs:
       FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
       FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
       FIREBASE_PROJECT_ALIAS: ${{ vars.FIREBASE_PROJECT_ALIAS }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
     steps:
+      - name: Check deploy configuration
+        id: config
+        run: |
+          missing=()
+          for key in \
+            APP_ID \
+            ADMIN_PASSWORD \
+            FIREBASE_API_KEY \
+            FIREBASE_AUTH_DOMAIN \
+            FIREBASE_PROJECT_ID \
+            FIREBASE_STORAGE_BUCKET \
+            FIREBASE_MESSAGING_SENDER_ID \
+            FIREBASE_APP_ID \
+            FIREBASE_SERVICE_ACCOUNT
+          do
+            if [ -z "${!key:-}" ]; then
+              missing+=("$key")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping preview deploy. Missing settings: ${missing[*]}"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
+        if: steps.config.outputs.configured == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Python
+        if: steps.config.outputs.configured == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Generate runtime config
+        if: steps.config.outputs.configured == 'true'
         run: python3 scripts/generate_local_config.py --from-process-env
 
       - name: Deploy preview
+        if: steps.config.outputs.configured == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ vars.FIREBASE_PROJECT_ID }}
           expires: 7d
+
+      - name: Skip deploy
+        if: steps.config.outputs.configured != 'true'
+        run: echo "Firebase Hosting preview deploy is disabled until GitHub Variables and FIREBASE_SERVICE_ACCOUNT are configured."

@@ -64,6 +64,9 @@ Set this GitHub repository Secret:
 
 - `FIREBASE_SERVICE_ACCOUNT`
 
+These settings are only required when you want GitHub Actions to deploy to Firebase Hosting.
+Until they are configured, the preview and live deploy workflows will skip cleanly.
+
 The preview workflow deploys PR previews for non-fork pull requests.
 The live workflow deploys to Firebase Hosting on pushes to `master` or `main`.
 
