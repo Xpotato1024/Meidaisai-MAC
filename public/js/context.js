@@ -96,7 +96,7 @@ function createInitialState() {
 export function createAppContext() {
     const urlParams = new URLSearchParams(window.location.search);
     const currentAppId = urlParams.get("app_id") || APP_ID;
-    const privateBase = `/artifacts/${currentAppId}/private`;
+    const privateBase = `/artifacts/${currentAppId}/private/data`;
     const accessMembersCollectionPath = `${privateBase}/accessMembers`;
     const accessRequestsCollectionPath = `${privateBase}/accessRequests`;
     return {
