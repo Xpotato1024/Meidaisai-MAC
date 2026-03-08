@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { canAccessTab, hasRole } from "./access.js";
 import { fetchRegistryItems } from "./firestore.js";
+import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
 import { approveAccessRequest, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
 function cloneJson(value) {
@@ -70,6 +71,15 @@ function validateAppId(currentAppId, id) {
 function collectAssignedRoomIds(root, uid) {
     return Array.from(root.querySelectorAll(`input[data-room-assignment][data-uid="${uid}"]:checked`))
         .map((checkbox) => checkbox.value);
+}
+function setMemberDirectoryImportStatus(context, message, tone) {
+    const { adminDirectoryImportStatus } = context.dom;
+    adminDirectoryImportStatus.textContent = message;
+    adminDirectoryImportStatus.className = `text-sm ${tone === "success"
+        ? "text-emerald-600"
+        : tone === "error"
+            ? "text-rose-600 font-bold"
+            : "text-slate-500"}`;
 }
 async function exportFullBackup(context) {
     const { db, currentAppId, dom, paths, state } = context;
@@ -526,6 +536,31 @@ export function setupEventListeners(context) {
         state.localAdminConfig.pauseReasons.push({ id: newId, name: newName });
         dom.adminNewPauseReasonInput.value = "";
         renderAdminSettings(context);
+    });
+    dom.adminDirectoryImportBtn.addEventListener("click", () => {
+        dom.adminDirectoryImportFile.click();
+    });
+    dom.adminDirectoryImportFile.addEventListener("change", (event) => {
+        const target = event.target;
+        const file = target.files?.[0];
+        if (!file) {
+            return;
+        }
+        dom.adminDirectoryImportBtn.disabled = true;
+        setMemberDirectoryImportStatus(context, `名簿を取り込み中です: ${file.name}`, "info");
+        void importMemberDirectoryFromFile(context, file)
+            .then((result) => {
+            setMemberDirectoryImportStatus(context, `名簿を更新しました。${result.importedCount}件取込 / 既存メンバー同期 ${result.syncedMemberCount}件 / 自動承認 ${result.autoApprovedCount}件 / 名簿外停止 ${result.deactivatedCount}件`, "success");
+        })
+            .catch((error) => {
+            console.error("Failed to import member directory:", error);
+            const message = error instanceof Error ? error.message : String(error);
+            setMemberDirectoryImportStatus(context, `名簿の取込に失敗しました: ${message}`, "error");
+        })
+            .finally(() => {
+            dom.adminDirectoryImportBtn.disabled = false;
+            target.value = "";
+        });
     });
     // ----------------------------------------------------
     // 管理設定タブ全体のイベントリスナー (イベント移譲)

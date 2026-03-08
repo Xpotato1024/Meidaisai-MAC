@@ -6,15 +6,18 @@ import { cloneConfig } from "./context.js";
 import { APP_CONFIG } from "./default-config.js";
 import { setupEventListeners } from "./events.js";
 import { cleanupDataSubscriptions, configureDataSubscriptions } from "./firestore.js";
+import { normalizeEmail } from "./member-directory.js";
 import { renderAllUI } from "./render.js";
 function normalizeMember(uid, data) {
     return {
         uid,
         email: String(data.email || ""),
         displayName: String(data.displayName || ""),
+        grade: typeof data.grade === "string" ? data.grade : null,
         role: data.role || "staff",
         isActive: data.isActive !== false,
         assignedRoomIds: Array.isArray(data.assignedRoomIds) ? data.assignedRoomIds.map(String) : [],
+        authorizationSource: typeof data.authorizationSource === "string" ? data.authorizationSource : null,
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         lastLoginAt: data.lastLoginAt
@@ -71,6 +74,60 @@ async function ensureAccessRequest(context, user) {
         lastSeenAt: serverTimestamp(),
         updatedAt: serverTimestamp()
     }, { merge: true });
+}
+async function ensureRosterAccessMember(context, user) {
+    const { db, paths } = context;
+    const emailKey = normalizeEmail(String(user.email || ""));
+    if (!emailKey) {
+        return false;
+    }
+    const directoryRef = doc(db, paths.memberDirectoryCollectionPath, emailKey);
+    const directorySnapshot = await getDoc(directoryRef);
+    if (!directorySnapshot.exists()) {
+        return false;
+    }
+    const directoryData = directorySnapshot.data();
+    const resolvedDisplayName = String(directoryData.displayName || user.displayName || "");
+    const resolvedEmail = String(directoryData.email || emailKey);
+    const resolvedGrade = typeof directoryData.grade === "string" ? directoryData.grade : null;
+    await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), {
+        uid: user.uid,
+        email: resolvedEmail,
+        displayName: resolvedDisplayName,
+        grade: resolvedGrade,
+        role: "staff",
+        isActive: true,
+        assignedRoomIds: [],
+        authorizationSource: "roster",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
+    }, { merge: true });
+    const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
+    const requestSnapshot = await getDoc(requestRef);
+    if (requestSnapshot.exists()) {
+        await setDoc(requestRef, {
+            email: resolvedEmail,
+            displayName: resolvedDisplayName,
+            status: "approved",
+            note: "名簿登録済みのため自動承認",
+            lastSeenAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
+    return true;
+}
+async function bootstrapSelfAccess(context, user) {
+    const { db, paths } = context;
+    const memberSnapshot = await getDoc(doc(db, paths.accessMembersCollectionPath, user.uid));
+    if (memberSnapshot.exists()) {
+        return;
+    }
+    const provisionedFromRoster = await ensureRosterAccessMember(context, user);
+    if (provisionedFromRoster) {
+        return;
+    }
+    await ensureAccessRequest(context, user);
 }
 function bindAuthButtons(context) {
     const { auth, dom } = context;
@@ -146,8 +203,10 @@ export function setupAuthListener(context) {
         if (user) {
             state.authUser = user;
             state.userId = user.uid;
+            dom.firestoreStatus.textContent = "名簿と権限を確認しています...";
+            dom.firestoreStatus.className = "text-center text-xs text-slate-500";
             try {
-                await ensureAccessRequest(context, user);
+                await bootstrapSelfAccess(context, user);
             }
             catch (error) {
                 console.error("Failed to ensure access request:", error);

@@ -10,6 +10,29 @@ service cloud.firestore {
       return /databases/$(database)/documents/artifacts/$(appId)/private/data/accessMembers/$(uid);
     }
 
+    function memberDirectoryPath(appId, emailKey) {
+      return /databases/$(database)/documents/artifacts/$(appId)/private/data/memberDirectory/$(emailKey);
+    }
+
+    function hasVerifiedEmail() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function selfEmailKey() {
+      return request.auth.token.email.lower().trim();
+    }
+
+    function selfDirectory(appId) {
+      return get(memberDirectoryPath(appId, selfEmailKey()));
+    }
+
+    function selfDirectoryExists(appId) {
+      return hasVerifiedEmail()
+        && exists(memberDirectoryPath(appId, selfEmailKey()));
+    }
+
     function selfMember(appId) {
       return get(memberPath(appId, request.auth.uid));
     }
@@ -56,6 +79,21 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).changedKeys();
     }
 
+    function canProvisionSelfFromRoster(appId, uid) {
+      return hasVerifiedEmail()
+        && request.auth.uid == uid
+        && selfDirectoryExists(appId)
+        && selfDirectory(appId).data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.displayName == selfDirectory(appId).data.displayName
+        && request.resource.data.grade == selfDirectory(appId).data.grade
+        && request.resource.data.role == 'staff'
+        && request.resource.data.isActive == true
+        && request.resource.data.assignedRoomIds.size() == 0
+        && request.resource.data.authorizationSource == 'roster';
+    }
+
     match /artifacts/{appId}/public/data/config/{documentId} {
       allow read: if canReadOps(appId);
       allow create, update, delete: if isAdmin(appId);
@@ -94,6 +132,17 @@ service cloud.firestore {
 
     match /artifacts/{appId}/private/data/accessMembers/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
+      allow list: if isAdmin(appId);
+      allow create: if isAdmin(appId) || canProvisionSelfFromRoster(appId, uid);
+      allow update, delete: if isAdmin(appId);
+    }
+
+    match /artifacts/{appId}/private/data/memberDirectory/{emailKey} {
+      allow get: if isAdmin(appId)
+        || (
+          hasVerifiedEmail()
+          && emailKey == selfEmailKey()
+        );
       allow list: if isAdmin(appId);
       allow create, update, delete: if isAdmin(appId);
     }

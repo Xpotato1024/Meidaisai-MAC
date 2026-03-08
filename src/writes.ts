@@ -325,6 +325,7 @@ export async function approveAccessRequest(
         role,
         isActive: true,
         assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        authorizationSource: "manual",
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp()

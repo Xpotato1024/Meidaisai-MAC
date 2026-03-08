@@ -1,6 +1,7 @@
 export type RoleId = "admin" | "reception" | "staff";
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
 export type TabId = "reception" | "staff" | "admin" | "database";
+export type AuthorizationSource = "manual" | "roster";
 
 export interface RoomConfig {
     id: string;
@@ -40,9 +41,11 @@ export interface AccessMember {
     uid: string;
     email: string;
     displayName: string;
+    grade?: string | null;
     role: RoleId;
     isActive: boolean;
     assignedRoomIds: string[];
+    authorizationSource?: AuthorizationSource | null;
     createdAt?: unknown;
     updatedAt?: unknown;
     lastLoginAt?: unknown;
@@ -59,6 +62,25 @@ export interface AccessRequest {
     lastSeenAt?: unknown;
     updatedAt?: unknown;
     [key: string]: unknown;
+}
+
+export interface MemberDirectoryEntry {
+    emailKey: string;
+    email: string;
+    displayName: string;
+    grade: string | null;
+    source: AuthorizationSource;
+    importedAt?: unknown;
+    updatedAt?: unknown;
+    [key: string]: unknown;
+}
+
+export interface MemberDirectoryImportResult {
+    importedCount: number;
+    removedDirectoryCount: number;
+    syncedMemberCount: number;
+    autoApprovedCount: number;
+    deactivatedCount: number;
 }
 
 export interface LaneData {
@@ -99,6 +121,7 @@ export interface FirestorePaths {
     lanesCollectionPath: string;
     roomStateCollectionPath: string;
     registryCollectionPath: string;
+    memberDirectoryCollectionPath: string;
     accessMembersCollectionPath: string;
     accessMemberDocPath: string;
     accessRequestsCollectionPath: string;
@@ -127,6 +150,9 @@ export interface DomRefs {
     globalEventNameText: HTMLElement;
     globalAppIdText: HTMLElement;
     adminEventNameInput: HTMLInputElement;
+    adminDirectoryImportFile: HTMLInputElement;
+    adminDirectoryImportBtn: HTMLButtonElement;
+    adminDirectoryImportStatus: HTMLElement;
     adminAccessRequestList: HTMLElement;
     adminMemberList: HTMLElement;
     dbSearchInput: HTMLInputElement;
