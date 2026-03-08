@@ -88,9 +88,9 @@
 
 - `/artifacts/{appId}/public/data/**`
   イベント運用データ。受付とスタッフが読む
-- `/artifacts/{appId}/private/accessRequests/**`
+- `/artifacts/{appId}/private/data/accessRequests/**`
   初回ログイン時の承認待ち
-- `/artifacts/{appId}/private/accessMembers/**`
+- `/artifacts/{appId}/private/data/accessMembers/**`
   承認済みメンバーと担当部屋
 - `/sys_registry/**`
   イベント ID 一覧

@@ -7,7 +7,7 @@ service cloud.firestore {
     }
 
     function memberPath(appId, uid) {
-      return /databases/$(database)/documents/artifacts/$(appId)/private/accessMembers/$(uid);
+      return /databases/$(database)/documents/artifacts/$(appId)/private/data/accessMembers/$(uid);
     }
 
     function selfMember(appId) {
@@ -92,13 +92,13 @@ service cloud.firestore {
       allow create, update, delete: if canManageRoom(appId, roomId);
     }
 
-    match /artifacts/{appId}/private/accessMembers/{uid} {
+    match /artifacts/{appId}/private/data/accessMembers/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
       allow create, update, delete: if isAdmin(appId);
     }
 
-    match /artifacts/{appId}/private/accessRequests/{uid} {
+    match /artifacts/{appId}/private/data/accessRequests/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
 
