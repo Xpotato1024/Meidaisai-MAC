@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レーン空き状況管理 LINEΩ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style type="text/tailwindcss">
+        /* Noto Sans JP を適用 */
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+
+        /* カスタムスタイル */
+        .tab-button {
+            /* flex, items-center, justify-center, gap-2 を追加 */
+            @apply px-4 py-2 font-medium text-sm text-gray-500 border-b-2 border-transparent transition flex items-center justify-center gap-2;
+        }
+        .tab-button.active {
+            @apply text-blue-600 border-blue-600;
+        }
+        .lane-card {
+            @apply bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col;
+        }
+        .lane-status-indicator {
+            @apply w-full px-3 py-2 text-center text-white font-bold rounded-md shadow-sm;
+        }
+        .status-available { background-color: #10b981; } /* emerald-500 */
+        .status-occupied { background-color: #ef4444; } /* red-500 */
+        .status-preparing { background-color: #f59e0b; } /* amber-500 */
+        .status-paused { background-color: #6b7280; } /* (★追加) gray-500 */
+
+        .reception-status {
+            @apply mt-2 text-sm text-center;
+        }
+        .reception-available { color: #10b981; } /* emerald-500 */
+        .reception-guiding { color: #2563eb; } /* blue-600 */
+
+        /* ★追加: コンパクトUI用 */
+        .dashboard-grid {
+            @apply grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6; /* PCなら2〜3列で部屋を表示 */
+        }
+        
+        /* 部屋カード */
+        .room-dashboard-card {
+            @apply bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col h-full;
+        }
+
+        /* 待機数バッジ（巨大化） */
+        .wait-badge-large {
+            @apply px-4 py-2 text-2xl font-bold text-white rounded-lg shadow-inner text-center min-w-[80px];
+        }
+        .wait-zero { @apply bg-gray-200 text-gray-400; }
+        .wait-exists { @apply bg-red-500 animate-pulse; }
+
+/* レーンタイル（極小化） */
+        .lane-tile {
+            @apply flex flex-col items-center justify-center p-1 rounded-lg border-2 transition cursor-pointer h-24 relative shadow-sm text-white;
+            /* text-white を追加して文字を白くします */
+        }
+        .lane-tile:active { @apply scale-95; }
+        
+        /* ★変更: ステータス別のタイルスタイル (濃い色・白文字に変更) */
+        /* レーン担当者画面の色味 (#10b981等) に合わせます */
+        
+        .tile-available { 
+            background-color: #10b981; /* emerald-500 */
+            border-color: #059669; 
+        }
+        .tile-available:hover {
+            background-color: #059669; /* hoverで少し暗く */
+        }
+
+        .tile-occupied { 
+            background-color: #ef4444; /* red-500 */
+            border-color: #b91c1c;
+            cursor: default;
+        } 
+
+        .tile-preparing { 
+            background-color: #f59e0b; /* amber-500 */
+            border-color: #b45309;
+            cursor: default;
+        }
+
+        .tile-paused { 
+            background-color: #6b7280; /* gray-500 */
+            border-color: #374151;
+            cursor: default;
+        }
+
+        .tile-guiding { 
+            background-color: #2563eb; /* blue-600 */
+            border-color: #1d4ed8;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5); /* 光らせる */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col font-sans text-gray-900">
+
+    <div class="container mx-auto p-4 max-w-7xl flex-grow w-full">
+
+        <header class="text-center mb-4"> <h1 class="text-2xl font-bold text-gray-800">レーン空き状況管理 LINE <span class="font-serif">Ω</span> </h1> <p class="text-sm text-gray-600 mt-1">現在の空き状況をリアルタイムで確認・更新します。</p>
+        </header>
+
+        <div id="global-event-display" class="mb-4 text-center hidden">
+            <span class="inline-block px-4 py-1.5 bg-indigo-100 text-indigo-800 text-sm font-bold rounded-full border border-indigo-200 shadow-sm">
+                <i class="fa-solid fa-calendar-check mr-1"></i>
+                <span id="global-event-name-text"></span>
+                <span class="text-xs font-normal text-indigo-500 ml-2 border-l border-indigo-300 pl-2" id="global-appid-text"></span>
+            </span>
+        </div>
+
+        <div class="mb-4 border-b border-gray-200 bg-white rounded-lg shadow-sm">
+            <nav class="flex -mb-px px-4" id="tabs">
+                <button data-tab="reception" class="tab-button">
+                    <i class="fa-solid fa-clipboard-list"></i> 受付用 (一覧・操作)
+                </button>
+                <button data-tab="staff" class="tab-button active">
+                    <i class="fa-solid fa-bullseye"></i> レーン担当用 (更新)
+                </button>
+                <button data-tab="admin" class="tab-button">
+                    <i class="fa-solid fa-gear"></i> 管理設定
+                </button>
+                <button data-tab="database" class="tab-button text-indigo-600 border-indigo-600">
+                    <i class="fa-solid fa-database"></i> DB管理
+                </button>
+            </nav>
+        </div>
+
+        <div class="mb-4 border-b border-gray-200 bg-white rounded-lg shadow-sm">
+            <nav class="flex -mb-px px-4" id="tabs">
+               </nav>
+        </div>
+
+        <div id="room-summary-bar" class="mb-6 flex flex-wrap gap-2 px-1">
+        </div>
+
+        <div id="tab-content">
+
+            <div id="tab-reception" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">全レーン状況一覧</h2>
+                <div id="reception-list" class="space-y-6">
+                    <div class="text-center text-gray-500 py-10">
+                        <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+                        <p class="mt-2">データベースから設定を読み込んでいます...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-staff" class="tab-pane active">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">レーン状況 更新ダッシュボード</h2>
+                
+                <div class="bg-white p-4 rounded-lg shadow border border-gray-200 space-y-4">
+                    <div>
+                        <label for="staff-name" class="block text-sm font-medium text-gray-700">あなたの担当者名:</label>
+                        <input type="text" id="staff-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="例: 鈴木">
+                    </div>
+
+                    <div>
+                        <label for="staff-room-select" class="block text-sm font-medium text-gray-700">担当する部屋を選択:</label>
+                        <select id="staff-room-select" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">--- 部屋を選択してください ---</option>
+                            </select>
+                    </div>
+                </div>
+
+                <div id="staff-lane-dashboard" class="mt-6 space-y-6">
+                    <p class="text-center text-gray-500">上記で担当する部屋を選択してください。</p>
+                </div>
+            </div>
+
+            <div id="tab-admin" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">管理設定</h2>
+                
+                <div class="bg-white p-6 rounded-lg shadow border border-gray-200 space-y-6">
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">イベント基本設定</h3>
+                        <p class="text-sm text-gray-500 mb-3">画面上部に表示されるイベント名を設定します。</p>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-gray-50 p-3 rounded border border-gray-100">
+                            <label for="admin-event-name-input" class="text-sm font-bold text-gray-700 w-32">イベント表示名:</label>
+                            <input type="text" id="admin-event-name-input" class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="例: 2025年度 明大祭">
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">部屋とレーン設定</h3>
+                        <p class="text-sm text-gray-500 mb-4">部屋の追加・削除、各部屋のレーン数を設定します。</p>
+                        <div id="admin-room-list" class="space-y-3 mb-4">
+                            </div>
+                        <div class="flex space-x-2">
+                            <input type="text" id="admin-new-room-input" class="flex-grow min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="新しい部屋名 (例: D部屋)">
+                            <input type="number" id="admin-new-room-lanes-input" class="w-16 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-center" placeholder="レーン" min="1" value="1"> 
+                            <button id="admin-add-room-btn" class="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 text-sm font-medium">
+                                <i class="fa-solid fa-plus"></i> 部屋追加
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">オプション設定</h3>
+                        <p class="text-sm text-gray-500 mb-4">受付で使用するオプションを管理します。</p>
+                        <div id="admin-options-list" class="space-y-2 mb-4">
+                            </div>
+                        <div class="flex space-x-2">
+                            <input type="text" id="admin-new-option-input" class="flex-grow min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="新しいオプション名 (例: プランD)">
+                            
+                            <button id="admin-add-option-btn" class="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 text-sm font-medium">
+                                <i class="fa-solid fa-plus"></i> オプション追加
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">休止理由設定</h3>
+                        <p class="text-sm text-gray-500 mb-4">レーンを「休止中」にする際の理由を管理します。</p>
+                        <div id="admin-pause-reasons-list" class="space-y-2 mb-4">
+                            </div>
+                        <div class="flex space-x-2">
+                            <input type="text" id="admin-new-pause-reason-input" class="flex-grow min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="新しい休止理由 (例: 機材トラブル)">
+                            
+                            <button id="admin-add-pause-reason-btn" class="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 text-sm font-medium">
+                                <i class="fa-solid fa-plus"></i> 理由追加
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">レーン名カスタム設定</h3>
+                        <p class="text-sm text-gray-500 mb-4">各レーンに固有の名前を設定できます。</p>
+                        <div id="admin-lane-list" class="space-y-4 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-md">
+                            <p class="text-gray-400 text-sm">レーン情報を読み込み中です...</p>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <button id="admin-save-settings-btn" class="w-full px-6 py-3 bg-green-600 text-white font-bold rounded-md shadow-sm hover:bg-green-700 active:scale-95 transition-transform">
+                            <i class="fa-solid fa-save mr-2"></i> 各種設定を保存
+                        </button>
+                        <p id="admin-save-status" class="text-sm text-center mt-3 h-4"></p>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="tab-database" class="tab-pane hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">データベース管理</h2>
+                
+                <div class="bg-white p-6 rounded-lg shadow border border-gray-200 space-y-6">
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">イベント一覧</h3>
+                        <p class="text-sm text-gray-500 mb-4">過去に作成されたイベント（App ID）を検索・切り替えできます。</p>
+                        
+                        <div class="flex space-x-2 mb-4">
+                            <div class="relative flex-grow">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                    <i class="fa-solid fa-search"></i>
+                                </span>
+                                <input type="text" id="db-search-input" class="w-full pl-10 px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="イベントIDや部屋名で検索...">
+                            </div>
+                            <button id="db-refresh-btn" class="px-3 py-2 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200">
+                                <i class="fa-solid fa-sync"></i>
+                            </button>
+                        </div>
+
+                        <div class="border border-gray-200 rounded-md overflow-hidden">
+                            <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex text-xs font-bold text-gray-500">
+                                <div class="w-1/3">イベントID (App ID)</div>
+                                <div class="w-1/3">情報 (部屋数など)</div>
+                                <div class="w-1/3 text-right">最終更新 / 操作</div>
+                            </div>
+                            <div id="db-event-list" class="max-h-64 overflow-y-auto divide-y divide-gray-100 bg-white">
+                                <p class="p-4 text-center text-gray-400 text-sm">データを読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div class="bg-orange-50 p-4 rounded-md border border-orange-200 mb-6">
+                        <h3 class="text-lg font-medium text-orange-900 mb-2">
+                            <i class="fa-solid fa-signature mr-1"></i> イベントID (App ID) の変更・新規作成
+                        </h3>
+                        <p class="text-sm text-orange-700 mb-4">
+                            現在表示しているイベント（<span class="font-bold font-mono bg-white px-1 rounded" id="lbl-current-appid"></span>）を操作します。
+                        </p>
+
+                        <div class="flex flex-col md:flex-row gap-4 items-end">
+                            <div class="flex-grow w-full md:w-auto min-w-0">
+                                <label class="block text-xs font-bold text-orange-800 mb-1">新しい ID (半角英数推奨)</label>
+                                <input type="text" id="input-new-app-id" 
+                                    class="w-full px-3 py-2 border border-orange-300 rounded-md text-sm focus:ring-orange-500 focus:border-orange-500" 
+                                    placeholder="例: meiji_fes_2025 (わかりやすい名前)">
+                            </div>
+                            
+                            <div class="flex gap-2 w-full md:w-auto">
+                                <button id="btn-switch-only" class="flex-1 md:flex-none px-4 py-2 bg-white border border-orange-400 text-orange-700 font-bold rounded shadow-sm hover:bg-orange-100 transition text-sm">
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i> 空で移動
+                                </button>
+                                
+                                <button id="btn-copy-switch" class="flex-1 md:flex-none px-4 py-2 bg-orange-600 text-white font-bold rounded shadow-md hover:bg-orange-700 transition text-sm">
+                                    <i class="fa-solid fa-copy"></i> コピーして移動
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-orange-600 mt-2">
+                            ※ <strong>「コピーして移動」</strong> を使うと、現在の設定・レーン・待機状況をすべて新しいIDに複製します（実質的なリネーム）。<br>
+                            ※ <strong>「空で移動」</strong> は、設定のない真っ新な状態で新しいIDを開始します。
+                        </p>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">設定バックアップ・復元</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div class="bg-indigo-50 p-4 rounded-md border border-indigo-100">
+                                <h4 class="font-bold text-indigo-800 mb-2"><i class="fa-solid fa-file-export mr-1"></i> エクスポート (保存)</h4>
+                                <p class="text-xs text-indigo-600 mb-3">現在の設定をJSONファイルとしてダウンロードします。<br>ファイル名には日時が自動付与されます。</p>
+                                <button id="db-export-btn" class="w-full px-4 py-2 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-700 transition">
+                                    設定をダウンロード
+                                </button>
+                            </div>
+
+                            <div class="bg-gray-100 p-4 rounded-md border border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2"><i class="fa-solid fa-file-import mr-1"></i> インポート (復元)</h4>
+                                <p class="text-xs text-gray-600 mb-3">バックアップファイルを読み込み、現在の設定を上書きします。</p>
+                                <div class="flex space-x-2">
+                                    <input type="file" id="db-import-file" accept=".json" class="hidden">
+                                    <button onclick="document.getElementById('db-import-file').click()" class="w-full px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded hover:bg-gray-50 transition">
+                                        ファイルを選択...
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="reception-lane-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
+                <button id="reception-modal-close-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+                <h3 id="reception-modal-title" class="text-xl font-bold text-gray-800 mb-4"></h3>
+                
+                <div id="reception-modal-content">
+                    </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 mb-8 text-center border-t border-gray-200 pt-6">
+            <div class="text-gray-500 text-xs space-y-1 mb-4">
+                <p>&copy; 2025 LINEΩ Project</p>
+                <p>Created by <span class="font-medium text-gray-600">三ツ井 雅翔</span></p>
+                <p><a href="https://xpotato.net" class="hover:underline text-indigo-400">https://xpotato.net</a></p>
+            </div>
+
+            <div id="firestore-status" class="text-xs text-gray-400 font-mono">
+                Connecting to Realtime Database...
+            </div>
+        </footer>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>

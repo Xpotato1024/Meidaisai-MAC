@@ -1,0 +1,31 @@
+name: Validate Local Config
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate local config from example
+        run: |
+          cp .env.example .env
+          python3 scripts/generate_local_config.py
+
+      - name: Verify generated files
+        run: |
+          test -f public/js/env.js
+          test -f .firebaserc
