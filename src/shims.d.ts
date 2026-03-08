@@ -13,7 +13,13 @@ declare module "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" {
 declare module "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" {
     export function getAuth(app: any): any;
     export function setPersistence(...args: any[]): Promise<void>;
+    export const browserLocalPersistence: unknown;
     export const inMemoryPersistence: unknown;
+    export class GoogleAuthProvider {
+        addScope(scope: string): void;
+    }
+    export function signInWithPopup(auth: any, provider: any): Promise<any>;
+    export function signOut(auth: any): Promise<void>;
     export function signInAnonymously(auth: any): Promise<any>;
     export function signInWithCustomToken(auth: any, token: string): Promise<any>;
     export function onAuthStateChanged(auth: any, callback: (user: any) => void): () => void;
@@ -21,6 +27,7 @@ declare module "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" {
 
 declare module "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" {
     export function getFirestore(app: any): any;
+    export function documentId(): any;
     export function doc(...args: any[]): any;
     export function getDoc(...args: any[]): Promise<any>;
     export function setDoc(...args: any[]): Promise<void>;
@@ -29,6 +36,7 @@ declare module "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
     export function onSnapshot(...args: any[]): () => void;
     export function collection(...args: any[]): any;
     export function query(...args: any[]): any;
+    export function where(...args: any[]): any;
     export function getDocs(...args: any[]): Promise<any>;
     export function writeBatch(...args: any[]): any;
     export function serverTimestamp(): any;

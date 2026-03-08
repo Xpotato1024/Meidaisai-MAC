@@ -5,6 +5,13 @@
 もともと `public/js/main.js` に集約されていた処理を、責務ごとに分割して保守しやすくすることが目的です。  
 機能の見た目や操作感は大きく変えず、コードの境界だけを明確にしています。
 
+今回の機能リファクタでは、加えて次の方針を入れています。
+
+- Google ログイン + 承認制 role モデル
+- `staff` の購読範囲を担当部屋だけに絞る Firestore read 最適化
+- `requestAnimationFrame` を使った描画のまとめ更新
+- ステータスアイコンの SVG 化
+
 ## 編集起点
 
 - 実装を直す場所: `src/`
@@ -27,15 +34,16 @@
 
 ### `src/auth.ts`
 
-- 匿名認証または custom token 認証
-- 管理タブ用の簡易パスワード判定
-- 初期化タイミングの制御
+- Google ログイン
+- 自分自身の access request / access member の購読
+- 権限確定後の画面初期化制御
 
 ### `src/firestore.ts`
 
 - Firestore の購読処理
-- config / lanes / roomState / registry の読み取り
+- config / lanes / roomState / registry / access request / access member の読み取り
 - 購読結果を state へ反映し、描画を更新する
+- `staff` の場合は担当部屋だけを query する
 
 ### `src/db-sync.ts`
 
@@ -47,6 +55,7 @@
 - 受付画面の描画
 - レーン担当画面の描画
 - 管理設定画面の描画
+- 認証状態、承認待ち、role 別の UI 切り替え
 - サマリーバーやモーダルなど UI 表示の組み立て
 
 ### `src/events.ts`
@@ -59,6 +68,7 @@
 
 - Firestore への更新処理
 - レーン状態変更、受付状態変更、待機組数更新、管理設定保存
+- access request の承認、メンバー role 更新
 
 ### `src/default-config.ts`
 
@@ -73,6 +83,19 @@
 
 - Firebase SDK 初期化
 - `db` と `auth` の生成
+
+## Firestore 上の責務分離
+
+- `/artifacts/{appId}/public/data/**`
+  イベント運用データ。受付とスタッフが読む
+- `/artifacts/{appId}/private/accessRequests/**`
+  初回ログイン時の承認待ち
+- `/artifacts/{appId}/private/accessMembers/**`
+  承認済みメンバーと担当部屋
+- `/sys_registry/**`
+  イベント ID 一覧
+
+認可の本体は `firestore.rules` に置き、UI の表示制御は補助として扱います。
 
 ## コメント方針
 

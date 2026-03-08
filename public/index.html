@@ -116,6 +116,45 @@
             </span>
         </div>
 
+        <div class="mb-4 overflow-hidden rounded-2xl bg-slate-900 text-white shadow-lg">
+            <div class="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-300">Access Control</p>
+                    <h2 class="mt-1 text-lg font-bold">メンバー認証</h2>
+                    <p id="auth-status-text" class="mt-1 text-sm text-slate-300">Google アカウントでログインしてください。初回は承認待ちになります。</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span id="auth-role-badge" class="hidden"></span>
+                    <div class="min-w-[180px] text-right">
+                        <div id="auth-user-name" class="text-sm font-bold">未ログイン</div>
+                        <div id="auth-user-email" class="text-xs text-slate-300">アクセス権が必要です</div>
+                    </div>
+                    <button id="auth-sign-in-btn" class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow hover:bg-slate-100">
+                        <i class="fa-brands fa-google"></i> Googleでログイン
+                    </button>
+                    <button id="auth-sign-out-btn" class="hidden rounded-full border border-slate-600 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-slate-800">
+                        ログアウト
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="auth-login-card" class="mb-4 rounded-2xl border border-indigo-200 bg-white p-6 shadow-sm">
+            <h2 class="text-xl font-bold text-slate-900">最初にログインしてください</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                このアプリは Google ログイン後に管理者が role を付与する運用へ切り替えました。
+                初回ログイン時は承認待ちとして登録されます。
+            </p>
+        </div>
+
+        <div id="auth-pending-card" class="mb-4 hidden rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+            <h2 class="text-xl font-bold text-amber-900">承認待ち</h2>
+            <p id="auth-pending-message" class="mt-2 text-sm leading-6 text-amber-800">
+                ログインは完了しました。管理者の承認後に利用できます。
+            </p>
+        </div>
+
+        <div id="app-shell" class="hidden">
         <div class="mb-4 border-b border-gray-200 bg-white rounded-lg shadow-sm">
             <nav class="flex -mb-px px-4" id="tabs">
                 <button data-tab="reception" class="tab-button">
@@ -131,11 +170,6 @@
                     <i class="fa-solid fa-database"></i> DB管理
                 </button>
             </nav>
-        </div>
-
-        <div class="mb-4 border-b border-gray-200 bg-white rounded-lg shadow-sm">
-            <nav class="flex -mb-px px-4" id="tabs">
-               </nav>
         </div>
 
         <div id="room-summary-bar" class="mb-6 flex flex-wrap gap-2 px-1">
@@ -234,6 +268,29 @@
                             <button id="admin-add-pause-reason-btn" class="flex-shrink-0 whitespace-nowrap px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-600 text-sm font-medium">
                                 <i class="fa-solid fa-plus"></i> 理由追加
                             </button>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">メンバー権限管理</h3>
+                        <p class="text-sm text-gray-500 mb-4">Google ログイン済みメンバーの承認、role 付与、担当部屋設定を行います。</p>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                <h4 class="mb-3 text-sm font-bold text-amber-900">承認待ちリクエスト</h4>
+                                <div id="admin-access-request-list" class="space-y-3">
+                                    <p class="text-sm text-amber-700">承認待ちメンバーを読み込み中です...</p>
+                                </div>
+                            </div>
+
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <h4 class="mb-3 text-sm font-bold text-slate-900">登録済みメンバー</h4>
+                                <div id="admin-member-list" class="space-y-3">
+                                    <p class="text-sm text-slate-500">メンバー一覧を読み込み中です...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -355,6 +412,7 @@
                 </div>
             </div>
 
+        </div>
         </div>
 
         <div id="reception-lane-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">

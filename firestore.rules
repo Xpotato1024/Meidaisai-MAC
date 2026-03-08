@@ -1,0 +1,127 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function memberPath(appId, uid) {
+      return /databases/$(database)/documents/artifacts/$(appId)/private/accessMembers/$(uid);
+    }
+
+    function selfMember(appId) {
+      return get(memberPath(appId, request.auth.uid));
+    }
+
+    function isActiveMember(appId) {
+      return signedIn()
+        && exists(memberPath(appId, request.auth.uid))
+        && selfMember(appId).data.isActive == true;
+    }
+
+    function hasRole(appId, role) {
+      return isActiveMember(appId) && selfMember(appId).data.role == role;
+    }
+
+    function isAdmin(appId) {
+      return hasRole(appId, 'admin');
+    }
+
+    function isReception(appId) {
+      return hasRole(appId, 'reception');
+    }
+
+    function isStaff(appId) {
+      return hasRole(appId, 'staff');
+    }
+
+    function canReadOps(appId) {
+      return isAdmin(appId) || isReception(appId) || isStaff(appId);
+    }
+
+    function assignedToRoom(appId, roomId) {
+      return isStaff(appId) && selfMember(appId).data.assignedRoomIds.hasAny([roomId]);
+    }
+
+    function canManageRoom(appId, roomId) {
+      return isAdmin(appId) || assignedToRoom(appId, roomId);
+    }
+
+    function canOperateAssignedRoom(appId, roomId) {
+      return isAdmin(appId) || assignedToRoom(appId, roomId);
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).changedKeys();
+    }
+
+    match /artifacts/{appId}/public/data/config/{documentId} {
+      allow read: if canReadOps(appId);
+      allow create, update, delete: if isAdmin(appId);
+    }
+
+    match /artifacts/{appId}/public/data/lanes/{laneId} {
+      allow read: if canReadOps(appId)
+        && (isAdmin(appId) || isReception(appId) || assignedToRoom(appId, resource.data.roomId));
+
+      allow create, delete: if isAdmin(appId);
+
+      allow update: if isAdmin(appId)
+        || (
+          isReception(appId)
+          && changedKeys().hasOnly(['receptionStatus', 'selectedOptions', 'receptionNotes', 'updatedAt'])
+        )
+        || (
+          canOperateAssignedRoom(appId, resource.data.roomId)
+          && changedKeys().hasOnly(['status', 'pauseReasonId', 'staffName', 'updatedAt', 'selectedOptions', 'receptionNotes'])
+          && request.resource.data.receptionStatus == resource.data.receptionStatus
+        )
+        || (
+          canOperateAssignedRoom(appId, resource.data.roomId)
+          && changedKeys().hasOnly(['status', 'staffName', 'updatedAt', 'receptionStatus'])
+          && resource.data.receptionStatus == 'guiding'
+          && request.resource.data.receptionStatus == 'available'
+          && request.resource.data.status == 'occupied'
+        );
+    }
+
+    match /artifacts/{appId}/public/data/roomState/{roomId} {
+      allow read: if canReadOps(appId)
+        && (isAdmin(appId) || isReception(appId) || assignedToRoom(appId, roomId));
+      allow create, update, delete: if canManageRoom(appId, roomId);
+    }
+
+    match /artifacts/{appId}/private/accessMembers/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
+      allow list: if isAdmin(appId);
+      allow create, update, delete: if isAdmin(appId);
+    }
+
+    match /artifacts/{appId}/private/accessRequests/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
+      allow list: if isAdmin(appId);
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update: if isAdmin(appId)
+        || (
+          signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.status == resource.data.status
+          && changedKeys().hasOnly(['email', 'displayName', 'lastSeenAt', 'updatedAt'])
+        );
+
+      allow delete: if isAdmin(appId);
+    }
+
+    match /sys_registry/{appId} {
+      allow read: if signedIn();
+      allow write: if isAdmin(appId);
+    }
+  }
+}

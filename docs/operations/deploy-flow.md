@@ -6,11 +6,11 @@
 
 - GitHub repository variables は設定済み
 - `FIREBASE_SERVICE_ACCOUNT` は設定済み
-- GitHub Actions から Firebase Hosting へ deploy 可能
+- GitHub Actions から Firebase Hosting と Firestore Rules へ deploy 可能
 
 ## 目的
 
-Firebase Hosting の標準 deploy 経路を GitHub Actions に統一します。  
+Firebase Hosting と Firestore Rules の標準 deploy 経路を GitHub Actions に統一します。  
 ローカルや `code-server` からの手動 deploy は補助経路としてのみ扱います。
 
 ## 初回セットアップ
@@ -37,7 +37,6 @@ Firebase Hosting の標準 deploy 経路を GitHub Actions に統一します。
 登録する Variables:
 
 - `APP_ID`
-- `ADMIN_PASSWORD`
 - `FIREBASE_API_KEY`
 - `FIREBASE_AUTH_DOMAIN`
 - `FIREBASE_PROJECT_ID`
@@ -52,6 +51,8 @@ CLI 例:
 ```bash
 gh variable set -R Xpotato1024/Meidaisai-MAC -f .env
 ```
+
+`ADMIN_PASSWORD` は任意です。残す場合だけ Variables に追加してください。
 
 ### 3. GitHub Actions Secret
 
@@ -79,6 +80,33 @@ CLI 例:
 gh secret set FIREBASE_SERVICE_ACCOUNT -R Xpotato1024/Meidaisai-MAC < service-account.json
 ```
 
+### 4. Firebase Authentication
+
+Google ログインを使うため、Firebase Console で Authentication を有効化します。
+
+1. Firebase Console を開く
+2. `Authentication`
+3. `Sign-in method`
+4. `Google` を有効化する
+
+### 5. 初期管理者の bootstrap
+
+最初の `admin` だけは Firebase Console から手動登録します。  
+Firestore Console で `/artifacts/{appId}/private/accessMembers/{uid}` を作成し、以下を入れます。
+
+```json
+{
+  "uid": "ログイン済みユーザーの uid",
+  "email": "example@gmail.com",
+  "displayName": "表示名",
+  "role": "admin",
+  "isActive": true,
+  "assignedRoomIds": []
+}
+```
+
+初回管理者を入れた後は、アプリ内の「メンバー権限管理」から承認・更新を行います。
+
 ## 標準リリースフロー
 
 ### 開発時
@@ -103,7 +131,8 @@ preview deploy は fork ではない PR を対象にします。
 1. PR を `main` へ merge する
 2. `Validate Local Config` が `main` で実行される
 3. `Deploy Live to Firebase Hosting` が `main` で実行される
-4. Firebase Hosting の本番が更新される
+4. Firestore Rules / Indexes が更新される
+5. Firebase Hosting の本番が更新される
 
 ## rollback
 
@@ -125,6 +154,6 @@ preview deploy は fork ではない PR を対象にします。
 3. `.env` を確認する
 4. `python3 scripts/generate_local_config.py` を実行する
 5. `npm run build` を実行する
-6. `firebase deploy --only hosting --project <project-id>` を実行する
+6. `firebase deploy --only firestore:rules,firestore:indexes,hosting --project <project-id>` を実行する
 
 `code-server` を使う手動 deploy 案は [../roadmap.md](../roadmap.md) で別管理しています。

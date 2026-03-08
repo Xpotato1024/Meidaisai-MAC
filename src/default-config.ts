@@ -1,4 +1,5 @@
 import type { AppConfig } from "./types.js";
+import { STATUS_ICON_SVGS } from "./icons.js";
 
 // --- アプリケーション設定 ---
 export const APP_CONFIG: AppConfig = {
@@ -11,15 +12,15 @@ export const APP_CONFIG: AppConfig = {
     ],
     // レーン担当者が設定するステータス
     laneStatuses: [
-        { id: "available", name: "空き", colorClass: "status-available", icon: "🟢" },
-        { id: "occupied", name: "使用中", colorClass: "status-occupied", icon: "🔴" },
-        { id: "preparing", name: "準備中", colorClass: "status-preparing", icon: "🟡" },
-        { id: "paused", name: "休止中", colorClass: "status-paused", icon: "⏸️" }
+        { id: "available", name: "空き", colorClass: "status-available", icon: STATUS_ICON_SVGS.available },
+        { id: "occupied", name: "使用中", colorClass: "status-occupied", icon: STATUS_ICON_SVGS.occupied },
+        { id: "preparing", name: "準備中", colorClass: "status-preparing", icon: STATUS_ICON_SVGS.preparing },
+        { id: "paused", name: "休止中", colorClass: "status-paused", icon: STATUS_ICON_SVGS.paused }
     ],
     // 受付が設定するステータス
     receptionStatuses: [
-        { id: "available", name: "案内可", colorClass: "reception-available", icon: "✅" },
-        { id: "guiding", name: "案内中", colorClass: "reception-guiding", icon: "🔀" }
+        { id: "available", name: "案内可", colorClass: "reception-available", icon: STATUS_ICON_SVGS.receptionAvailable },
+        { id: "guiding", name: "案内中", colorClass: "reception-guiding", icon: STATUS_ICON_SVGS.guiding }
     ],
     // オプション設定
     options: [

@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       APP_ID: ${{ vars.APP_ID }}
-      ADMIN_PASSWORD: ${{ vars.ADMIN_PASSWORD }}
       FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
       FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
       FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -39,7 +38,6 @@ jobs:
           missing=()
           for key in \
             APP_ID \
-            ADMIN_PASSWORD \
             FIREBASE_API_KEY \
             FIREBASE_AUTH_DOMAIN \
             FIREBASE_PROJECT_ID \
@@ -71,9 +69,28 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Setup Node
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        if: steps.config.outputs.configured == 'true'
+        run: npm ci
+
       - name: Generate runtime config
         if: steps.config.outputs.configured == 'true'
         run: python3 scripts/generate_local_config.py --from-process-env
+
+      - name: TypeScript check
+        if: steps.config.outputs.configured == 'true'
+        run: npm run check
+
+      - name: Build frontend
+        if: steps.config.outputs.configured == 'true'
+        run: npm run build
 
       - name: Deploy preview
         if: steps.config.outputs.configured == 'true'
