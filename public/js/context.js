@@ -103,7 +103,7 @@ export function createAppContext() {
     const urlParams = new URLSearchParams(window.location.search);
     const currentAppId = urlParams.get("app_id") || APP_ID;
     const privateBase = `/artifacts/${currentAppId}/private/data`;
-    const globalAccessMembersCollectionPath = "/sys_access/globalMembers";
+    const globalAccessMembersCollectionPath = "sys_globalAccessMembers";
     const memberDirectoryCollectionPath = `${privateBase}/memberDirectory`;
     const accessMembersCollectionPath = `${privateBase}/accessMembers`;
     const accessRequestsCollectionPath = `${privateBase}/accessRequests`;
