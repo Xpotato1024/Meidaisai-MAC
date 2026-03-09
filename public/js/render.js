@@ -580,14 +580,12 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         <div class="wait-control-shell">
             <div class="wait-control-main">
                 <p class="pill-eyebrow">Room Operations</p>
-                <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">担当部屋オペレーション</h3>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">部屋選択と待機組数管理をこのカード内でまとめて行います。</p>
+                <h3 class="mt-2 text-[1.28rem] font-black tracking-tight text-slate-900 sm:text-[1.4rem]">担当部屋オペレーション</h3>
             </div>
             <div class="wait-control-grid">
                 <div class="wait-control-panel wait-control-room-slot" data-room-select-slot></div>
                 <div class="wait-control-panel wait-control-panel-counter">
                     <div class="wait-control-panel-title">待機組数</div>
-                    <div class="wait-control-panel-copy">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。</div>
                     <div class="wait-control-actions">
                         <button data-action="dec-wait" data-roomid="${selectedRoomId}"
                                 class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
@@ -613,7 +611,6 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         roomPicker.className = "wait-control-room";
         roomPicker.innerHTML = `
             <div class="wait-control-panel-title">担当する部屋</div>
-            <div class="wait-control-panel-copy">現在の担当部屋を切り替えます。</div>
         `;
         dom.staffRoomSelect.className = "wait-control-select";
         roomPicker.appendChild(dom.staffRoomSelect);
