@@ -4,6 +4,7 @@ import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
 import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
+import { flushWaitingGroupSync } from "./writes.js";
 function toTimestampMillis(value) {
     if (value && typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
         return value.toDate().getTime();
@@ -145,11 +146,19 @@ export function listenToRoomStateChanges(context) {
     state.unsubscribeRoomState = onSnapshot(snapshotQuery, (querySnapshot) => {
         console.log("Room state data updated...");
         state.currentRoomState = {};
+        const roomsReadyToResume = [];
         querySnapshot.forEach((roomStateDoc) => {
             const totalLanes = context.state.dynamicAppConfig.rooms.find((room) => room.id === roomStateDoc.id)?.lanes || 0;
             state.currentRoomState[roomStateDoc.id] = normalizeRoomStateData(roomStateDoc.data(), totalLanes);
+            if (Number(state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id] || 0) !== 0) {
+                delete state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id];
+                roomsReadyToResume.push(roomStateDoc.id);
+            }
         });
         scheduleRender(context);
+        roomsReadyToResume.forEach((roomId) => {
+            void flushWaitingGroupSync(context, roomId);
+        });
     }, (error) => {
         console.error("Room state listener error:", error);
         dom.firestoreStatus.textContent = "部屋待機情報の取得に失敗しました。";

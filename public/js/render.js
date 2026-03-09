@@ -117,8 +117,18 @@ function getReceptionRoomLaneVisuals(roomState, totalLanes) {
     }
     return visuals.slice(0, totalLanes);
 }
+function getPendingWaitingGroupDelta(context, roomId) {
+    const { state } = context;
+    return Number(state.waitingGroupQueuedDeltas[roomId] || 0)
+        + Number(state.waitingGroupInFlightDeltas[roomId] || 0)
+        + Number(state.waitingGroupAwaitingSnapshotDeltas[roomId] || 0);
+}
 function getRoomStateSnapshot(context, roomId, totalLanes) {
-    return normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
+    const roomState = normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
+    return {
+        ...roomState,
+        waitingGroups: Math.max(0, Number(roomState.waitingGroups || 0) + getPendingWaitingGroupDelta(context, roomId))
+    };
 }
 function setChevronToggleState(button, expanded) {
     button.setAttribute("aria-expanded", String(expanded));
@@ -708,8 +718,9 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
         return;
     }
-    const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
-    const currentWaitingGroups = currentState.waitingGroups || 0;
+    const selectedRoom = config.rooms.find((room) => room.id === selectedRoomId);
+    const currentState = getRoomStateSnapshot(context, selectedRoomId, selectedRoom?.lanes || 0);
+    const currentWaitingGroups = Number(currentState.waitingGroups || 0);
     const waitControlElement = document.createElement("div");
     waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `

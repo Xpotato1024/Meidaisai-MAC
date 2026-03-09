@@ -146,8 +146,23 @@ function getReceptionRoomLaneVisuals(roomState: ReturnType<typeof normalizeRoomS
     return visuals.slice(0, totalLanes);
 }
 
+function getPendingWaitingGroupDelta(context: AppContext, roomId: string): number {
+    const { state } = context;
+    return Number(state.waitingGroupQueuedDeltas[roomId] || 0)
+        + Number(state.waitingGroupInFlightDeltas[roomId] || 0)
+        + Number(state.waitingGroupAwaitingSnapshotDeltas[roomId] || 0);
+}
+
 function getRoomStateSnapshot(context: AppContext, roomId: string, totalLanes: number) {
-    return normalizeRoomStateData(context.state.currentRoomState[roomId] as Record<string, unknown> | undefined, totalLanes);
+    const roomState = normalizeRoomStateData(
+        context.state.currentRoomState[roomId] as Record<string, unknown> | undefined,
+        totalLanes
+    );
+
+    return {
+        ...roomState,
+        waitingGroups: Math.max(0, Number(roomState.waitingGroups || 0) + getPendingWaitingGroupDelta(context, roomId))
+    };
 }
 
 function setChevronToggleState(button: HTMLButtonElement, expanded: boolean): void {
@@ -801,8 +816,9 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         return;
     }
 
-    const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
-    const currentWaitingGroups = currentState.waitingGroups || 0;
+    const selectedRoom = config.rooms.find((room) => room.id === selectedRoomId);
+    const currentState = getRoomStateSnapshot(context, selectedRoomId, selectedRoom?.lanes || 0);
+    const currentWaitingGroups = Number(currentState.waitingGroups || 0);
 
     const waitControlElement = document.createElement("div");
     waitControlElement.className = "wait-control-card mb-6";
