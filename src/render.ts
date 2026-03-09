@@ -139,7 +139,7 @@ function getReceptionRoomLaneVisuals(roomState: ReturnType<typeof normalizeRoomS
         visuals.push({
             tileClass: "tile-paused",
             icon: STATUS_ICON_SVGS.paused,
-            label: "未反映"
+            label: "休止中"
         });
     }
 
@@ -210,10 +210,9 @@ function renderAuthShell(context: AppContext): void {
 
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
-    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isEventCardCollapsed);
-    dom.authAccountCard.classList.toggle("is-collapsed", state.isAccessCardCollapsed);
-    setChevronToggleState(dom.globalEventToggleBtn, !state.isEventCardCollapsed);
-    setChevronToggleState(dom.authAccountToggleBtn, !state.isAccessCardCollapsed);
+    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    dom.authAccountCard.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    setChevronToggleState(dom.statusBannerToggleBtn, !state.isStatusBannerCollapsed);
 
     if (member?.isActive) {
         dom.authStatusText.textContent = "";

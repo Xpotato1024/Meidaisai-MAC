@@ -359,13 +359,8 @@ export function setupEventListeners(context: AppContext): void {
         renderAllUI(context);
     });
 
-    dom.globalEventToggleBtn.addEventListener("click", () => {
-        state.isEventCardCollapsed = !state.isEventCardCollapsed;
-        renderAllUI(context);
-    });
-
-    dom.authAccountToggleBtn.addEventListener("click", () => {
-        state.isAccessCardCollapsed = !state.isAccessCardCollapsed;
+    dom.statusBannerToggleBtn.addEventListener("click", () => {
+        state.isStatusBannerCollapsed = !state.isStatusBannerCollapsed;
         renderAllUI(context);
     });
 

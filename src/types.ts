@@ -153,8 +153,7 @@ export interface DomRefs {
     tabs: HTMLElement;
     tabContents: HTMLElement;
     authAccountCard: HTMLElement;
-    globalEventToggleBtn: HTMLButtonElement;
-    authAccountToggleBtn: HTMLButtonElement;
+    statusBannerToggleBtn: HTMLButtonElement;
     receptionList: HTMLElement;
     staffRoomSelect: HTMLSelectElement;
     staffLaneDashboard: HTMLElement;
@@ -208,8 +207,7 @@ export interface AppState {
     renderScheduled: boolean;
     activeTab: TabId;
     isNavMenuOpen: boolean;
-    isEventCardCollapsed: boolean;
-    isAccessCardCollapsed: boolean;
+    isStatusBannerCollapsed: boolean;
     isSummaryCollapsed: boolean;
     currentLanesState: Record<string, LaneData>;
     currentRoomState: Record<string, RoomStateData>;

@@ -287,12 +287,8 @@ export function setupEventListeners(context) {
         state.isNavMenuOpen = !state.isNavMenuOpen;
         renderAllUI(context);
     });
-    dom.globalEventToggleBtn.addEventListener("click", () => {
-        state.isEventCardCollapsed = !state.isEventCardCollapsed;
-        renderAllUI(context);
-    });
-    dom.authAccountToggleBtn.addEventListener("click", () => {
-        state.isAccessCardCollapsed = !state.isAccessCardCollapsed;
+    dom.statusBannerToggleBtn.addEventListener("click", () => {
+        state.isStatusBannerCollapsed = !state.isStatusBannerCollapsed;
         renderAllUI(context);
     });
     dom.summaryToggleBtn.addEventListener("click", () => {

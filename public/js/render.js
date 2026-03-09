@@ -112,7 +112,7 @@ function getReceptionRoomLaneVisuals(roomState, totalLanes) {
         visuals.push({
             tileClass: "tile-paused",
             icon: STATUS_ICON_SVGS.paused,
-            label: "未反映"
+            label: "休止中"
         });
     }
     return visuals.slice(0, totalLanes);
@@ -168,10 +168,9 @@ function renderAuthShell(context) {
     dom.authStatusText.classList.remove("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
-    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isEventCardCollapsed);
-    dom.authAccountCard.classList.toggle("is-collapsed", state.isAccessCardCollapsed);
-    setChevronToggleState(dom.globalEventToggleBtn, !state.isEventCardCollapsed);
-    setChevronToggleState(dom.authAccountToggleBtn, !state.isAccessCardCollapsed);
+    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    dom.authAccountCard.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    setChevronToggleState(dom.statusBannerToggleBtn, !state.isStatusBannerCollapsed);
     if (member?.isActive) {
         dom.authStatusText.textContent = "";
         dom.authStatusText.classList.add("hidden");

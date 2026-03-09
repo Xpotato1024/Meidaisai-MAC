@@ -30,15 +30,17 @@
         </header>
 
         <div class="status-banner mt-5 overflow-hidden px-5 py-4 text-white md:px-6">
+            <div class="status-banner-toolbar">
+                <button id="status-banner-toggle-btn" class="card-collapse-toggle" type="button" aria-expanded="true" aria-label="認証情報を折り畳む">
+                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                        <path d="M12 8.2 17.5 14.8h-11L12 8.2Z" fill="currentColor" />
+                    </svg>
+                </button>
+            </div>
             <div class="auth-event-shell">
                 <div id="global-event-display" class="auth-event-card">
                     <div class="auth-card-header">
                         <p class="auth-card-label">Current Event</p>
-                        <button id="global-event-toggle-btn" class="card-collapse-toggle" type="button" aria-expanded="true" aria-label="Current Event を折り畳む">
-                            <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
-                                <path d="M12 8.2 17.5 14.8h-11L12 8.2Z" fill="currentColor" />
-                            </svg>
-                        </button>
                     </div>
                     <div class="auth-card-content">
                         <div id="global-event-name-text" class="auth-event-title">名称未設定イベント</div>
@@ -49,11 +51,6 @@
                 <div id="auth-account-card" class="auth-account-card">
                     <div class="auth-card-header">
                         <p class="auth-card-label">Member Access</p>
-                        <button id="auth-account-toggle-btn" class="card-collapse-toggle" type="button" aria-expanded="true" aria-label="Member Access を折り畳む">
-                            <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
-                                <path d="M12 8.2 17.5 14.8h-11L12 8.2Z" fill="currentColor" />
-                            </svg>
-                        </button>
                     </div>
                     <div class="auth-card-content">
                         <p id="auth-status-text" class="auth-status-copy">
@@ -100,15 +97,17 @@
         </div>
 
         <div id="app-shell" class="hidden">
-            <div class="app-surface mt-6 overflow-hidden">
+            <div class="app-surface mt-6">
                 <div class="tabs-menu-shell">
-                    <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs">
+                    <div class="tabs-menu-bar">
+                        <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
                         <span class="tabs-menu-labels">
                             <span class="tabs-menu-kicker">Navigation</span>
                             <span id="tabs-menu-label" class="tabs-menu-label">レーン担当</span>
                         </span>
-                        <i class="fa-solid fa-bars"></i>
-                    </button>
+                    </div>
                     <nav class="tab-shell hidden" id="tabs">
                         <button data-tab="reception" class="tab-button">
                             受付
