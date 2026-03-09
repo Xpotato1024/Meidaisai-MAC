@@ -1,8 +1,9 @@
 import { collection, doc, getDocs, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
+import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
-import { renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
+import { openReceptionRoomModal, renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
 import { approveAccessRequest, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -195,6 +196,8 @@ async function importBackup(context, file) {
                     lastUpdated: serverTimestamp()
                 }, { merge: true });
                 await batch.commit();
+                state.isDbMigrating = true;
+                await checkAndInitDatabase(context, state.localAdminConfig);
             }
             else {
                 // === B. 旧形式(設定のみ)復元 ===
@@ -398,6 +401,14 @@ export function setupEventListeners(context) {
             return;
         }
         const action = button.dataset.action;
+        if (action === "open-room-guiding") {
+            const roomId = button.dataset.roomid;
+            if (!roomId) {
+                return;
+            }
+            void openReceptionRoomModal(context, roomId);
+            return;
+        }
         if (action === "set-guiding") {
             const docId = button.dataset.docid;
             if (!docId) {
@@ -475,13 +486,11 @@ export function setupEventListeners(context) {
         if (!roomId) {
             return;
         }
-        const currentState = state.currentRoomState[roomId] || { waitingGroups: 0 };
-        const currentWaitingGroups = currentState.waitingGroups || 0;
         if (action === "inc-wait") {
-            void updateWaitingGroups(context, roomId, currentWaitingGroups + 1);
+            void updateWaitingGroups(context, roomId, 1);
         }
-        if (action === "dec-wait" && currentWaitingGroups > 0) {
-            void updateWaitingGroups(context, roomId, currentWaitingGroups - 1);
+        if (action === "dec-wait") {
+            void updateWaitingGroups(context, roomId, -1);
         }
     });
     dom.staffLaneDashboard.addEventListener("change", (event) => {

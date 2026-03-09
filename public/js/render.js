@@ -1,5 +1,7 @@
+import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
+import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
 function getAllLanes(context) {
     return Object.entries(context.state.currentLanesState).map(([docId, data]) => ({
@@ -55,6 +57,9 @@ function getRoomSummaryState(waiting, availableCount) {
         icon: UI_ICON_SVGS.full,
         label: "満室"
     };
+}
+function getRoomStateSnapshot(context, roomId, totalLanes) {
+    return normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
 }
 // --- UI描画 (Render) ---
 export function scheduleRender(context) {
@@ -255,7 +260,7 @@ function renderAccessManagement(context) {
  * (待機がある部屋は赤、空きがある部屋は緑、満室はグレーで表示)
  */
 function renderRoomSummaryBar(context) {
-    const { dom, state } = context;
+    const { dom } = context;
     const summaryBar = dom.roomSummaryBar;
     summaryBar.innerHTML = "";
     const visibleRooms = getVisibleRooms(context);
@@ -263,12 +268,10 @@ function renderRoomSummaryBar(context) {
         summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
         return;
     }
-    const allLanes = Object.values(state.currentLanesState);
     visibleRooms.forEach((room) => {
-        const roomState = state.currentRoomState[room.id] || { waitingGroups: 0 };
-        const waiting = roomState.waitingGroups || 0;
-        const roomLanes = allLanes.filter((lane) => lane.roomId === room.id);
-        const availableCount = roomLanes.filter((lane) => lane.status === "available").length;
+        const roomState = getRoomStateSnapshot(context, room.id, room.lanes);
+        const waiting = Number(roomState.waitingGroups || 0);
+        const availableCount = Number(roomState.availableLanes || 0);
         const summaryState = getRoomSummaryState(waiting, availableCount);
         const chip = document.createElement("div");
         chip.className = summaryState.chipClass;
@@ -339,125 +342,65 @@ function renderReceptionList(context) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
-    const allLanes = getAllLanes(context);
-    const clickable = hasRole(context, ["admin", "reception"]);
     getVisibleRooms(context).forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "room-dashboard-card";
-        const currentState = state.currentRoomState[room.id] || { waitingGroups: 0 };
-        const waitingGroups = currentState.waitingGroups || 0;
-        const headerElement = document.createElement("div");
-        headerElement.className = "room-dashboard-header";
+        const roomState = getRoomStateSnapshot(context, room.id, room.lanes);
+        const waitingGroups = Number(roomState.waitingGroups || 0);
+        const availableLanes = Number(roomState.availableLanes || 0);
+        const occupiedLanes = Number(roomState.occupiedLanes || 0);
+        const preparingLanes = Number(roomState.preparingLanes || 0);
+        const pausedLanes = Number(roomState.pausedLanes || 0);
+        const guidingLanes = Number(roomState.guidingLanes || 0);
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
-        headerElement.innerHTML = `
-            <div>
-                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Room</p>
-                <div class="mt-2 flex items-baseline gap-2">
-                    <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                    <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+        roomElement.innerHTML = `
+            <div class="room-dashboard-header">
+                <div>
+                    <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Room</p>
+                    <div class="mt-2 flex items-baseline gap-2">
+                        <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                        <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">待機</span>
+                    <div class="${waitBadgeClass} wait-badge-large">
+                        ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
+                    </div>
                 </div>
             </div>
-            <div class="flex flex-col items-end">
-                <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">待機</span>
-                <div class="${waitBadgeClass} wait-badge-large">
-                    ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
+            <div class="room-dashboard-summary">
+                <div class="room-dashboard-metrics">
+                    <span class="room-dashboard-metric room-dashboard-metric-positive">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
+                        <span>空き ${availableLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric room-dashboard-metric-guiding">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.guiding}</span>
+                        <span>案内中 ${guidingLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.occupied}</span>
+                        <span>使用中 ${occupiedLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.preparing}</span>
+                        <span>準備中 ${preparingLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.paused}</span>
+                        <span>休止中 ${pausedLanes}</span>
+                    </span>
                 </div>
+                <button
+                    data-action="open-room-guiding"
+                    data-roomid="${room.id}"
+                    class="reception-room-action ${availableLanes > 0 ? "reception-room-action-ready" : "reception-room-action-muted"}"
+                    ${availableLanes > 0 ? "" : "disabled"}>
+                    ${availableLanes > 0 ? "空きレーンを選択" : "空きなし"}
+                </button>
             </div>
         `;
-        roomElement.appendChild(headerElement);
-        const lanesContainer = document.createElement("div");
-        lanesContainer.className = "room-dashboard-grid";
-        const roomLanes = allLanes
-            .filter((lane) => lane.data.roomId === room.id)
-            .sort((left, right) => left.data.laneNum - right.data.laneNum);
-        if (roomLanes.length === 0) {
-            lanesContainer.innerHTML = '<p class="col-span-full py-8 text-center text-sm text-slate-400">レーン未設定</p>';
-        }
-        roomLanes.forEach((lane) => {
-            const docId = lane.docId;
-            const laneData = lane.data;
-            const laneName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
-            let tileClass = "";
-            let statusIcon = "";
-            let statusText = "";
-            let isClickable = false;
-            let additionalInfo = "";
-            if (laneData.receptionStatus === "guiding") {
-                tileClass = "tile-guiding";
-                statusIcon = STATUS_ICON_SVGS.guiding;
-                statusText = "案内中";
-            }
-            else {
-                switch (laneData.status) {
-                    case "available":
-                        tileClass = "tile-available";
-                        statusIcon = STATUS_ICON_SVGS.available;
-                        statusText = "空き";
-                        isClickable = clickable;
-                        break;
-                    case "occupied":
-                        tileClass = "tile-occupied";
-                        statusIcon = STATUS_ICON_SVGS.occupied;
-                        statusText = "使用中";
-                        break;
-                    case "preparing":
-                        tileClass = "tile-preparing";
-                        statusIcon = STATUS_ICON_SVGS.preparing;
-                        statusText = "準備中";
-                        break;
-                    case "paused":
-                        tileClass = "tile-paused";
-                        statusIcon = STATUS_ICON_SVGS.paused;
-                        statusText = "休止中";
-                        if (laneData.pauseReasonId) {
-                            const reason = config.pauseReasons.find((item) => item.id === laneData.pauseReasonId);
-                            if (reason) {
-                                additionalInfo = `<span class="lane-tile-note">${escapeHtml(reason.name)}</span>`;
-                            }
-                        }
-                        break;
-                    default:
-                        tileClass = "tile-paused";
-                        statusIcon = STATUS_ICON_SVGS.paused;
-                        statusText = "不明";
-                }
-            }
-            const laneTile = document.createElement("div");
-            laneTile.className = `lane-tile ${tileClass}${isClickable ? " lane-tile-clickable" : ""}`;
-            let innerContent = `
-                <div class="lane-tile-number">${laneName}</div>
-                <div class="lane-tile-status">
-                    <span class="inline-flex">${statusIcon}</span>
-                    <span>${statusText}</span>
-                </div>
-                ${additionalInfo}
-            `;
-            if (laneData.selectedOptions?.length) {
-                innerContent += `
-                    <div class="lane-tile-badge lane-tile-badge-options">
-                        <span class="inline-flex">${UI_ICON_SVGS.options}</span>
-                        <span>Op</span>
-                    </div>
-                `;
-            }
-            if (laneData.receptionNotes) {
-                innerContent += `
-                    <div class="lane-tile-badge lane-tile-badge-note">
-                        <span class="inline-flex">${UI_ICON_SVGS.note}</span>
-                        <span>Memo</span>
-                    </div>
-                `;
-            }
-            laneTile.innerHTML = innerContent;
-            if (isClickable) {
-                laneTile.onclick = (event) => {
-                    event.stopPropagation();
-                    void openReceptionLaneModal(context, docId);
-                };
-            }
-            lanesContainer.appendChild(laneTile);
-        });
-        roomElement.appendChild(lanesContainer);
         dom.receptionList.appendChild(roomElement);
     });
 }
@@ -465,72 +408,160 @@ function renderReceptionList(context) {
  * ★新規追加: 受付画面でレーンタイルをクリックした際に表示されるモーダル
  * (レーン担当者画面のmodalと似た構造ですが、受付用は操作に特化させます)
  */
-export async function openReceptionLaneModal(context, laneDocId) {
+export async function openReceptionRoomModal(context, roomId) {
     if (!hasRole(context, ["admin", "reception"])) {
         alert("受付権限を持つメンバーのみ操作できます。");
         return;
     }
-    const { dom, state } = context;
-    const laneData = state.currentLanesState[laneDocId];
-    if (!laneData) {
-        alert("レーン情報が見つかりません。");
+    const { db, dom, paths, state } = context;
+    const room = state.dynamicAppConfig.rooms.find((item) => item.id === roomId);
+    if (!room) {
+        alert("部屋情報が見つかりません。");
         return;
     }
     const config = state.dynamicAppConfig;
-    const laneName = laneData.customName || `レーン ${laneData.laneNum}`;
-    dom.receptionModalTitle.textContent = `${laneName}へ案内`;
-    dom.receptionModalContent.innerHTML = `
-        <div class="mb-5 rounded-2xl bg-slate-50/80 p-4">
-            <h4 class="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-500">オプション選択</h4>
-            <div id="reception-modal-options" class="max-h-40 overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/80 p-3">
-                ${config.options.length > 0 ?
-        config.options.map((option) => `
-                        <label class="mb-2 flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2 text-sm text-slate-800 hover:bg-slate-50">
-                            <input type="checkbox" class="reception-opt-chk accent-blue-600" value="${escapeHtml(option.name)}"
-                                ${laneData.selectedOptions && laneData.selectedOptions.includes(option.name) ? "checked" : ""}>
-                            <span class="truncate">${escapeHtml(option.name)}</span>
-                        </label>
-                    `).join("") :
-        '<p class="text-xs text-slate-400">オプションは設定されていません。</p>'}
-            </div>
-        </div>
-
-        <div class="mb-6 rounded-2xl bg-amber-50/70 p-4">
-            <label for="reception-modal-notes" class="mb-2 block text-sm font-bold text-amber-900">備考 (任意)</label>
-            <input type="text" id="reception-modal-notes" 
-                   class="w-full px-4 py-3 text-sm" 
-                   placeholder="例: 人数、特徴など (任意)"
-                   value="${escapeHtml(laneData.receptionNotes || "")}">
-        </div>
-
-        <button id="reception-modal-start-btn" 
-                class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20">
-            <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする
-        </button>
-    `;
+    const laneSnapshot = await getDocs(query(collection(db, paths.lanesCollectionPath), where("roomId", "==", roomId)));
+    const roomLanes = laneSnapshot.docs
+        .map((laneDoc) => ({
+        docId: laneDoc.id,
+        data: laneDoc.data()
+    }))
+        .sort((left, right) => left.data.laneNum - right.data.laneNum);
+    let selectedLaneId = roomLanes.find((lane) => getEffectiveLaneState(lane.data) === "available")?.docId || "";
+    let selectedOptions = [];
+    let receptionNotes = "";
+    const hydrateDraftFromLane = () => {
+        const selectedLane = roomLanes.find((lane) => lane.docId === selectedLaneId);
+        selectedOptions = selectedLane?.data.selectedOptions ? [...selectedLane.data.selectedOptions] : [];
+        receptionNotes = selectedLane?.data.receptionNotes || "";
+    };
+    hydrateDraftFromLane();
+    dom.receptionModalTitle.textContent = `${room.name} のレーン選択`;
+    const closeModal = () => {
+        dom.receptionLaneModal.classList.add("hidden");
+    };
     dom.receptionLaneModal.classList.remove("hidden");
-    dom.receptionModalCloseBtn.onclick = () => dom.receptionLaneModal.classList.add("hidden");
+    dom.receptionModalCloseBtn.onclick = closeModal;
     dom.receptionLaneModal.onclick = (event) => {
         if (event.target === dom.receptionLaneModal) {
-            dom.receptionLaneModal.classList.add("hidden");
+            closeModal();
         }
     };
-    const startButton = document.getElementById("reception-modal-start-btn");
-    const notesInput = document.getElementById("reception-modal-notes");
-    if (!startButton || !notesInput) {
-        return;
-    }
-    startButton.onclick = async () => {
-        startButton.disabled = true;
-        startButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 処理中...';
-        const selectedOptions = Array.from(document.querySelectorAll(".reception-opt-chk:checked"))
-            .map((checkbox) => checkbox.value);
-        const receptionNotes = notesInput.value.trim() || null;
-        await updateReceptionStatus(context, laneDocId, "guiding", null, selectedOptions, receptionNotes);
-        dom.receptionLaneModal.classList.add("hidden");
-        startButton.disabled = false;
-        startButton.innerHTML = `<span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする`;
+    const renderModalContent = () => {
+        dom.receptionModalContent.innerHTML = `
+            <div class="reception-modal-grid">
+                <div class="reception-modal-section">
+                    <h4 class="reception-modal-section-title">案内するレーン</h4>
+                    <div class="reception-modal-lane-grid">
+                        ${roomLanes.map((lane) => {
+            const laneName = escapeHtml(lane.data.customName || `レーン ${lane.data.laneNum}`);
+            const effectiveState = getEffectiveLaneState(lane.data);
+            const stateLabel = effectiveState === "guiding"
+                ? "案内中"
+                : effectiveState === "available"
+                    ? "空き"
+                    : effectiveState === "occupied"
+                        ? "使用中"
+                        : effectiveState === "preparing"
+                            ? "準備中"
+                            : "休止中";
+            const stateIcon = effectiveState === "guiding"
+                ? STATUS_ICON_SVGS.guiding
+                : effectiveState === "available"
+                    ? STATUS_ICON_SVGS.available
+                    : effectiveState === "occupied"
+                        ? STATUS_ICON_SVGS.occupied
+                        : effectiveState === "preparing"
+                            ? STATUS_ICON_SVGS.preparing
+                            : STATUS_ICON_SVGS.paused;
+            const isSelectable = effectiveState === "available";
+            const isSelected = selectedLaneId === lane.docId;
+            return `
+                                <button
+                                    type="button"
+                                    data-reception-select-lane="${lane.docId}"
+                                    class="reception-modal-lane-card reception-modal-lane-card-${effectiveState}${isSelected ? " is-selected" : ""}"
+                                    ${isSelectable ? "" : "disabled"}>
+                                    <span class="reception-modal-lane-name">${laneName}</span>
+                                    <span class="reception-modal-lane-status">
+                                        <span class="inline-flex">${stateIcon}</span>
+                                        <span>${stateLabel}</span>
+                                    </span>
+                                </button>
+                            `;
+        }).join("")}
+                    </div>
+                </div>
+
+                <div class="reception-modal-section">
+                    <h4 class="reception-modal-section-title">オプション選択</h4>
+                    <div class="reception-modal-options">
+                        ${config.options.length > 0
+            ? config.options.map((option) => `
+                                <label class="reception-modal-option-row">
+                                    <input
+                                        type="checkbox"
+                                        class="reception-opt-chk accent-blue-600"
+                                        value="${escapeHtml(option.name)}"
+                                        ${selectedOptions.includes(option.name) ? "checked" : ""}>
+                                    <span class="truncate">${escapeHtml(option.name)}</span>
+                                </label>
+                            `).join("")
+            : '<p class="text-xs text-slate-400">オプションは設定されていません。</p>'}
+                    </div>
+                </div>
+            </div>
+
+            <div class="reception-modal-section">
+                <label for="reception-modal-notes" class="reception-modal-section-title">備考 (任意)</label>
+                <input
+                    type="text"
+                    id="reception-modal-notes"
+                    class="w-full px-4 py-3 text-sm"
+                    placeholder="例: 人数、特徴など"
+                    value="${escapeHtml(receptionNotes)}">
+            </div>
+
+            <button
+                id="reception-modal-start-btn"
+                class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                ${selectedLaneId ? "" : "disabled"}>
+                <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする
+            </button>
+        `;
+        dom.receptionModalContent.querySelectorAll("[data-reception-select-lane]").forEach((button) => {
+            button.onclick = () => {
+                selectedLaneId = button.dataset.receptionSelectLane || "";
+                hydrateDraftFromLane();
+                renderModalContent();
+            };
+        });
+        dom.receptionModalContent.querySelectorAll(".reception-opt-chk").forEach((checkbox) => {
+            checkbox.onchange = () => {
+                selectedOptions = Array.from(dom.receptionModalContent.querySelectorAll(".reception-opt-chk:checked"))
+                    .map((item) => item.value);
+            };
+        });
+        const notesInput = dom.receptionModalContent.querySelector("#reception-modal-notes");
+        if (notesInput) {
+            notesInput.oninput = () => {
+                receptionNotes = notesInput.value;
+            };
+        }
+        const startButton = dom.receptionModalContent.querySelector("#reception-modal-start-btn");
+        if (startButton) {
+            startButton.onclick = async () => {
+                if (!selectedLaneId) {
+                    return;
+                }
+                startButton.disabled = true;
+                startButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 処理中...';
+                await updateReceptionStatus(context, selectedLaneId, "guiding", null, selectedOptions, receptionNotes.trim() || null);
+                closeModal();
+            };
+        }
     };
+    renderModalContent();
 }
 /**
  * レーン担当用ビュー (部屋選択) を描画

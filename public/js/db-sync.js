@@ -1,4 +1,5 @@
 import { collection, doc, getDoc, getDocs, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { summarizeRoomState } from "./room-state.js";
 /**
  * データベースの初期化とマイグレーション
  */
@@ -53,6 +54,8 @@ export async function checkAndInitDatabase(context, config) {
                         updates.receptionNotes = null;
                     if (typeof data.pauseReasonId === "undefined")
                         updates.pauseReasonId = null;
+                    if (typeof data.revision !== "number")
+                        updates.revision = 0;
                     if (Object.keys(updates).length > 0) {
                         batch.update(docRef, updates);
                         operationsCount += 1;
@@ -73,6 +76,7 @@ export async function checkAndInitDatabase(context, config) {
                         customName: null,
                         receptionNotes: null,
                         pauseReasonId: null,
+                        revision: 0,
                         updatedAt: serverTimestamp()
                     });
                     operationsCount += 1;
@@ -109,20 +113,33 @@ export async function checkAndInitDatabase(context, config) {
         const roomStateCollectionRef = collection(db, paths.roomStateCollectionPath);
         const currentRoomStateSnapshot = await getDocs(roomStateCollectionRef);
         const existingRoomStateIds = new Set(currentRoomStateSnapshot.docs.map((roomStateDoc) => roomStateDoc.id));
+        const waitingGroupsMap = new Map();
+        currentRoomStateSnapshot.forEach((roomStateDoc) => {
+            waitingGroupsMap.set(roomStateDoc.id, Number(roomStateDoc.data().waitingGroups || 0));
+        });
         const roomStateBatch = writeBatch(db);
         let roomStateOps = 0;
-        for (const room of config.rooms) {
-            if (!existingRoomStateIds.has(room.id)) {
-                const newRoomStateRef = doc(db, paths.roomStateCollectionPath, room.id);
-                roomStateBatch.set(newRoomStateRef, {
-                    waitingGroups: 0,
-                    updatedAt: serverTimestamp()
-                });
-                roomStateOps += 1;
+        const latestLanesSnapshot = await getDocs(collection(db, paths.lanesCollectionPath));
+        const lanesByRoomId = new Map();
+        latestLanesSnapshot.forEach((laneDoc) => {
+            const data = laneDoc.data();
+            if (!lanesByRoomId.has(data.roomId)) {
+                lanesByRoomId.set(data.roomId, []);
             }
+            lanesByRoomId.get(data.roomId)?.push(data);
+        });
+        for (const room of config.rooms) {
+            const roomStateRef = doc(db, paths.roomStateCollectionPath, room.id);
+            const summary = summarizeRoomState((lanesByRoomId.get(room.id) || []), room.lanes, waitingGroupsMap.get(room.id) || 0);
+            roomStateBatch.set(roomStateRef, {
+                ...summary,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            roomStateOps += 1;
+            existingRoomStateIds.delete(room.id);
         }
         currentRoomStateSnapshot.forEach((roomStateDoc) => {
-            if (!configRoomIds.has(roomStateDoc.id)) {
+            if (existingRoomStateIds.has(roomStateDoc.id) && !configRoomIds.has(roomStateDoc.id)) {
                 roomStateBatch.delete(roomStateDoc.ref);
                 roomStateOps += 1;
             }

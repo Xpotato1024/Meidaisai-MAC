@@ -11,6 +11,7 @@ import {
 import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
+import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneStatusConfig, NamedOption, ReceptionStatusConfig } from "./types.js";
 
@@ -90,7 +91,11 @@ export function configureDataSubscriptions(context: AppContext): void {
 
     listenToConfigChanges(context);
     listenToRoomStateChanges(context);
-    listenToLaneChanges(context);
+    if (hasRole(context, ["admin", "staff"])) {
+        listenToLaneChanges(context);
+    } else {
+        context.state.currentLanesState = {};
+    }
 
     if (hasRole(context, ["admin"])) {
         listenToAccessRequestsChanges(context);
@@ -182,7 +187,8 @@ export function listenToRoomStateChanges(context: AppContext): void {
             console.log("Room state data updated...");
             state.currentRoomState = {};
             querySnapshot.forEach((roomStateDoc: any) => {
-                state.currentRoomState[roomStateDoc.id] = roomStateDoc.data();
+                const totalLanes = context.state.dynamicAppConfig.rooms.find((room) => room.id === roomStateDoc.id)?.lanes || 0;
+                state.currentRoomState[roomStateDoc.id] = normalizeRoomStateData(roomStateDoc.data(), totalLanes);
             });
 
             scheduleRender(context);
