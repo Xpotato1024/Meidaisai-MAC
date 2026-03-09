@@ -171,10 +171,15 @@
         box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
     }
 
-    .status-banner-toolbar {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 0.85rem;
+    .status-banner-inner {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.9rem;
+        align-items: start;
+    }
+
+    .status-banner-toggle {
+        margin-top: 0.2rem;
     }
 
     .auth-event-shell {
@@ -1082,8 +1087,14 @@
     .summary-panel-header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 0.8rem;
+    }
+
+    .summary-panel-title-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
     }
 
     .summary-collapse-toggle {
@@ -1379,6 +1390,15 @@
 }
 
 @media (max-width: 767px) {
+    .status-banner-inner {
+        grid-template-columns: 1fr;
+        gap: 0.7rem;
+    }
+
+    .status-banner-toggle {
+        margin-top: 0;
+    }
+
     .auth-event-card,
     .auth-account-card {
         min-height: 0;
