@@ -32,35 +32,47 @@
         <div class="status-banner mt-5 overflow-hidden px-5 py-4 text-white md:px-6">
             <div class="auth-event-shell">
                 <div id="global-event-display" class="auth-event-card">
-                    <p class="auth-card-label">Current Event</p>
-                    <div id="global-event-name-text" class="auth-event-title">名称未設定イベント</div>
-                    <div id="global-appid-text" class="auth-event-meta">ID: --</div>
+                    <div class="auth-card-header">
+                        <p class="auth-card-label">Current Event</p>
+                        <button id="global-event-toggle-btn" class="card-collapse-toggle" type="button" aria-expanded="true" aria-label="Current Event を折り畳む">
+                            <i class="fa-solid fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="auth-card-content">
+                        <div id="global-event-name-text" class="auth-event-title">名称未設定イベント</div>
+                        <div id="global-appid-text" class="auth-event-meta">ID: --</div>
+                    </div>
                 </div>
 
-                <div class="auth-account-card">
-                    <div>
+                <div id="auth-account-card" class="auth-account-card">
+                    <div class="auth-card-header">
                         <p class="auth-card-label">Member Access</p>
+                        <button id="auth-account-toggle-btn" class="card-collapse-toggle" type="button" aria-expanded="true" aria-label="Member Access を折り畳む">
+                            <i class="fa-solid fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div class="auth-card-content">
                         <p id="auth-status-text" class="auth-status-copy">
                             Google アカウントでログインしてください。初回は承認待ちになります。
                         </p>
-                    </div>
 
-                    <div class="auth-account-main">
-                        <span id="auth-role-badge" class="hidden"></span>
-                        <div class="min-w-[180px] text-left md:text-right">
-                            <div id="auth-user-name" class="text-sm font-bold">未ログイン</div>
-                            <div id="auth-user-email" class="text-xs text-slate-300">アクセス権が必要です</div>
+                        <div class="auth-account-main">
+                            <span id="auth-role-badge" class="hidden"></span>
+                            <div class="min-w-[180px] text-left md:text-right">
+                                <div id="auth-user-name" class="text-sm font-bold">未ログイン</div>
+                                <div id="auth-user-email" class="text-xs text-slate-300">アクセス権が必要です</div>
+                            </div>
+                            <button id="auth-sign-in-btn" class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-lg shadow-slate-950/10 hover:bg-slate-100">
+                                <i class="fa-brands fa-google"></i> Googleでログイン
+                            </button>
+                            <button id="auth-sign-out-btn" class="hidden rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-white/10">
+                                ログアウト
+                            </button>
                         </div>
-                        <button id="auth-sign-in-btn" class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-lg shadow-slate-950/10 hover:bg-slate-100">
-                            <i class="fa-brands fa-google"></i> Googleでログイン
-                        </button>
-                        <button id="auth-sign-out-btn" class="hidden rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-white/10">
-                            ログアウト
-                        </button>
-                    </div>
 
-                    <div id="firestore-status" class="auth-runtime-status">
-                        Connecting to Realtime Database...
+                        <div id="firestore-status" class="auth-runtime-status">
+                            Connecting to Realtime Database...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -85,23 +97,42 @@
 
         <div id="app-shell" class="hidden">
             <div class="app-surface mt-6 overflow-hidden">
-                <nav class="tab-shell" id="tabs">
-                    <button data-tab="reception" class="tab-button">
-                        受付
+                <div class="tabs-menu-shell">
+                    <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs">
+                        <span class="tabs-menu-labels">
+                            <span class="tabs-menu-kicker">Navigation</span>
+                            <span id="tabs-menu-label" class="tabs-menu-label">レーン担当</span>
+                        </span>
+                        <i class="fa-solid fa-bars"></i>
                     </button>
-                    <button data-tab="staff" class="tab-button active">
-                        レーン担当
-                    </button>
-                    <button data-tab="admin" class="tab-button">
-                        管理設定
-                    </button>
-                    <button data-tab="database" class="tab-button">
-                        DB管理
-                    </button>
-                </nav>
+                    <nav class="tab-shell hidden" id="tabs">
+                        <button data-tab="reception" class="tab-button">
+                            受付
+                        </button>
+                        <button data-tab="staff" class="tab-button active">
+                            レーン担当
+                        </button>
+                        <button data-tab="admin" class="tab-button">
+                            管理設定
+                        </button>
+                        <button data-tab="database" class="tab-button">
+                            DB管理
+                        </button>
+                    </nav>
+                </div>
             </div>
 
-            <div id="room-summary-bar" class="summary-strip mt-5"></div>
+            <section id="summary-section" class="summary-panel mt-5">
+                <div class="summary-panel-header">
+                    <div>
+                        <p class="pill-eyebrow">Room Summary</p>
+                    </div>
+                    <button id="summary-toggle-btn" class="card-collapse-toggle summary-collapse-toggle" type="button" aria-expanded="true" aria-label="サマリーを折り畳む">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </button>
+                </div>
+                <div id="room-summary-bar" class="summary-strip mt-4"></div>
+            </section>
 
             <div id="tab-content" class="mt-7">
                 <div id="tab-reception" class="tab-pane hidden">

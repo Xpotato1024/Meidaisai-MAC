@@ -3,6 +3,12 @@ import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprove
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
+const TAB_LABELS = {
+    reception: "受付",
+    staff: "レーン担当",
+    admin: "管理設定",
+    database: "DB管理"
+};
 function getAllLanes(context) {
     return Object.entries(context.state.currentLanesState).map(([docId, data]) => ({
         docId,
@@ -61,6 +67,20 @@ function getRoomSummaryState(waiting, availableCount) {
 function getRoomStateSnapshot(context, roomId, totalLanes) {
     return normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
 }
+function setChevronToggleState(button, expanded) {
+    button.setAttribute("aria-expanded", String(expanded));
+    const icon = button.querySelector("i");
+    if (icon) {
+        icon.className = `fa-solid fa-chevron-${expanded ? "up" : "down"}`;
+    }
+}
+function setMenuToggleState(button, expanded) {
+    button.setAttribute("aria-expanded", String(expanded));
+    const icon = button.querySelector("i");
+    if (icon) {
+        icon.className = `fa-solid fa-${expanded ? "xmark" : "bars"}`;
+    }
+}
 // --- UI描画 (Render) ---
 export function scheduleRender(context) {
     if (context.state.renderScheduled) {
@@ -98,6 +118,10 @@ function renderAuthShell(context) {
     dom.authStatusText.classList.remove("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
+    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isEventCardCollapsed);
+    dom.authAccountCard.classList.toggle("is-collapsed", state.isAccessCardCollapsed);
+    setChevronToggleState(dom.globalEventToggleBtn, !state.isEventCardCollapsed);
+    setChevronToggleState(dom.authAccountToggleBtn, !state.isAccessCardCollapsed);
     if (member?.isActive) {
         dom.authStatusText.textContent = "";
         dom.authStatusText.classList.add("hidden");
@@ -155,6 +179,9 @@ function renderTabVisibility(context) {
     if (!canAccessTab(context, state.activeTab)) {
         state.activeTab = getDefaultTab(context);
     }
+    dom.tabsMenuLabel.textContent = TAB_LABELS[state.activeTab];
+    dom.tabs.classList.toggle("hidden", !state.isNavMenuOpen);
+    setMenuToggleState(dom.tabsMenuToggle, state.isNavMenuOpen);
     visibleTabs.forEach((button) => {
         const tabId = button.dataset.tab;
         if (!tabId) {
@@ -263,6 +290,9 @@ function renderRoomSummaryBar(context) {
     const { dom } = context;
     const summaryBar = dom.roomSummaryBar;
     summaryBar.innerHTML = "";
+    dom.summarySection.classList.toggle("is-collapsed", context.state.isSummaryCollapsed);
+    summaryBar.classList.toggle("summary-strip-compact", context.state.isSummaryCollapsed);
+    setChevronToggleState(dom.summaryToggleBtn, !context.state.isSummaryCollapsed);
     const visibleRooms = getVisibleRooms(context);
     if (visibleRooms.length === 0) {
         summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
@@ -274,21 +304,36 @@ function renderRoomSummaryBar(context) {
         const availableCount = Number(roomState.availableLanes || 0);
         const summaryState = getRoomSummaryState(waiting, availableCount);
         const chip = document.createElement("div");
-        chip.className = summaryState.chipClass;
-        chip.innerHTML = `
-            <div class="summary-chip-main">
-                <p class="summary-chip-room">${escapeHtml(room.name)}</p>
-                <div class="summary-chip-metrics">
-                    <span class="summary-chip-metric">空き ${availableCount}</span>
-                    <span class="summary-chip-metric">待機 ${waiting}</span>
-                    <span class="summary-chip-metric">全 ${room.lanes}</span>
+        if (context.state.isSummaryCollapsed) {
+            const compactTone = waiting > 0
+                ? "summary-chip-mini-alert"
+                : availableCount > 0
+                    ? "summary-chip-mini-positive"
+                    : "summary-chip-mini-neutral";
+            chip.className = `summary-chip-mini ${compactTone}`;
+            chip.innerHTML = `
+                <span class="summary-chip-mini-icon inline-flex">${summaryState.icon}</span>
+                <span class="summary-chip-mini-room">${escapeHtml(room.name)}</span>
+                <span class="summary-chip-mini-state">${summaryState.label}</span>
+            `;
+        }
+        else {
+            chip.className = summaryState.chipClass;
+            chip.innerHTML = `
+                <div class="summary-chip-main">
+                    <p class="summary-chip-room">${escapeHtml(room.name)}</p>
+                    <div class="summary-chip-metrics">
+                        <span class="summary-chip-metric">空き ${availableCount}</span>
+                        <span class="summary-chip-metric">待機 ${waiting}</span>
+                        <span class="summary-chip-metric">全 ${room.lanes}</span>
+                    </div>
                 </div>
-            </div>
-            <span class="summary-chip-state">
-                <span class="inline-flex">${summaryState.icon}</span>
-                <span>${summaryState.label}</span>
-            </span>
-        `;
+                <span class="summary-chip-state">
+                    <span class="inline-flex">${summaryState.icon}</span>
+                    <span>${summaryState.label}</span>
+                </span>
+            `;
+        }
         chip.onclick = () => {
             if (!canAccessTab(context, "reception")) {
                 return;
