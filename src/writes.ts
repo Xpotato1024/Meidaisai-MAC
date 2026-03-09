@@ -5,7 +5,7 @@ import {
     updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { canManageRoom, hasRole } from "./access.js";
+import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import type { AppContext, RoleId } from "./types.js";
 
@@ -13,7 +13,7 @@ import type { AppContext, RoleId } from "./types.js";
  * レーン担当者がレーンの物理ステータスを更新
  */
 export async function updateLaneStatus(context: AppContext, docId: string, newStatus: string): Promise<void> {
-    const { db, dom, paths } = context;
+    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -23,14 +23,11 @@ export async function updateLaneStatus(context: AppContext, docId: string, newSt
         return;
     }
 
-    const staffName = dom.staffNameInput.value.trim() || null;
+    const staffName = getActorDisplayName(context);
     if (!staffName) {
-        console.warn("担当者名を入力してください。");
-        dom.staffNameInput.focus();
-        dom.staffNameInput.classList.add("border-red-500", "ring-red-500");
+        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
         return;
     }
-    dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
 
     if (currentLane.status === newStatus && currentLane.staffName === staffName) {
         return;
@@ -130,7 +127,7 @@ export async function updateReceptionStatus(
 }
 
 export async function updateLanePauseReason(context: AppContext, docId: string, reasonId: string): Promise<void> {
-    const { db, dom, paths } = context;
+    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -140,14 +137,11 @@ export async function updateLanePauseReason(context: AppContext, docId: string, 
         return;
     }
 
-    const staffName = dom.staffNameInput.value.trim() || null;
+    const staffName = getActorDisplayName(context);
     if (!staffName) {
-        console.warn("担当者名を入力してください。");
-        dom.staffNameInput.focus();
-        dom.staffNameInput.classList.add("border-red-500", "ring-red-500");
+        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
         return;
     }
-    dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
 
     if ((currentLane.pauseReasonId || "") === (reasonId || "") && currentLane.staffName === staffName) {
         return;

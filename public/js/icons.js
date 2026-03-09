@@ -50,9 +50,9 @@ export const UI_ICON_SVGS = {
             <path d="M8.2 12.2 10.65 14.65 15.8 9.5" stroke="#059669" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" />
         `, "status-svg-lg"),
     plus: buildUtilityIcon(`
-            <path d="M12 7.5v9M7.5 12h9" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" />
+            <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" />
         `, "status-svg-xl"),
     minus: buildUtilityIcon(`
-            <path d="M7.5 12h9" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" />
+            <path d="M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" />
         `, "status-svg-xl")
 };

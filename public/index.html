@@ -134,10 +134,13 @@
                         <p class="section-copy mt-2 text-sm">担当部屋を選び、待機数と各レーンの状態をその場で更新します。</p>
                     </div>
 
-                    <div class="app-surface-strong space-y-5 p-5 md:p-6">
+                    <div class="staff-context-grid app-surface-strong p-5 md:p-6">
                         <div>
-                            <label for="staff-name" class="block text-sm font-bold text-slate-700">あなたの担当者名</label>
-                            <input type="text" id="staff-name" class="mt-2 block w-full px-4 py-3 text-sm" placeholder="例: 鈴木">
+                            <p class="text-sm font-bold text-slate-700">現在の操作ユーザー</p>
+                            <div class="staff-identity-card mt-2">
+                                <div id="staff-operator-name" class="staff-identity-name">未ログイン</div>
+                                <div id="staff-operator-meta" class="staff-identity-meta">名簿または認証情報の表示名を利用します</div>
+                            </div>
                         </div>
 
                         <div>

@@ -91,13 +91,13 @@ export const UI_ICON_SVGS = {
     ),
     plus: buildUtilityIcon(
         `
-            <path d="M12 7.5v9M7.5 12h9" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" />
+            <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" />
         `,
         "status-svg-xl"
     ),
     minus: buildUtilityIcon(
         `
-            <path d="M7.5 12h9" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" />
+            <path d="M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" />
         `,
         "status-svg-xl"
     )

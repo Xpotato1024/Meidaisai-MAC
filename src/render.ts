@@ -1,4 +1,4 @@
-import { canAccessTab, canManageRoom, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
+import { canAccessTab, canManageRoom, getActorDisplayName, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
 import { updateReceptionStatus } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
@@ -40,21 +40,6 @@ function getAuthorizationSourceBadge(member: AccessMember): string {
         return '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">名簿連携</span>';
     }
     return '<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">手動承認</span>';
-}
-
-function getLanePillClass(status: string): string {
-    switch (status) {
-        case "available":
-            return "lane-pill lane-pill-available";
-        case "occupied":
-            return "lane-pill lane-pill-occupied";
-        case "preparing":
-            return "lane-pill lane-pill-preparing";
-        case "paused":
-            return "lane-pill lane-pill-paused";
-        default:
-            return "lane-pill lane-pill-paused";
-    }
 }
 
 function getRoomSummaryState(waiting: number, availableCount: number): {
@@ -627,9 +612,15 @@ export async function openReceptionLaneModal(context: AppContext, laneDocId: str
  * レーン担当用ビュー (部屋選択) を描画
  */
 export function renderStaffRoomSelect(context: AppContext): void {
-    const { dom } = context;
+    const { dom, state } = context;
     const visibleRooms = getVisibleRooms(context);
     const currentSelectedRoom = dom.staffRoomSelect.value;
+    const actorName = getActorDisplayName(context) || "表示名未設定";
+
+    dom.staffOperatorName.textContent = actorName;
+    dom.staffOperatorMeta.textContent = state.accessMember?.email
+        ? `${state.accessMember.email} で操作中`
+        : "名簿または認証情報の表示名を利用します";
 
     dom.staffRoomSelect.innerHTML = '<option value="">--- 部屋を選択してください ---</option>';
     visibleRooms.forEach((room) => {
@@ -669,6 +660,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         return;
     }
 
+    const selectedRoomName = config.rooms.find((room) => room.id === selectedRoomId)?.name || "未選択";
     const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
     const currentWaitingGroups = currentState.waitingGroups || 0;
 
@@ -677,9 +669,12 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
             <div>
-                <p class="pill-eyebrow">Queue Control</p>
-                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">待機組数 管理</h3>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">受付が見ている待機数をこの部屋単位で同期します。案内前後のタイミングで更新してください。</p>
+                <div class="wait-control-head">
+                    <p class="pill-eyebrow">Queue Control</p>
+                    <span class="wait-control-tag">${escapeHtml(selectedRoomName)}</span>
+                </div>
+                <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">待機組数 管理</h3>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。案内前後のタイミングで更新してください。</p>
             </div>
             <div class="wait-control-actions">
                 <button data-action="dec-wait" data-roomid="${selectedRoomId}"
@@ -720,15 +715,16 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         laneElement.className = "lane-card";
 
         const laneDisplayName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
-        const staffNameDisplay = laneData.staffName ? `担当: ${escapeHtml(laneData.staffName)}` : "担当: ---";
+        const staffNameDisplay = laneData.staffName ? `最終操作: ${escapeHtml(laneData.staffName)}` : "最終操作: まだありません";
         const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
         const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
 
-        let receptionStatusDisplay = receptionStatusConfig.name;
-        let receptionStatusClass = "text-slate-500";
+        let receptionStatusDisplay = receptionStatusConfig.name || "受付待機";
+        let receptionStatusTone = "lane-meta-chip";
         let arrivalButton = "";
         let optionsDisplay = "";
         let notesDisplay = "";
+        const laneStatusDisplay = escapeHtml(laneStatusConfig.name || "不明");
 
         if (laneData.status !== "available" && laneData.receptionStatus === "available") {
             let statusName = laneStatusConfig.name;
@@ -743,16 +739,16 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
 
         if (laneData.receptionStatus === "guiding") {
             receptionStatusDisplay = "お客様 案内中";
-            receptionStatusClass = "text-blue-600 font-bold animate-pulse";
+            receptionStatusTone = "lane-meta-chip lane-meta-chip-guiding";
             arrivalButton = `
                 <button data-action="confirm-arrival" data-docid="${docId}"
-                        class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
+                        class="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
                     <span class="mr-2 inline-flex">${UI_ICON_SVGS.arrival}</span>お客様 到着確認
                 </button>
             `;
         } else if (laneData.receptionStatus === "available" && laneData.status === "available") {
             receptionStatusDisplay = "案内可";
-            receptionStatusClass = "text-green-600";
+            receptionStatusTone = "lane-meta-chip lane-meta-chip-open";
         }
 
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
@@ -810,7 +806,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         ).join("");
 
         const pauseReasonSelect = `
-            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-2xl bg-slate-50/80 p-4" : "hidden"}">
+            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-xl border border-slate-200/80 bg-slate-50/80 p-4" : "hidden"}">
                 <label for="pause-reason-select-${docId}" class="mb-2 block text-sm font-bold text-slate-700">休止理由</label>
                 <select id="pause-reason-select-${docId}" data-action="set-pause-reason" data-docid="${docId}" 
                         class="block w-full px-4 py-3 text-sm">
@@ -826,17 +822,17 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
                     <h4 class="lane-card-title">${laneDisplayName}</h4>
                     <p class="lane-card-subtext">${staffNameDisplay}</p>
                 </div>
-                <span class="${getLanePillClass(laneData.status)}">
-                    <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
-                    <span>${escapeHtml(laneStatusConfig.name || "不明")}</span>
-                </span>
             </div>
 
-            <div class="lane-card-reception">
-                <p class="inline-flex items-center gap-2 text-sm ${receptionStatusClass}">
+            <div class="lane-card-meta">
+                <span class="lane-meta-chip lane-meta-chip-primary">
+                    <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
+                    <span>${laneStatusDisplay}</span>
+                </span>
+                <span class="${receptionStatusTone}">
                     <span class="inline-flex">${receptionStatusConfig.icon || STATUS_ICON_SVGS.guiding}</span>
                     <span>${escapeHtml(receptionStatusDisplay || "状態未設定")}</span>
-                </p>
+                </span>
             </div>
 
             ${optionsDisplay}
@@ -847,7 +843,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
             
             <div class="mt-2 border-t border-slate-200/80 pt-4">
                 <p class="mb-3 text-sm font-bold text-slate-700">レーンの状況を変更</p>
-                <div class="flex flex-wrap gap-2">
+                <div class="status-action-grid">
                     ${statusButtons}
                 </div>
                 ${pauseReasonSelect}

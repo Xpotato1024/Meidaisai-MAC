@@ -45,3 +45,19 @@ export function getVisibleRooms(context) {
     const allowedRoomIds = new Set(getAllowedRoomIds(context));
     return context.state.dynamicAppConfig.rooms.filter((room) => allowedRoomIds.has(room.id));
 }
+export function getActorDisplayName(context) {
+    const memberName = String(context.state.accessMember?.displayName || "").trim();
+    if (memberName) {
+        return memberName;
+    }
+    const authName = String(context.state.authUser?.displayName || "").trim();
+    if (authName) {
+        return authName;
+    }
+    const email = String(context.state.accessMember?.email || context.state.authUser?.email || "").trim();
+    if (!email) {
+        return null;
+    }
+    const [localPart] = email.split("@");
+    return localPart || email;
+}
