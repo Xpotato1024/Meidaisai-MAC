@@ -146,8 +146,6 @@ export interface DomRefs {
     receptionList: HTMLElement;
     staffRoomSelect: HTMLSelectElement;
     staffLaneDashboard: HTMLElement;
-    staffOperatorName: HTMLElement;
-    staffOperatorMeta: HTMLElement;
     firestoreStatus: HTMLElement;
     globalEventDisplay: HTMLElement;
     globalEventNameText: HTMLElement;

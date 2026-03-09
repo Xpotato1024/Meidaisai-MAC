@@ -225,6 +225,26 @@
         margin-top: 0.9rem;
     }
 
+    .auth-runtime-status {
+        margin-top: 0.9rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        color: rgba(226, 232, 240, 0.78);
+    }
+
+    .auth-runtime-status-ready {
+        color: #86efac;
+    }
+
+    .auth-runtime-status-pending {
+        color: #fcd34d;
+    }
+
+    .auth-runtime-status-error {
+        color: #fda4af;
+    }
+
     .pill-eyebrow {
         display: inline-flex;
         align-items: center;
@@ -276,35 +296,6 @@
 
     .section-copy {
         color: var(--page-copy);
-    }
-
-    .staff-context-grid {
-        display: grid;
-        gap: 1rem;
-        align-items: end;
-        border-radius: 16px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-    }
-
-    .staff-identity-card {
-        border-radius: 14px;
-        border: 1px solid rgba(148, 163, 184, 0.18);
-        background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.96));
-        padding: 0.95rem 1rem;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
-    }
-
-    .staff-identity-name {
-        font-size: 1.02rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        color: #0f172a;
-    }
-
-    .staff-identity-meta {
-        margin-top: 0.18rem;
-        font-size: 0.78rem;
-        color: #64748b;
     }
 
     .dashboard-grid {
@@ -482,8 +473,7 @@
     }
 
     .lane-card-header {
-        padding-bottom: 0.75rem;
-        border-bottom: 1px solid rgba(226, 232, 240, 0.82);
+        padding-bottom: 0.15rem;
     }
 
     .lane-card-title-row {
@@ -576,8 +566,7 @@
 
     .lane-card-actions {
         margin-top: 0.1rem;
-        padding-top: 0.95rem;
-        border-top: 1px solid rgba(226, 232, 240, 0.82);
+        padding-top: 0.55rem;
     }
 
     .wait-control-card {
@@ -589,35 +578,40 @@
     }
 
     .wait-control-shell {
-        display: flex;
-        flex-direction: column;
+        display: grid;
         gap: 0.95rem;
     }
 
-    .wait-control-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+    .wait-control-main {
+        min-width: 0;
     }
 
-    .wait-control-tag {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 9999px;
-        border: 1px solid rgba(37, 99, 235, 0.12);
-        background: rgba(37, 99, 235, 0.05);
-        padding: 0.26rem 0.66rem;
-        font-size: 0.7rem;
+    .wait-control-room-slot {
+        min-width: 0;
+    }
+
+    .wait-control-room {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 0;
+    }
+
+    .wait-control-room-label {
+        font-size: 0.75rem;
         font-weight: 700;
-        color: #1e40af;
+        color: #475569;
+    }
+
+    .wait-control-select {
+        width: 100%;
+        min-height: 3.15rem;
     }
 
     .wait-control-actions {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
         gap: 0.7rem;
     }
 
@@ -833,13 +827,12 @@
         grid-template-columns: minmax(240px, 0.95fr) minmax(0, 1.45fr);
     }
 
-    .staff-context-grid {
-        grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+    .wait-control-shell {
+        grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.85fr) auto;
+        align-items: center;
     }
 
-    .wait-control-shell {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+    .wait-control-actions {
+        justify-content: flex-end;
     }
 }

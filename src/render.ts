@@ -1,4 +1,4 @@
-import { canAccessTab, canManageRoom, getActorDisplayName, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
+import { canAccessTab, canManageRoom, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
 import { updateReceptionStatus } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
@@ -612,15 +612,9 @@ export async function openReceptionLaneModal(context: AppContext, laneDocId: str
  * レーン担当用ビュー (部屋選択) を描画
  */
 export function renderStaffRoomSelect(context: AppContext): void {
-    const { dom, state } = context;
+    const { dom } = context;
     const visibleRooms = getVisibleRooms(context);
     const currentSelectedRoom = dom.staffRoomSelect.value;
-    const actorName = getActorDisplayName(context) || "表示名未設定";
-
-    dom.staffOperatorName.textContent = actorName;
-    dom.staffOperatorMeta.textContent = state.accessMember?.email
-        ? `${state.accessMember.email} で操作中`
-        : "名簿または認証情報の表示名を利用します";
 
     dom.staffRoomSelect.innerHTML = '<option value="">--- 部屋を選択してください ---</option>';
     visibleRooms.forEach((room) => {
@@ -668,14 +662,12 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
     waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
-            <div>
-                <div class="wait-control-head">
-                    <p class="pill-eyebrow">Queue Control</p>
-                    <span class="wait-control-tag">${escapeHtml(selectedRoomName)}</span>
-                </div>
+            <div class="wait-control-main">
+                <p class="pill-eyebrow">Queue Control</p>
                 <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">待機組数 管理</h3>
                 <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。</p>
             </div>
+            <div class="wait-control-room-slot" data-room-select-slot></div>
             <div class="wait-control-actions">
                 <button data-action="dec-wait" data-roomid="${selectedRoomId}"
                         class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
@@ -693,6 +685,15 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
             </div>
         </div>
     `;
+    const roomSelectSlot = waitControlElement.querySelector("[data-room-select-slot]");
+    if (roomSelectSlot instanceof HTMLElement) {
+        const roomPicker = document.createElement("div");
+        roomPicker.className = "wait-control-room";
+        roomPicker.innerHTML = '<label for="staff-room-select" class="wait-control-room-label">担当する部屋</label>';
+        dom.staffRoomSelect.className = "wait-control-select";
+        roomPicker.appendChild(dom.staffRoomSelect);
+        roomSelectSlot.appendChild(roomPicker);
+    }
     dom.staffLaneDashboard.appendChild(waitControlElement);
 
     const roomLanes = getAllLanes(context)
@@ -717,7 +718,6 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         const laneDisplayName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
         const staffNameDisplay = laneData.staffName ? `最終操作: ${escapeHtml(laneData.staffName)}` : "最終操作: まだありません";
         const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
-        const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
         const pauseReason = laneData.pauseReasonId
             ? config.pauseReasons.find((item) => item.id === laneData.pauseReasonId) || null
             : null;
@@ -741,10 +741,6 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
                     <span class="mr-2 inline-flex">${UI_ICON_SVGS.arrival}</span>お客様 到着確認
                 </button>
             `;
-        } else if (laneData.receptionStatus === "available" && laneData.status === "available") {
-            receptionStatusDisplay = "受付状態: 案内可";
-        } else if (laneData.receptionStatus === "available" && laneData.status !== "available") {
-            receptionStatusDisplay = `受付状態: ${escapeHtml(receptionStatusConfig.name || "受付待機")}`;
         }
 
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {

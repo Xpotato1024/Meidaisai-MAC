@@ -22,6 +22,31 @@ function sortRequests(requests) {
         return toTimestampMillis(right.requestedAt) - toTimestampMillis(left.requestedAt);
     });
 }
+function mergeNamedCollection(defaults, currentValue) {
+    if (!Array.isArray(currentValue)) {
+        return [...defaults];
+    }
+    const providedItems = currentValue.filter((item) => {
+        return Boolean(item && typeof item === "object" && "id" in item && typeof item.id === "string");
+    });
+    const defaultIds = new Set(defaults.map((item) => item.id));
+    const mergedDefaults = defaults.map((defaultItem) => {
+        const matched = providedItems.find((item) => item.id === defaultItem.id);
+        return matched ? { ...defaultItem, ...matched } : defaultItem;
+    });
+    const extraItems = providedItems.filter((item) => !defaultIds.has(item.id));
+    return [...mergedDefaults, ...extraItems];
+}
+function normalizeConfig(rawConfig) {
+    return {
+        ...APP_CONFIG,
+        ...rawConfig,
+        laneStatuses: mergeNamedCollection(APP_CONFIG.laneStatuses, rawConfig.laneStatuses),
+        receptionStatuses: mergeNamedCollection(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses),
+        pauseReasons: mergeNamedCollection(APP_CONFIG.pauseReasons, rawConfig.pauseReasons),
+        options: Array.isArray(rawConfig.options) ? rawConfig.options : APP_CONFIG.options
+    };
+}
 export function cleanupDataSubscriptions(context) {
     const { state } = context;
     state.unsubscribeConfig?.();
@@ -66,16 +91,7 @@ export function listenToConfigChanges(context) {
         if (docSnap.exists()) {
             console.log("Config loaded from Firestore.");
             const firestoreData = docSnap.data();
-            state.dynamicAppConfig = {
-                ...APP_CONFIG,
-                ...firestoreData
-            };
-            if (!firestoreData.laneStatuses) {
-                state.dynamicAppConfig.laneStatuses = APP_CONFIG.laneStatuses;
-            }
-            if (!firestoreData.pauseReasons) {
-                state.dynamicAppConfig.pauseReasons = APP_CONFIG.pauseReasons;
-            }
+            state.dynamicAppConfig = normalizeConfig(firestoreData);
             if (dom.firestoreStatus.textContent?.includes("設定なし")) {
                 dom.firestoreStatus.textContent = "設定を読み込みました";
             }

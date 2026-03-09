@@ -58,6 +58,10 @@
                             ログアウト
                         </button>
                     </div>
+
+                    <div id="firestore-status" class="auth-runtime-status">
+                        Connecting to Realtime Database...
+                    </div>
                 </div>
             </div>
         </div>
@@ -121,21 +125,10 @@
                         <p class="section-copy mt-2 text-sm">担当部屋を選び、待機数と各レーンの状態をその場で更新します。</p>
                     </div>
 
-                    <div class="staff-context-grid app-surface-strong p-5 md:p-6">
-                        <div>
-                            <p class="text-sm font-bold text-slate-700">現在の操作ユーザー</p>
-                            <div class="staff-identity-card mt-2">
-                                <div id="staff-operator-name" class="staff-identity-name">未ログイン</div>
-                                <div id="staff-operator-meta" class="staff-identity-meta">名簿または認証情報の表示名を利用します</div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="staff-room-select" class="block text-sm font-bold text-slate-700">担当する部屋を選択</label>
-                            <select id="staff-room-select" class="mt-2 block w-full px-4 py-3 text-sm">
-                                <option value="">--- 部屋を選択してください ---</option>
-                            </select>
-                        </div>
+                    <div class="hidden" aria-hidden="true">
+                        <select id="staff-room-select" class="block w-full px-4 py-3 text-sm">
+                            <option value="">--- 部屋を選択してください ---</option>
+                        </select>
                     </div>
 
                     <div id="staff-lane-dashboard" class="mt-6 space-y-6">
@@ -385,9 +378,6 @@
                 <p><a href="https://xpotato.net" class="font-medium text-blue-600 hover:underline">https://xpotato.net</a></p>
             </div>
 
-            <div id="firestore-status" class="text-xs font-mono text-slate-400 md:text-right">
-                Connecting to Realtime Database...
-            </div>
         </footer>
     </div>
 

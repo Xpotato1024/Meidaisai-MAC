@@ -197,8 +197,8 @@ function attachSelfAccessListeners(context, user) {
                 ? "権限確認済み / リアルタイム接続完了"
                 : "このアカウントは無効化されています";
             dom.firestoreStatus.className = effectiveMember.isActive
-                ? "text-center text-xs text-green-600"
-                : "text-center text-xs text-rose-600 font-bold";
+                ? "auth-runtime-status auth-runtime-status-ready"
+                : "auth-runtime-status auth-runtime-status-error";
             if (!state.isUiInitialized) {
                 setupEventListeners(context);
                 state.isUiInitialized = true;
@@ -212,7 +212,7 @@ function attachSelfAccessListeners(context, user) {
         }
         else {
             dom.firestoreStatus.textContent = "承認待ちです";
-            dom.firestoreStatus.className = "text-center text-xs text-amber-600";
+            dom.firestoreStatus.className = "auth-runtime-status auth-runtime-status-pending";
             resetAuthorizedData(context);
         }
         renderAllUI(context);
