@@ -459,6 +459,11 @@
         padding: 0.85rem;
     }
 
+    .room-dashboard-grid-reception {
+        padding: 0;
+        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    }
+
     .room-dashboard-summary {
         display: grid;
         gap: 0.85rem;
@@ -671,6 +676,11 @@
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
     }
 
+    .lane-tile-summary {
+        min-height: 4.2rem;
+        padding: 0.62rem 0.68rem;
+    }
+
     .lane-tile-clickable:hover {
         border-color: rgba(37, 99, 235, 0.24);
         box-shadow: 0 12px 24px rgba(37, 99, 235, 0.08);
@@ -696,6 +706,12 @@
         color: #0f172a;
     }
 
+    .lane-tile-summary .lane-tile-number {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
     .lane-tile-status {
         display: inline-flex;
         align-items: center;
@@ -703,6 +719,11 @@
         font-size: 0.78rem;
         font-weight: 600;
         color: #475569;
+    }
+
+    .lane-tile-summary .lane-tile-status {
+        font-size: 0.75rem;
+        font-weight: 700;
     }
 
     .lane-tile-note {

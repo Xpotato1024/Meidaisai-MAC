@@ -64,6 +64,59 @@ function getRoomSummaryState(waiting, availableCount) {
         label: "満室"
     };
 }
+function getReceptionRoomLaneVisuals(roomState, totalLanes) {
+    const visuals = [];
+    const buckets = [
+        {
+            count: Number(roomState.availableLanes || 0),
+            tileClass: "tile-available",
+            icon: STATUS_ICON_SVGS.available,
+            label: "空き"
+        },
+        {
+            count: Number(roomState.guidingLanes || 0),
+            tileClass: "tile-guiding",
+            icon: STATUS_ICON_SVGS.guiding,
+            label: "案内中"
+        },
+        {
+            count: Number(roomState.occupiedLanes || 0),
+            tileClass: "tile-occupied",
+            icon: STATUS_ICON_SVGS.occupied,
+            label: "使用中"
+        },
+        {
+            count: Number(roomState.preparingLanes || 0),
+            tileClass: "tile-preparing",
+            icon: STATUS_ICON_SVGS.preparing,
+            label: "準備中"
+        },
+        {
+            count: Number(roomState.pausedLanes || 0),
+            tileClass: "tile-paused",
+            icon: STATUS_ICON_SVGS.paused,
+            label: "休止中"
+        }
+    ];
+    buckets.forEach((bucket) => {
+        for (let index = 0; index < bucket.count; index += 1) {
+            visuals.push({
+                tileClass: bucket.tileClass,
+                icon: bucket.icon,
+                label: bucket.label
+            });
+        }
+    });
+    const remaining = Math.max(totalLanes - visuals.length, 0);
+    for (let index = 0; index < remaining; index += 1) {
+        visuals.push({
+            tileClass: "tile-paused",
+            icon: STATUS_ICON_SVGS.paused,
+            label: "未反映"
+        });
+    }
+    return visuals.slice(0, totalLanes);
+}
 function getRoomStateSnapshot(context, roomId, totalLanes) {
     return normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
 }
@@ -394,6 +447,7 @@ function renderReceptionList(context) {
         const preparingLanes = Number(roomState.preparingLanes || 0);
         const pausedLanes = Number(roomState.pausedLanes || 0);
         const guidingLanes = Number(roomState.guidingLanes || 0);
+        const laneVisuals = getReceptionRoomLaneVisuals(roomState, room.lanes);
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
@@ -412,6 +466,17 @@ function renderReceptionList(context) {
                 </div>
             </div>
             <div class="room-dashboard-summary">
+                <div class="room-dashboard-grid room-dashboard-grid-reception">
+                    ${laneVisuals.map((lane, index) => `
+                        <div class="lane-tile lane-tile-summary ${lane.tileClass}">
+                            <span class="lane-tile-number">レーン ${index + 1}</span>
+                            <span class="lane-tile-status">
+                                <span class="inline-flex">${lane.icon}</span>
+                                <span>${lane.label}</span>
+                            </span>
+                        </div>
+                    `).join("")}
+                </div>
                 <div class="room-dashboard-metrics">
                     <span class="room-dashboard-metric room-dashboard-metric-positive">
                         <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
