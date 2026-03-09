@@ -81,15 +81,18 @@ function createInitialState() {
         currentRoomState: {},
         dynamicAppConfig: cloneConfig(APP_CONFIG),
         localAdminConfig: cloneConfig(APP_CONFIG),
+        eventAccessMember: null,
         accessMember: null,
         selfAccessRequest: null,
         accessMembersCache: [],
         accessRequestsCache: [],
         isDbMigrating: false,
         registryCache: [],
+        globalAccessMember: null,
         unsubscribeLanes: null,
         unsubscribeConfig: null,
         unsubscribeRoomState: null,
+        unsubscribeGlobalAccessMember: null,
         unsubscribeAccessMember: null,
         unsubscribeAccessRequest: null,
         unsubscribeAccessMembers: null,
@@ -100,6 +103,7 @@ export function createAppContext() {
     const urlParams = new URLSearchParams(window.location.search);
     const currentAppId = urlParams.get("app_id") || APP_ID;
     const privateBase = `/artifacts/${currentAppId}/private/data`;
+    const globalAccessMembersCollectionPath = "/sys_access/globalMembers";
     const memberDirectoryCollectionPath = `${privateBase}/memberDirectory`;
     const accessMembersCollectionPath = `${privateBase}/accessMembers`;
     const accessRequestsCollectionPath = `${privateBase}/accessRequests`;
@@ -112,6 +116,8 @@ export function createAppContext() {
             lanesCollectionPath: `/artifacts/${currentAppId}/public/data/lanes`,
             roomStateCollectionPath: `/artifacts/${currentAppId}/public/data/roomState`,
             registryCollectionPath: "sys_registry",
+            globalAccessMembersCollectionPath,
+            globalAccessMemberDocPath: `${globalAccessMembersCollectionPath}/__SELF__`,
             memberDirectoryCollectionPath,
             accessMembersCollectionPath,
             accessMemberDocPath: `${accessMembersCollectionPath}/__SELF__`,

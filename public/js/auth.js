@@ -36,8 +36,10 @@ function normalizeRequest(uid, data) {
     };
 }
 function cleanupSelfAccessListeners(context) {
+    context.state.unsubscribeGlobalAccessMember?.();
     context.state.unsubscribeAccessMember?.();
     context.state.unsubscribeAccessRequest?.();
+    context.state.unsubscribeGlobalAccessMember = null;
     context.state.unsubscribeAccessMember = null;
     context.state.unsubscribeAccessRequest = null;
 }
@@ -50,6 +52,28 @@ function resetAuthorizedData(context) {
     state.dynamicAppConfig = cloneConfig(APP_CONFIG);
     state.accessMembersCache = [];
     state.accessRequestsCache = [];
+}
+function normalizeGlobalMember(uid, data) {
+    return {
+        uid,
+        email: String(data.email || ""),
+        displayName: String(data.displayName || ""),
+        grade: typeof data.grade === "string" ? data.grade : null,
+        role: data.role || "admin",
+        isActive: data.isActive !== false,
+        assignedRoomIds: [],
+        authorizationSource: "global",
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        lastLoginAt: data.lastLoginAt
+    };
+}
+function resolveEffectiveAccessMember(context) {
+    const globalMember = context.state.globalAccessMember;
+    if (globalMember?.isActive && globalMember.role === "admin") {
+        return globalMember;
+    }
+    return context.state.eventAccessMember;
 }
 async function ensureAccessRequest(context, user) {
     const { db, paths } = context;
@@ -119,6 +143,13 @@ async function ensureRosterAccessMember(context, user) {
 }
 async function bootstrapSelfAccess(context, user) {
     const { db, paths } = context;
+    const globalMemberSnapshot = await getDoc(doc(db, paths.globalAccessMembersCollectionPath, user.uid));
+    if (globalMemberSnapshot.exists()) {
+        const globalData = globalMemberSnapshot.data();
+        if (globalData.role === "admin" && globalData.isActive !== false) {
+            return;
+        }
+    }
     const memberSnapshot = await getDoc(doc(db, paths.accessMembersCollectionPath, user.uid));
     if (memberSnapshot.exists()) {
         return;
@@ -154,23 +185,25 @@ function bindAuthButtons(context) {
 }
 function attachSelfAccessListeners(context, user) {
     const { db, dom, paths, state } = context;
+    const globalMemberRef = doc(db, paths.globalAccessMembersCollectionPath, user.uid);
     const memberRef = doc(db, paths.accessMembersCollectionPath, user.uid);
     const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
-    state.unsubscribeAccessMember = onSnapshot(memberRef, async (memberSnap) => {
-        if (memberSnap.exists()) {
-            state.accessMember = normalizeMember(user.uid, memberSnap.data());
+    const syncEffectiveMember = () => {
+        const effectiveMember = resolveEffectiveAccessMember(context);
+        state.accessMember = effectiveMember;
+        if (effectiveMember) {
             state.activeTab = getDefaultTab(context);
-            dom.firestoreStatus.textContent = state.accessMember.isActive
+            dom.firestoreStatus.textContent = effectiveMember.isActive
                 ? "✅ 権限確認済み / リアルタイム接続完了"
                 : "⛔ このアカウントは無効化されています";
-            dom.firestoreStatus.className = state.accessMember.isActive
+            dom.firestoreStatus.className = effectiveMember.isActive
                 ? "text-center text-xs text-green-600"
                 : "text-center text-xs text-rose-600 font-bold";
             if (!state.isUiInitialized) {
                 setupEventListeners(context);
                 state.isUiInitialized = true;
             }
-            if (state.accessMember.isActive) {
+            if (effectiveMember.isActive) {
                 configureDataSubscriptions(context);
             }
             else {
@@ -178,12 +211,23 @@ function attachSelfAccessListeners(context, user) {
             }
         }
         else {
-            state.accessMember = null;
             dom.firestoreStatus.textContent = "承認待ちです";
             dom.firestoreStatus.className = "text-center text-xs text-amber-600";
             resetAuthorizedData(context);
         }
         renderAllUI(context);
+    };
+    state.unsubscribeGlobalAccessMember = onSnapshot(globalMemberRef, (globalMemberSnap) => {
+        state.globalAccessMember = globalMemberSnap.exists()
+            ? normalizeGlobalMember(user.uid, globalMemberSnap.data())
+            : null;
+        syncEffectiveMember();
+    });
+    state.unsubscribeAccessMember = onSnapshot(memberRef, async (memberSnap) => {
+        state.eventAccessMember = memberSnap.exists()
+            ? normalizeMember(user.uid, memberSnap.data())
+            : null;
+        syncEffectiveMember();
     });
     state.unsubscribeAccessRequest = onSnapshot(requestRef, (requestSnap) => {
         state.selfAccessRequest = requestSnap.exists()
@@ -219,6 +263,8 @@ export function setupAuthListener(context) {
         }
         state.authUser = null;
         state.userId = null;
+        state.eventAccessMember = null;
+        state.globalAccessMember = null;
         state.accessMember = null;
         state.selfAccessRequest = null;
         dom.firestoreStatus.textContent = "ログイン待機中";

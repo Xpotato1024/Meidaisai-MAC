@@ -10,6 +10,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/artifacts/$(appId)/private/data/accessMembers/$(uid);
     }
 
+    function globalMemberPath(uid) {
+      return /databases/$(database)/documents/sys_access/globalMembers/$(uid);
+    }
+
     function memberDirectoryPath(appId, emailKey) {
       return /databases/$(database)/documents/artifacts/$(appId)/private/data/memberDirectory/$(emailKey);
     }
@@ -37,6 +41,21 @@ service cloud.firestore {
       return get(memberPath(appId, request.auth.uid));
     }
 
+    function selfGlobalMember() {
+      return get(globalMemberPath(request.auth.uid));
+    }
+
+    function isActiveGlobalMember() {
+      return signedIn()
+        && exists(globalMemberPath(request.auth.uid))
+        && selfGlobalMember().data.isActive == true;
+    }
+
+    function isGlobalAdmin() {
+      return isActiveGlobalMember()
+        && selfGlobalMember().data.role == 'admin';
+    }
+
     function isActiveMember(appId) {
       return signedIn()
         && exists(memberPath(appId, request.auth.uid))
@@ -48,7 +67,7 @@ service cloud.firestore {
     }
 
     function isAdmin(appId) {
-      return hasRole(appId, 'admin');
+      return hasRole(appId, 'admin') || isGlobalAdmin();
     }
 
     function isReception(appId) {
@@ -92,6 +111,12 @@ service cloud.firestore {
         && request.resource.data.isActive == true
         && request.resource.data.assignedRoomIds.size() == 0
         && request.resource.data.authorizationSource == 'roster';
+    }
+
+    match /sys_access/globalMembers/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isGlobalAdmin());
+      allow list: if isGlobalAdmin();
+      allow create, update, delete: if isGlobalAdmin();
     }
 
     match /artifacts/{appId}/public/data/config/{documentId} {
