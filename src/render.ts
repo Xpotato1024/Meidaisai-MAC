@@ -914,7 +914,7 @@ export function renderAdminSettings(context: AppContext): void {
             </div>
 
             <button data-action="delete-room" data-id="${room.id}" 
-                    class="ml-1 sm:ml-2 w-8 h-8 flex flex-shrink-0 items-center justify-center bg-white border border-red-200 text-red-500 rounded-full hover:bg-red-50 transition"
+                    class="admin-delete-button ml-1 sm:ml-2"
                     title="削除">
                 <i class="fa-solid fa-trash"></i>
             </button>
@@ -931,7 +931,7 @@ export function renderAdminSettings(context: AppContext): void {
         optionElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
         optionElement.innerHTML = `
             <input type="text" data-action="edit-option-name" data-id="${option.id}" value="${option.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
-            <button data-action="delete-option" data-id="${option.id}" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs flex-shrink-0">
+            <button data-action="delete-option" data-id="${option.id}" class="admin-delete-button">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;
@@ -947,7 +947,7 @@ export function renderAdminSettings(context: AppContext): void {
         reasonElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
         reasonElement.innerHTML = `
             <input type="text" data-action="edit-pause-reason-name" data-id="${reason.id}" value="${reason.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
-            <button data-action="delete-pause-reason" data-id="${reason.id}" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs flex-shrink-0">
+            <button data-action="delete-pause-reason" data-id="${reason.id}" class="admin-delete-button">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;

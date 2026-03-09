@@ -816,6 +816,25 @@
         color: var(--neutral);
     }
 
+    .admin-delete-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        flex: none;
+        border-radius: 10px;
+        border: 1px solid rgba(248, 113, 113, 0.22);
+        background: linear-gradient(180deg, #f87171, #ef4444);
+        color: #ffffff;
+        box-shadow: 0 8px 16px rgba(239, 68, 68, 0.14);
+    }
+
+    .admin-delete-button:hover {
+        border-color: rgba(220, 38, 38, 0.28);
+        background: linear-gradient(180deg, #ef4444, #dc2626);
+    }
+
     .modal-scrim {
         background: rgba(15, 23, 42, 0.42);
         backdrop-filter: blur(4px);
