@@ -90,10 +90,12 @@ function renderAuthShell(context) {
     const request = state.selfAccessRequest;
     dom.authUserName.textContent = state.authUser?.displayName || "未ログイン";
     dom.authUserEmail.textContent = state.authUser?.email || "アクセス権が必要です";
+    dom.authStatusText.classList.remove("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
     if (member?.isActive) {
-        dom.authStatusText.textContent = "承認済みメンバーとして利用できます。";
+        dom.authStatusText.textContent = "";
+        dom.authStatusText.classList.add("hidden");
         dom.authRoleBadge.textContent = ROLE_LABELS[member.role];
         dom.authRoleBadge.className = "inline-flex items-center rounded-lg border border-emerald-300/30 bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100";
         dom.authLoginCard.classList.add("hidden");
@@ -577,25 +579,31 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
             <div class="wait-control-main">
-                <p class="pill-eyebrow">Queue Control</p>
-                <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">待機組数 管理</h3>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。</p>
+                <p class="pill-eyebrow">Room Operations</p>
+                <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">担当部屋オペレーション</h3>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">部屋選択と待機組数管理をこのカード内でまとめて行います。</p>
             </div>
-            <div class="wait-control-room-slot" data-room-select-slot></div>
-            <div class="wait-control-actions">
-                <button data-action="dec-wait" data-roomid="${selectedRoomId}"
-                        class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
-                        ${currentWaitingGroups === 0 ? "disabled" : ""}>
-                    <span class="inline-flex">${UI_ICON_SVGS.minus}</span>
-                </button>
-                <div class="wait-counter-card">
-                    <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">現在</div>
-                    <div class="mt-2 text-4xl font-black tracking-tight text-blue-700">${currentWaitingGroups}</div>
+            <div class="wait-control-grid">
+                <div class="wait-control-panel wait-control-room-slot" data-room-select-slot></div>
+                <div class="wait-control-panel wait-control-panel-counter">
+                    <div class="wait-control-panel-title">待機組数</div>
+                    <div class="wait-control-panel-copy">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。</div>
+                    <div class="wait-control-actions">
+                        <button data-action="dec-wait" data-roomid="${selectedRoomId}"
+                                class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
+                                ${currentWaitingGroups === 0 ? "disabled" : ""}>
+                            <span class="inline-flex">${UI_ICON_SVGS.minus}</span>
+                        </button>
+                        <div class="wait-counter-card">
+                            <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">現在</div>
+                            <div class="mt-2 text-4xl font-black tracking-tight text-blue-700">${currentWaitingGroups}</div>
+                        </div>
+                        <button data-action="inc-wait" data-roomid="${selectedRoomId}"
+                                class="wait-adjust-button wait-adjust-button-inc">
+                            <span class="inline-flex">${UI_ICON_SVGS.plus}</span>
+                        </button>
+                    </div>
                 </div>
-                <button data-action="inc-wait" data-roomid="${selectedRoomId}"
-                        class="wait-adjust-button wait-adjust-button-inc">
-                    <span class="inline-flex">${UI_ICON_SVGS.plus}</span>
-                </button>
             </div>
         </div>
     `;
@@ -603,7 +611,10 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
     if (roomSelectSlot instanceof HTMLElement) {
         const roomPicker = document.createElement("div");
         roomPicker.className = "wait-control-room";
-        roomPicker.innerHTML = '<label for="staff-room-select" class="wait-control-room-label">担当する部屋</label>';
+        roomPicker.innerHTML = `
+            <div class="wait-control-panel-title">担当する部屋</div>
+            <div class="wait-control-panel-copy">現在の担当部屋を切り替えます。</div>
+        `;
         dom.staffRoomSelect.className = "wait-control-select";
         roomPicker.appendChild(dom.staffRoomSelect);
         roomSelectSlot.appendChild(roomPicker);

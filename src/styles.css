@@ -174,11 +174,15 @@
     .auth-event-shell {
         display: grid;
         gap: 1rem;
-        align-items: center;
+        align-items: stretch;
     }
 
     .auth-event-card,
     .auth-account-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 9.5rem;
         border-radius: 14px;
         border: 1px solid rgba(148, 163, 184, 0.12);
         background: rgba(255, 255, 255, 0.04);
@@ -586,6 +590,32 @@
         min-width: 0;
     }
 
+    .wait-control-grid {
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .wait-control-panel {
+        border-radius: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #ffffff;
+        padding: 0.9rem;
+    }
+
+    .wait-control-panel-title {
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #475569;
+    }
+
+    .wait-control-panel-copy {
+        margin-top: 0.25rem;
+        font-size: 0.78rem;
+        color: #64748b;
+    }
+
     .wait-control-room-slot {
         min-width: 0;
     }
@@ -606,6 +636,7 @@
     .wait-control-select {
         width: 100%;
         min-height: 3.15rem;
+        margin-top: 0.7rem;
     }
 
     .wait-control-actions {
@@ -613,6 +644,7 @@
         align-items: center;
         justify-content: flex-start;
         gap: 0.7rem;
+        margin-top: 0.8rem;
     }
 
     .wait-adjust-button {
@@ -828,11 +860,10 @@
     }
 
     .wait-control-shell {
-        grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.85fr) auto;
-        align-items: center;
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .wait-control-actions {
-        justify-content: flex-end;
+    .wait-control-grid {
+        grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
     }
 }
