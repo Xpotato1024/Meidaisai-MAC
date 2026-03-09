@@ -194,8 +194,8 @@ function attachSelfAccessListeners(context, user) {
         if (effectiveMember) {
             state.activeTab = getDefaultTab(context);
             dom.firestoreStatus.textContent = effectiveMember.isActive
-                ? "✅ 権限確認済み / リアルタイム接続完了"
-                : "⛔ このアカウントは無効化されています";
+                ? "権限確認済み / リアルタイム接続完了"
+                : "このアカウントは無効化されています";
             dom.firestoreStatus.className = effectiveMember.isActive
                 ? "text-center text-xs text-green-600"
                 : "text-center text-xs text-rose-600 font-bold";

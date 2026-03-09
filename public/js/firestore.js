@@ -77,7 +77,7 @@ export function listenToConfigChanges(context) {
                 state.dynamicAppConfig.pauseReasons = APP_CONFIG.pauseReasons;
             }
             if (dom.firestoreStatus.textContent?.includes("設定なし")) {
-                dom.firestoreStatus.textContent = "✅ 設定を読み込みました";
+                dom.firestoreStatus.textContent = "設定を読み込みました";
             }
         }
         else {

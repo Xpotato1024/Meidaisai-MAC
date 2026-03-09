@@ -104,7 +104,7 @@ export function listenToConfigChanges(context: AppContext): void {
                 }
 
                 if (dom.firestoreStatus.textContent?.includes("設定なし")) {
-                    dom.firestoreStatus.textContent = "✅ 設定を読み込みました";
+                    dom.firestoreStatus.textContent = "設定を読み込みました";
                 }
             } else {
                 console.warn("No config found in Firestore. Using local default settings (READ-ONLY).");

@@ -142,7 +142,7 @@ export async function updateLaneCustomName(context, docId, newName) {
         const button = document.querySelector(`button[data-action='save-custom-name'][data-docid='${docId}']`);
         if (button) {
             const originalText = button.textContent;
-            button.textContent = "✅";
+            button.textContent = "保存済";
             button.classList.add("bg-green-500", "hover:bg-green-500");
             button.classList.remove("bg-blue-500", "hover:bg-blue-600");
             setTimeout(() => {
@@ -168,22 +168,22 @@ export async function saveAdminSettings(context) {
     try {
         await setDoc(configRef, state.localAdminConfig);
         await updateEventRegistry(context);
-        dom.adminSaveStatus.textContent = "✅ 設定を保存しました。DB同期を開始します...";
+        dom.adminSaveStatus.textContent = "設定を保存しました。DB同期を開始します...";
         console.log("Config saved. Explicitly starting migration...");
         if (!state.isDbMigrating) {
             state.isDbMigrating = true;
             console.log("Migration lock ACQUIRED by saveAdminSettings.");
             await checkAndInitDatabase(context, state.localAdminConfig);
-            dom.adminSaveStatus.textContent = "✅ DB同期が完了しました。";
+            dom.adminSaveStatus.textContent = "DB同期が完了しました。";
         }
         else {
             console.warn("Migration is already in progress. Skipping call.");
-            dom.adminSaveStatus.textContent = "✅ 設定を保存しました。(DB同期は他で実行中です)";
+            dom.adminSaveStatus.textContent = "設定を保存しました。(DB同期は他で実行中です)";
         }
     }
     catch (error) {
         console.error("Failed to save settings:", error);
-        dom.adminSaveStatus.textContent = "❌ 保存に失敗しました。";
+        dom.adminSaveStatus.textContent = "保存に失敗しました。";
         dom.adminSaveStatus.className = "text-sm text-center mt-3 text-red-500";
     }
     setTimeout(() => {

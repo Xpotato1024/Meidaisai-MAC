@@ -40,23 +40,20 @@ function getRoomSummaryState(waiting, availableCount) {
         return {
             chipClass: "summary-chip summary-chip-alert",
             icon: UI_ICON_SVGS.queue,
-            label: `待機 ${waiting}組`,
-            helper: "受付対応が必要です"
+            label: "待機あり"
         };
     }
     if (availableCount > 0) {
         return {
             chipClass: "summary-chip summary-chip-positive",
             icon: STATUS_ICON_SVGS.available,
-            label: `空き ${availableCount}レーン`,
-            helper: "すぐ案内できます"
+            label: "案内可"
         };
     }
     return {
         chipClass: "summary-chip summary-chip-neutral",
         icon: UI_ICON_SVGS.full,
-        label: "満室",
-        helper: "空き待ちなし"
+        label: "満室"
     };
 }
 // --- UI描画 (Render) ---
@@ -128,7 +125,7 @@ function renderAuthShell(context) {
         dom.appShell.classList.add("hidden");
     }
     else {
-        dom.authStatusText.textContent = "Google アカウントでログインしてください。名簿登録済み Gmail は自動承認、名簿外アカウントは承認待ちになります。";
+        dom.authStatusText.textContent = "Google アカウントでログインすると権限を確認します。";
         dom.authRoleBadge.textContent = "";
         dom.authRoleBadge.className = "hidden";
         dom.authPendingMessage.textContent = "";
@@ -274,9 +271,13 @@ function renderRoomSummaryBar(context) {
         const chip = document.createElement("div");
         chip.className = summaryState.chipClass;
         chip.innerHTML = `
-            <div>
+            <div class="summary-chip-main">
                 <p class="summary-chip-room">${escapeHtml(room.name)}</p>
-                <p class="summary-chip-copy">${summaryState.helper}</p>
+                <div class="summary-chip-metrics">
+                    <span class="summary-chip-metric">空き ${availableCount}</span>
+                    <span class="summary-chip-metric">待機 ${waiting}</span>
+                    <span class="summary-chip-metric">全 ${room.lanes}</span>
+                </div>
             </div>
             <span class="summary-chip-state">
                 <span class="inline-flex">${summaryState.icon}</span>
@@ -586,7 +587,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                     <span class="wait-control-tag">${escapeHtml(selectedRoomName)}</span>
                 </div>
                 <h3 class="mt-3 text-[1.55rem] font-black tracking-tight text-slate-900">待機組数 管理</h3>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。案内前後のタイミングで更新してください。</p>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${escapeHtml(selectedRoomName)} の待機数を受付表示と同期します。</p>
             </div>
             <div class="wait-control-actions">
                 <button data-action="dec-wait" data-roomid="${selectedRoomId}"
@@ -624,25 +625,19 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         const staffNameDisplay = laneData.staffName ? `最終操作: ${escapeHtml(laneData.staffName)}` : "最終操作: まだありません";
         const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
         const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
-        let receptionStatusDisplay = receptionStatusConfig.name || "受付待機";
-        let receptionStatusTone = "lane-meta-chip";
+        const pauseReason = laneData.pauseReasonId
+            ? config.pauseReasons.find((item) => item.id === laneData.pauseReasonId) || null
+            : null;
+        const laneStatusDisplay = escapeHtml(laneData.status === "paused" && pauseReason
+            ? pauseReason.name
+            : laneStatusConfig.name || "不明");
+        const laneStatusTone = `lane-current-status lane-current-status-${escapeHtml(laneData.status || "paused")}`;
+        let receptionStatusDisplay = "";
         let arrivalButton = "";
         let optionsDisplay = "";
         let notesDisplay = "";
-        const laneStatusDisplay = escapeHtml(laneStatusConfig.name || "不明");
-        if (laneData.status !== "available" && laneData.receptionStatus === "available") {
-            let statusName = laneStatusConfig.name;
-            if (laneData.status === "paused" && laneData.pauseReasonId) {
-                const reason = config.pauseReasons.find((item) => item.id === laneData.pauseReasonId);
-                if (reason) {
-                    statusName = `休止中 (${reason.name})`;
-                }
-            }
-            receptionStatusDisplay = `(${statusName})`;
-        }
         if (laneData.receptionStatus === "guiding") {
-            receptionStatusDisplay = "お客様 案内中";
-            receptionStatusTone = "lane-meta-chip lane-meta-chip-guiding";
+            receptionStatusDisplay = "受付状態: お客様 案内中";
             arrivalButton = `
                 <button data-action="confirm-arrival" data-docid="${docId}"
                         class="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
@@ -651,8 +646,10 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
             `;
         }
         else if (laneData.receptionStatus === "available" && laneData.status === "available") {
-            receptionStatusDisplay = "案内可";
-            receptionStatusTone = "lane-meta-chip lane-meta-chip-open";
+            receptionStatusDisplay = "受付状態: 案内可";
+        }
+        else if (laneData.receptionStatus === "available" && laneData.status !== "available") {
+            receptionStatusDisplay = `受付状態: ${escapeHtml(receptionStatusConfig.name || "受付待機")}`;
         }
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
             if (laneData.selectedOptions?.length) {
@@ -690,7 +687,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                 `;
             }
         }
-        const statusButtons = config.laneStatuses.map((status) => {
+        const primaryStatusButtons = config.laneStatuses.filter((status) => status.id !== "paused").map((status) => {
             const isCurrent = laneData.status === status.id;
             return `
                 <button data-action="set-lane-status" data-docid="${docId}" data-status="${status.id}" 
@@ -701,6 +698,15 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                 </button>
             `;
         }).join("");
+        const pauseStatus = config.laneStatuses.find((status) => status.id === "paused");
+        const pauseButton = pauseStatus ? `
+            <button data-action="set-lane-status" data-docid="${docId}" data-status="${pauseStatus.id}" 
+                    class="status-action-button status-action-pause-row ${laneData.status === pauseStatus.id
+            ? `status-action-active ${pauseStatus.colorClass}`
+            : "status-action-idle"}">
+                <span class="inline-flex">${pauseStatus.icon}</span>${pauseStatus.name}
+            </button>
+        ` : "";
         const pauseReasonsOptionsHtml = (config.pauseReasons || []).map((reason) => `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${escapeHtml(reason.name)}</option>`).join("");
         const pauseReasonSelect = `
             <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-xl border border-slate-200/80 bg-slate-50/80 p-4" : "hidden"}">
@@ -714,21 +720,17 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         `;
         laneElement.innerHTML = `
             <div class="lane-card-header">
-                <div>
-                    <h4 class="lane-card-title">${laneDisplayName}</h4>
+                <div class="w-full">
+                    <div class="lane-card-title-row">
+                        <h4 class="lane-card-title">${laneDisplayName}</h4>
+                        <span class="${laneStatusTone}">
+                            <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
+                            <span>${laneStatusDisplay}</span>
+                        </span>
+                    </div>
                     <p class="lane-card-subtext">${staffNameDisplay}</p>
+                    ${receptionStatusDisplay ? `<p class="lane-card-aux">${receptionStatusDisplay}</p>` : ""}
                 </div>
-            </div>
-
-            <div class="lane-card-meta">
-                <span class="lane-meta-chip lane-meta-chip-primary">
-                    <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
-                    <span>${laneStatusDisplay}</span>
-                </span>
-                <span class="${receptionStatusTone}">
-                    <span class="inline-flex">${receptionStatusConfig.icon || STATUS_ICON_SVGS.guiding}</span>
-                    <span>${escapeHtml(receptionStatusDisplay || "状態未設定")}</span>
-                </span>
             </div>
 
             ${optionsDisplay}
@@ -737,11 +739,12 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
 
             ${arrivalButton}
             
-            <div class="mt-2 border-t border-slate-200/80 pt-4">
+            <div class="lane-card-actions">
                 <p class="mb-3 text-sm font-bold text-slate-700">レーンの状況を変更</p>
                 <div class="status-action-grid">
-                    ${statusButtons}
+                    ${primaryStatusButtons}
                 </div>
+                ${pauseButton}
                 ${pauseReasonSelect}
             </div>
         `;
