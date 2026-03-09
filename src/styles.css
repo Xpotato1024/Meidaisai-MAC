@@ -1021,6 +1021,11 @@
         text-align: center;
     }
 
+    .wait-control-panel-counter .wait-control-panel-title {
+        align-self: flex-start;
+        text-align: left;
+    }
+
     .status-action-button {
         display: inline-flex;
         width: 100%;
