@@ -3,6 +3,12 @@ import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprove
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
+const TAB_LABELS = {
+    reception: "受付",
+    staff: "レーン担当",
+    admin: "管理設定",
+    database: "DB管理"
+};
 function getAllLanes(context) {
     return Object.entries(context.state.currentLanesState).map(([docId, data]) => ({
         docId,
@@ -58,8 +64,72 @@ function getRoomSummaryState(waiting, availableCount) {
         label: "満室"
     };
 }
+function getReceptionRoomLaneVisuals(roomState, totalLanes) {
+    const visuals = [];
+    const buckets = [
+        {
+            count: Number(roomState.availableLanes || 0),
+            tileClass: "tile-available",
+            icon: STATUS_ICON_SVGS.available,
+            label: "空き"
+        },
+        {
+            count: Number(roomState.guidingLanes || 0),
+            tileClass: "tile-guiding",
+            icon: STATUS_ICON_SVGS.guiding,
+            label: "案内中"
+        },
+        {
+            count: Number(roomState.occupiedLanes || 0),
+            tileClass: "tile-occupied",
+            icon: STATUS_ICON_SVGS.occupied,
+            label: "使用中"
+        },
+        {
+            count: Number(roomState.preparingLanes || 0),
+            tileClass: "tile-preparing",
+            icon: STATUS_ICON_SVGS.preparing,
+            label: "準備中"
+        },
+        {
+            count: Number(roomState.pausedLanes || 0),
+            tileClass: "tile-paused",
+            icon: STATUS_ICON_SVGS.paused,
+            label: "休止中"
+        }
+    ];
+    buckets.forEach((bucket) => {
+        for (let index = 0; index < bucket.count; index += 1) {
+            visuals.push({
+                tileClass: bucket.tileClass,
+                icon: bucket.icon,
+                label: bucket.label
+            });
+        }
+    });
+    const remaining = Math.max(totalLanes - visuals.length, 0);
+    for (let index = 0; index < remaining; index += 1) {
+        visuals.push({
+            tileClass: "tile-paused",
+            icon: STATUS_ICON_SVGS.paused,
+            label: "休止中"
+        });
+    }
+    return visuals.slice(0, totalLanes);
+}
 function getRoomStateSnapshot(context, roomId, totalLanes) {
     return normalizeRoomStateData(context.state.currentRoomState[roomId], totalLanes);
+}
+function setChevronToggleState(button, expanded) {
+    button.setAttribute("aria-expanded", String(expanded));
+    button.innerHTML = expanded ? UI_ICON_SVGS.triangleUp : UI_ICON_SVGS.triangleDown;
+}
+function setMenuToggleState(button, expanded) {
+    button.setAttribute("aria-expanded", String(expanded));
+    const icon = button.querySelector("i");
+    if (icon) {
+        icon.className = `fa-solid fa-${expanded ? "xmark" : "bars"}`;
+    }
 }
 // --- UI描画 (Render) ---
 export function scheduleRender(context) {
@@ -98,6 +168,9 @@ function renderAuthShell(context) {
     dom.authStatusText.classList.remove("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
+    dom.globalEventDisplay.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    dom.authAccountCard.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
+    setChevronToggleState(dom.statusBannerToggleBtn, !state.isStatusBannerCollapsed);
     if (member?.isActive) {
         dom.authStatusText.textContent = "";
         dom.authStatusText.classList.add("hidden");
@@ -155,6 +228,9 @@ function renderTabVisibility(context) {
     if (!canAccessTab(context, state.activeTab)) {
         state.activeTab = getDefaultTab(context);
     }
+    dom.tabsMenuLabel.textContent = TAB_LABELS[state.activeTab];
+    dom.tabs.classList.toggle("hidden", !state.isNavMenuOpen);
+    setMenuToggleState(dom.tabsMenuToggle, state.isNavMenuOpen);
     visibleTabs.forEach((button) => {
         const tabId = button.dataset.tab;
         if (!tabId) {
@@ -263,6 +339,9 @@ function renderRoomSummaryBar(context) {
     const { dom } = context;
     const summaryBar = dom.roomSummaryBar;
     summaryBar.innerHTML = "";
+    dom.summarySection.classList.toggle("is-collapsed", context.state.isSummaryCollapsed);
+    summaryBar.classList.toggle("summary-strip-compact", context.state.isSummaryCollapsed);
+    setChevronToggleState(dom.summaryToggleBtn, !context.state.isSummaryCollapsed);
     const visibleRooms = getVisibleRooms(context);
     if (visibleRooms.length === 0) {
         summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
@@ -274,21 +353,36 @@ function renderRoomSummaryBar(context) {
         const availableCount = Number(roomState.availableLanes || 0);
         const summaryState = getRoomSummaryState(waiting, availableCount);
         const chip = document.createElement("div");
-        chip.className = summaryState.chipClass;
-        chip.innerHTML = `
-            <div class="summary-chip-main">
-                <p class="summary-chip-room">${escapeHtml(room.name)}</p>
-                <div class="summary-chip-metrics">
-                    <span class="summary-chip-metric">空き ${availableCount}</span>
-                    <span class="summary-chip-metric">待機 ${waiting}</span>
-                    <span class="summary-chip-metric">全 ${room.lanes}</span>
+        if (context.state.isSummaryCollapsed) {
+            const compactTone = waiting > 0
+                ? "summary-chip-mini-alert"
+                : availableCount > 0
+                    ? "summary-chip-mini-positive"
+                    : "summary-chip-mini-neutral";
+            chip.className = `summary-chip-mini ${compactTone}`;
+            chip.innerHTML = `
+                <span class="summary-chip-mini-icon inline-flex">${summaryState.icon}</span>
+                <span class="summary-chip-mini-room">${escapeHtml(room.name)}</span>
+                <span class="summary-chip-mini-state">${summaryState.label}</span>
+            `;
+        }
+        else {
+            chip.className = summaryState.chipClass;
+            chip.innerHTML = `
+                <div class="summary-chip-main">
+                    <p class="summary-chip-room">${escapeHtml(room.name)}</p>
+                    <div class="summary-chip-metrics">
+                        <span class="summary-chip-metric">空き ${availableCount}</span>
+                        <span class="summary-chip-metric">待機 ${waiting}</span>
+                        <span class="summary-chip-metric">全 ${room.lanes}</span>
+                    </div>
                 </div>
-            </div>
-            <span class="summary-chip-state">
-                <span class="inline-flex">${summaryState.icon}</span>
-                <span>${summaryState.label}</span>
-            </span>
-        `;
+                <span class="summary-chip-state">
+                    <span class="inline-flex">${summaryState.icon}</span>
+                    <span>${summaryState.label}</span>
+                </span>
+            `;
+        }
         chip.onclick = () => {
             if (!canAccessTab(context, "reception")) {
                 return;
@@ -352,6 +446,7 @@ function renderReceptionList(context) {
         const preparingLanes = Number(roomState.preparingLanes || 0);
         const pausedLanes = Number(roomState.pausedLanes || 0);
         const guidingLanes = Number(roomState.guidingLanes || 0);
+        const laneVisuals = getReceptionRoomLaneVisuals(roomState, room.lanes);
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
@@ -370,6 +465,17 @@ function renderReceptionList(context) {
                 </div>
             </div>
             <div class="room-dashboard-summary">
+                <div class="room-dashboard-grid room-dashboard-grid-reception">
+                    ${laneVisuals.map((lane, index) => `
+                        <div class="lane-tile lane-tile-summary ${lane.tileClass}">
+                            <span class="lane-tile-number">レーン ${index + 1}</span>
+                            <span class="lane-tile-status">
+                                <span class="inline-flex">${lane.icon}</span>
+                                <span>${lane.label}</span>
+                            </span>
+                        </div>
+                    `).join("")}
+                </div>
                 <div class="room-dashboard-metrics">
                     <span class="room-dashboard-metric room-dashboard-metric-positive">
                         <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
@@ -602,17 +708,12 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
         return;
     }
-    const selectedRoomName = config.rooms.find((room) => room.id === selectedRoomId)?.name || "未選択";
     const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
     const currentWaitingGroups = currentState.waitingGroups || 0;
     const waitControlElement = document.createElement("div");
     waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
-            <div class="wait-control-main">
-                <p class="pill-eyebrow">Room Operations</p>
-                <h3 class="mt-2 text-[1.28rem] font-black tracking-tight text-slate-900 sm:text-[1.4rem]">担当部屋オペレーション</h3>
-            </div>
             <div class="wait-control-grid">
                 <div class="wait-control-panel wait-control-room-slot" data-room-select-slot></div>
                 <div class="wait-control-panel wait-control-panel-counter">

@@ -141,6 +141,8 @@ export interface DomRefs {
     appShell: HTMLElement;
     authLoginCard: HTMLElement;
     authPendingCard: HTMLElement;
+    tabsMenuToggle: HTMLButtonElement;
+    tabsMenuLabel: HTMLElement;
     authStatusText: HTMLElement;
     authUserName: HTMLElement;
     authUserEmail: HTMLElement;
@@ -150,6 +152,8 @@ export interface DomRefs {
     authSignOutBtn: HTMLButtonElement;
     tabs: HTMLElement;
     tabContents: HTMLElement;
+    authAccountCard: HTMLElement;
+    statusBannerToggleBtn: HTMLButtonElement;
     receptionList: HTMLElement;
     staffRoomSelect: HTMLSelectElement;
     staffLaneDashboard: HTMLElement;
@@ -157,6 +161,8 @@ export interface DomRefs {
     globalEventDisplay: HTMLElement;
     globalEventNameText: HTMLElement;
     globalAppIdText: HTMLElement;
+    summarySection: HTMLElement;
+    summaryToggleBtn: HTMLButtonElement;
     adminEventNameInput: HTMLInputElement;
     adminDirectoryImportFile: HTMLInputElement;
     adminDirectoryImportBtn: HTMLButtonElement;
@@ -200,6 +206,9 @@ export interface AppState {
     isUiInitialized: boolean;
     renderScheduled: boolean;
     activeTab: TabId;
+    isNavMenuOpen: boolean;
+    isStatusBannerCollapsed: boolean;
+    isSummaryCollapsed: boolean;
     currentLanesState: Record<string, LaneData>;
     currentRoomState: Record<string, RoomStateData>;
     dynamicAppConfig: AppConfig;

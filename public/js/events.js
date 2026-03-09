@@ -3,7 +3,7 @@ import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
-import { openReceptionRoomModal, renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
+import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import { approveAccessRequest, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -283,6 +283,32 @@ async function copyAndSwitchAppId(context, newId) {
 // --- イベントリスナー設定 ---
 export function setupEventListeners(context) {
     const { currentAppId, dom, state } = context;
+    dom.tabsMenuToggle.addEventListener("click", () => {
+        state.isNavMenuOpen = !state.isNavMenuOpen;
+        renderAllUI(context);
+    });
+    dom.statusBannerToggleBtn.addEventListener("click", () => {
+        state.isStatusBannerCollapsed = !state.isStatusBannerCollapsed;
+        renderAllUI(context);
+    });
+    dom.summaryToggleBtn.addEventListener("click", () => {
+        state.isSummaryCollapsed = !state.isSummaryCollapsed;
+        renderAllUI(context);
+    });
+    document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Node)) {
+            return;
+        }
+        if (!state.isNavMenuOpen) {
+            return;
+        }
+        if (dom.tabs.contains(target) || dom.tabsMenuToggle.contains(target)) {
+            return;
+        }
+        state.isNavMenuOpen = false;
+        renderAllUI(context);
+    });
     dom.tabs.addEventListener("click", (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
@@ -305,6 +331,7 @@ export function setupEventListeners(context) {
             return;
         }
         state.activeTab = tabId;
+        state.isNavMenuOpen = false;
         if (state.activeTab === "database" && hasRole(context, ["admin"])) {
             void fetchAndRenderEventList(context);
         }

@@ -10,7 +10,7 @@ import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
-import { openReceptionRoomModal, renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
+import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
     approveAccessRequest,
@@ -354,6 +354,39 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
 export function setupEventListeners(context: AppContext): void {
     const { currentAppId, dom, state } = context;
 
+    dom.tabsMenuToggle.addEventListener("click", () => {
+        state.isNavMenuOpen = !state.isNavMenuOpen;
+        renderAllUI(context);
+    });
+
+    dom.statusBannerToggleBtn.addEventListener("click", () => {
+        state.isStatusBannerCollapsed = !state.isStatusBannerCollapsed;
+        renderAllUI(context);
+    });
+
+    dom.summaryToggleBtn.addEventListener("click", () => {
+        state.isSummaryCollapsed = !state.isSummaryCollapsed;
+        renderAllUI(context);
+    });
+
+    document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Node)) {
+            return;
+        }
+
+        if (!state.isNavMenuOpen) {
+            return;
+        }
+
+        if (dom.tabs.contains(target) || dom.tabsMenuToggle.contains(target)) {
+            return;
+        }
+
+        state.isNavMenuOpen = false;
+        renderAllUI(context);
+    });
+
     dom.tabs.addEventListener("click", (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) {
@@ -381,6 +414,7 @@ export function setupEventListeners(context: AppContext): void {
         }
 
         state.activeTab = tabId as TabId;
+        state.isNavMenuOpen = false;
         if (state.activeTab === "database" && hasRole(context, ["admin"])) {
             void fetchAndRenderEventList(context);
         }
