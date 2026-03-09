@@ -7,6 +7,7 @@ Firebase Hosting 上で動く静的フロントエンドとして運用しつつ
 
 - 配信形態は `Firebase Hosting + 静的フロントエンド` を維持します。
 - フロントエンドは `TypeScript` で責務分離し、`src/` を編集して `public/js/` を生成します。
+- スタイルは `Tailwind CLI` で `src/styles.css` から `public/styles.css` を生成します。
 - 認証は Google ログイン、権限制御は Firestore Rules を正本にします。
 - `ADMIN_PASSWORD` は互換用の設定値として残していますが、現在の runtime 認証では使用しません。
 
@@ -70,8 +71,14 @@ Firestore 上では次の 2 系統で権限情報を持ちます。
 
 - `src/`
   TypeScript の実装本体です。ここを編集します。
+- `src/styles.css`
+  UI の見た目を定義する Tailwind 入力です。
 - `public/js/`
   `npm run build` で生成される配信用 JavaScript です。
+- `public/styles.css`
+  `npm run build` で生成される配信用 CSS です。
+- `tailwind.config.cjs`
+  Tailwind CLI の走査対象とテーマ設定です。
 - `firestore.rules`
   role ベースの認可ルールです。
 - `scripts/generate_local_config.py`

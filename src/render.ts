@@ -1,4 +1,5 @@
 import { canAccessTab, canManageRoom, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
+import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
 import { updateReceptionStatus } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
 
@@ -39,6 +40,53 @@ function getAuthorizationSourceBadge(member: AccessMember): string {
         return '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">名簿連携</span>';
     }
     return '<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">手動承認</span>';
+}
+
+function getLanePillClass(status: string): string {
+    switch (status) {
+        case "available":
+            return "lane-pill lane-pill-available";
+        case "occupied":
+            return "lane-pill lane-pill-occupied";
+        case "preparing":
+            return "lane-pill lane-pill-preparing";
+        case "paused":
+            return "lane-pill lane-pill-paused";
+        default:
+            return "lane-pill lane-pill-paused";
+    }
+}
+
+function getRoomSummaryState(waiting: number, availableCount: number): {
+    chipClass: string;
+    icon: string;
+    label: string;
+    helper: string;
+} {
+    if (waiting > 0) {
+        return {
+            chipClass: "summary-chip summary-chip-alert",
+            icon: UI_ICON_SVGS.queue,
+            label: `待機 ${waiting}組`,
+            helper: "受付対応が必要です"
+        };
+    }
+
+    if (availableCount > 0) {
+        return {
+            chipClass: "summary-chip summary-chip-positive",
+            icon: STATUS_ICON_SVGS.available,
+            label: `空き ${availableCount}レーン`,
+            helper: "すぐ案内できます"
+        };
+    }
+
+    return {
+        chipClass: "summary-chip summary-chip-neutral",
+        icon: UI_ICON_SVGS.full,
+        label: "満室",
+        helper: "空き待ちなし"
+    };
 }
 
 // --- UI描画 (Render) ---
@@ -266,7 +314,7 @@ function renderRoomSummaryBar(context: AppContext): void {
 
     const visibleRooms = getVisibleRooms(context);
     if (visibleRooms.length === 0) {
-        summaryBar.innerHTML = '<div class="rounded-lg border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
+        summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
         return;
     }
 
@@ -277,31 +325,18 @@ function renderRoomSummaryBar(context: AppContext): void {
         const waiting = roomState.waitingGroups || 0;
         const roomLanes = allLanes.filter((lane) => lane.roomId === room.id);
         const availableCount = roomLanes.filter((lane) => lane.status === "available").length;
-
-        let statusClass = "";
-        let iconHtml = "";
-        let textHtml = "";
-
-        if (waiting > 0) {
-            statusClass = "bg-red-500 text-white border-red-600 animate-pulse shadow-md";
-            iconHtml = '<i class="fa-solid fa-users mr-1"></i>';
-            textHtml = `待機: ${waiting}組`;
-        } else if (availableCount > 0) {
-            statusClass = "bg-emerald-500 text-white border-emerald-600 shadow-sm";
-            iconHtml = '<i class="fa-regular fa-circle-check mr-1"></i>';
-            textHtml = `空き: ${availableCount}`;
-        } else {
-            statusClass = "bg-gray-100 text-gray-500 border-gray-300";
-            iconHtml = '<i class="fa-solid fa-ban mr-1"></i>';
-            textHtml = "満室";
-        }
+        const summaryState = getRoomSummaryState(waiting, availableCount);
 
         const chip = document.createElement("div");
-        chip.className = `flex-grow sm:flex-grow-0 px-3 py-2 rounded-md border text-xs font-bold flex items-center justify-center cursor-pointer transition transform active:scale-95 ${statusClass}`;
+        chip.className = summaryState.chipClass;
         chip.innerHTML = `
-            <span class="mr-2 opacity-90">${room.name}</span>
-            <span class="flex items-center bg-black/10 px-2 py-0.5 rounded-full">
-                ${iconHtml} ${textHtml}
+            <div>
+                <p class="summary-chip-room">${escapeHtml(room.name)}</p>
+                <p class="summary-chip-copy">${summaryState.helper}</p>
+            </div>
+            <span class="summary-chip-state">
+                <span class="inline-flex">${summaryState.icon}</span>
+                <span>${summaryState.label}</span>
             </span>
         `;
 
@@ -359,12 +394,12 @@ function renderReceptionList(context: AppContext): void {
     dom.receptionList.className = "dashboard-grid";
 
     if (!canAccessTab(context, "reception")) {
-        dom.receptionList.innerHTML = '<div class="col-span-full rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">受付権限を持つメンバーのみ表示できます。</div>';
+        dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">受付権限を持つメンバーのみ表示できます。</div>';
         return;
     }
 
     if (config.rooms.length === 0) {
-        dom.receptionList.innerHTML = '<div class="col-span-full text-center py-10 text-gray-500 bg-white rounded-lg shadow">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
+        dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
 
@@ -378,37 +413,38 @@ function renderReceptionList(context: AppContext): void {
         const currentState = state.currentRoomState[room.id] || { waitingGroups: 0 };
         const waitingGroups = currentState.waitingGroups || 0;
         const headerElement = document.createElement("div");
-        headerElement.className = "bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center";
+        headerElement.className = "room-dashboard-header";
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
 
         headerElement.innerHTML = `
             <div>
-                <h3 class="text-xl font-bold text-gray-800">${room.name}</h3>
-                <p class="text-xs text-gray-500 mt-1">全 ${room.lanes} レーン</p>
+                <p class="pill-eyebrow">Reception Overview</p>
+                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                <p class="mt-2 text-sm text-slate-500">全 ${room.lanes} レーンをリアルタイム同期中</p>
             </div>
             <div class="flex flex-col items-center">
-                <span class="text-xs font-bold text-gray-400 mb-1">待機</span>
-                <div class="${waitBadgeClass} wait-badge-large text-gray-800">
-                    ${waitingGroups > 0 ? `${waitingGroups}組` : "0"}
+                <span class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">待機</span>
+                <div class="${waitBadgeClass} wait-badge-large">
+                    ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
                 </div>
             </div>
         `;
         roomElement.appendChild(headerElement);
 
         const lanesContainer = document.createElement("div");
-        lanesContainer.className = "p-4 grid grid-cols-3 gap-3 min-h-[50vh]";
+        lanesContainer.className = "room-dashboard-grid";
         const roomLanes = allLanes
             .filter((lane) => lane.data.roomId === room.id)
             .sort((left, right) => left.data.laneNum - right.data.laneNum);
 
         if (roomLanes.length === 0) {
-            lanesContainer.innerHTML = '<p class="col-span-full text-center text-xs text-gray-400 py-4">レーン未設定</p>';
+            lanesContainer.innerHTML = '<p class="col-span-full py-8 text-center text-sm text-slate-400">レーン未設定</p>';
         }
 
         roomLanes.forEach((lane) => {
             const docId = lane.docId;
             const laneData = lane.data;
-            const laneName = laneData.customName || `${laneData.laneNum}`;
+            const laneName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
 
             let tileClass = "";
             let statusIcon = "";
@@ -418,59 +454,72 @@ function renderReceptionList(context: AppContext): void {
 
             if (laneData.receptionStatus === "guiding") {
                 tileClass = "tile-guiding";
-                statusIcon = '<i class="fa-solid fa-person-walking-arrow-right fa-beat-fade"></i>';
+                statusIcon = STATUS_ICON_SVGS.guiding;
                 statusText = "案内中";
+                additionalInfo = '<span class="lane-tile-note">受付からご案内中</span>';
             } else {
                 switch (laneData.status) {
                     case "available":
                         tileClass = "tile-available";
-                        statusIcon = '<i class="fa-regular fa-circle-check text-2xl mb-1"></i>';
+                        statusIcon = STATUS_ICON_SVGS.available;
                         statusText = "空き";
                         isClickable = clickable;
                         break;
                     case "occupied":
                         tileClass = "tile-occupied";
-                        statusIcon = '<i class="fa-solid fa-gamepad"></i>';
+                        statusIcon = STATUS_ICON_SVGS.occupied;
                         statusText = "使用中";
                         break;
                     case "preparing":
                         tileClass = "tile-preparing";
-                        statusIcon = '<i class="fa-solid fa-wrench"></i>';
+                        statusIcon = STATUS_ICON_SVGS.preparing;
                         statusText = "準備中";
                         break;
                     case "paused":
                         tileClass = "tile-paused";
-                        statusIcon = '<i class="fa-solid fa-ban"></i>';
+                        statusIcon = STATUS_ICON_SVGS.paused;
                         statusText = "休止中";
                         if (laneData.pauseReasonId) {
                             const reason = config.pauseReasons.find((item) => item.id === laneData.pauseReasonId);
                             if (reason) {
-                                additionalInfo = `<span class="text-[10px] bg-black/20 px-1 rounded mt-1 truncate max-w-full">${reason.name}</span>`;
+                                additionalInfo = `<span class="lane-tile-note">${escapeHtml(reason.name)}</span>`;
                             }
                         }
                         break;
                     default:
-                        tileClass = "bg-gray-400 text-white";
+                        tileClass = "tile-paused";
+                        statusIcon = STATUS_ICON_SVGS.paused;
+                        statusText = "不明";
                 }
             }
 
             const laneTile = document.createElement("div");
-            laneTile.className = `lane-tile ${tileClass}`;
+            laneTile.className = `lane-tile ${tileClass}${isClickable ? " lane-tile-clickable" : ""}`;
 
             let innerContent = `
-                <div class="font-bold text-lg leading-none mb-1 shadow-sm" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${laneName}</div>
-                <div class="text-xs flex flex-col items-center">
-                    ${statusIcon}
-                    <span class="font-bold">${statusText}</span>
-                    ${additionalInfo}
+                <div class="lane-tile-number">${laneName}</div>
+                <div class="lane-tile-status">
+                    <span class="inline-flex">${statusIcon}</span>
+                    <span>${statusText}</span>
                 </div>
+                ${additionalInfo}
             `;
 
             if (laneData.selectedOptions?.length) {
-                innerContent += '<div class="absolute top-1 right-1 text-[10px] font-bold text-blue-700 bg-white rounded px-1 shadow">Op</div>';
+                innerContent += `
+                    <div class="lane-tile-badge lane-tile-badge-options">
+                        <span class="inline-flex">${UI_ICON_SVGS.options}</span>
+                        <span>Op</span>
+                    </div>
+                `;
             }
             if (laneData.receptionNotes) {
-                innerContent += '<div class="absolute top-1 left-1 text-[10px] font-bold text-yellow-700 bg-yellow-100 rounded px-1 shadow">Memo</div>';
+                innerContent += `
+                    <div class="lane-tile-badge lane-tile-badge-note">
+                        <span class="inline-flex">${UI_ICON_SVGS.note}</span>
+                        <span>Memo</span>
+                    </div>
+                `;
             }
 
             laneTile.innerHTML = innerContent;
@@ -513,33 +562,33 @@ export async function openReceptionLaneModal(context: AppContext, laneDocId: str
     dom.receptionModalTitle.textContent = `${laneName}へ案内`;
 
     dom.receptionModalContent.innerHTML = `
-        <div class="mb-4">
-            <h4 class="text-sm font-bold text-gray-700 mb-2">オプションを選択:</h4>
-            <div id="reception-modal-options" class="max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 bg-gray-50">
+        <div class="mb-5 rounded-2xl bg-slate-50/80 p-4">
+            <h4 class="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-slate-500">オプション選択</h4>
+            <div id="reception-modal-options" class="max-h-40 overflow-y-auto rounded-2xl border border-slate-200/80 bg-white/80 p-3">
                 ${config.options.length > 0 ?
                     config.options.map((option) => `
-                        <label class="flex items-center space-x-2 text-sm text-gray-800 mb-1 cursor-pointer">
-                            <input type="checkbox" class="reception-opt-chk accent-blue-600" value="${option.name}"
+                        <label class="mb-2 flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2 text-sm text-slate-800 hover:bg-slate-50">
+                            <input type="checkbox" class="reception-opt-chk accent-blue-600" value="${escapeHtml(option.name)}"
                                 ${laneData.selectedOptions && laneData.selectedOptions.includes(option.name) ? "checked" : ""}>
-                            <span class="truncate">${option.name}</span>
+                            <span class="truncate">${escapeHtml(option.name)}</span>
                         </label>
                     `).join("") :
-                    '<p class="text-xs text-gray-400">オプションは設定されていません。</p>'
+                    '<p class="text-xs text-slate-400">オプションは設定されていません。</p>'
                 }
             </div>
         </div>
 
-        <div class="mb-6">
-            <label for="reception-modal-notes" class="block text-sm font-bold text-gray-700 mb-2">備考 (任意):</label>
+        <div class="mb-6 rounded-2xl bg-amber-50/70 p-4">
+            <label for="reception-modal-notes" class="mb-2 block text-sm font-bold text-amber-900">備考 (任意)</label>
             <input type="text" id="reception-modal-notes" 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm" 
+                   class="w-full px-4 py-3 text-sm" 
                    placeholder="例: 人数、特徴など (任意)"
-                   value="${laneData.receptionNotes || ""}">
+                   value="${escapeHtml(laneData.receptionNotes || "")}">
         </div>
 
         <button id="reception-modal-start-btn" 
-                class="w-full px-4 py-3 bg-blue-600 text-white font-bold rounded-md shadow-md hover:bg-blue-700 transition">
-            <i class="fa-solid fa-person-walking-arrow-right mr-2"></i> 案内中にする
+                class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20">
+            <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする
         </button>
     `;
 
@@ -569,7 +618,7 @@ export async function openReceptionLaneModal(context: AppContext, laneDocId: str
 
         dom.receptionLaneModal.classList.add("hidden");
         startButton.disabled = false;
-        startButton.innerHTML = '<i class="fa-solid fa-person-walking-arrow-right mr-2"></i> 案内中にする';
+        startButton.innerHTML = `<span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする`;
     };
 }
 
@@ -603,19 +652,19 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
     dom.staffLaneDashboard.innerHTML = "";
 
     if (!canAccessTab(context, "staff")) {
-        dom.staffLaneDashboard.innerHTML = '<p class="text-center text-gray-500">レーン担当権限を持つメンバーのみ表示できます。</p>';
+        dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">レーン担当権限を持つメンバーのみ表示できます。</div>';
         return;
     }
 
     if (!selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = getVisibleRooms(context).length === 0
-            ? '<p class="text-center text-gray-500">担当部屋が割り当てられていません。管理者に連絡してください。</p>'
-            : '<p class="text-center text-gray-500">上記で担当する部屋を選択してください。</p>';
+            ? '<div class="app-surface px-6 py-10 text-center text-slate-500">担当部屋が割り当てられていません。管理者に連絡してください。</div>'
+            : '<div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから担当する部屋を選択してください。</div>';
         return;
     }
 
     if (!canManageRoom(context, selectedRoomId)) {
-        dom.staffLaneDashboard.innerHTML = '<p class="text-center text-gray-500">この部屋は操作できません。割り当て設定を確認してください。</p>';
+        dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
         return;
     }
 
@@ -623,22 +672,30 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
     const currentWaitingGroups = currentState.waitingGroups || 0;
 
     const waitControlElement = document.createElement("div");
-    waitControlElement.className = "bg-white p-4 rounded-lg shadow border border-gray-200 mb-6";
+    waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">待機組数 管理</h3>
-        <div class="flex items-center justify-center space-x-4">
-            <button data-action="dec-wait" data-roomid="${selectedRoomId}"
-                    class="px-5 py-3 bg-red-500 text-white font-bold rounded-lg shadow-md hover:bg-red-600 active:scale-95 transition-transform ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
-                    ${currentWaitingGroups === 0 ? "disabled" : ""}>
-                <i class="fa-solid fa-minus"></i>
-            </button>
-            <div class="text-4xl font-bold text-blue-600 w-20 text-center">${currentWaitingGroups}</div>
-            <button data-action="inc-wait" data-roomid="${selectedRoomId}"
-                    class="px-5 py-3 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 active:scale-95 transition-transform">
-                <i class="fa-solid fa-plus"></i>
-            </button>
+        <div class="wait-control-shell">
+            <div>
+                <p class="pill-eyebrow">Queue Control</p>
+                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">待機組数 管理</h3>
+                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">受付が見ている待機数をこの部屋単位で同期します。案内前後のタイミングで更新してください。</p>
+            </div>
+            <div class="wait-control-actions">
+                <button data-action="dec-wait" data-roomid="${selectedRoomId}"
+                        class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
+                        ${currentWaitingGroups === 0 ? "disabled" : ""}>
+                    <span class="inline-flex">${UI_ICON_SVGS.minus}</span>
+                </button>
+                <div class="wait-counter-card">
+                    <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">現在</div>
+                    <div class="mt-2 text-4xl font-black tracking-tight text-blue-700">${currentWaitingGroups}</div>
+                </div>
+                <button data-action="inc-wait" data-roomid="${selectedRoomId}"
+                        class="wait-adjust-button wait-adjust-button-inc">
+                    <span class="inline-flex">${UI_ICON_SVGS.plus}</span>
+                </button>
+            </div>
         </div>
-        <p class="text-center text-sm text-gray-500 mt-2">この部屋の待機組数を更新します</p>
     `;
     dom.staffLaneDashboard.appendChild(waitControlElement);
 
@@ -647,7 +704,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         .sort((left, right) => left.data.laneNum - right.data.laneNum);
 
     if (roomLanes.length === 0) {
-        dom.staffLaneDashboard.innerHTML += '<p class="text-center text-gray-500">この部屋にはレーンがありません。</p>';
+        dom.staffLaneDashboard.innerHTML += '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋にはレーンがありません。</div>';
         return;
     }
 
@@ -661,13 +718,13 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         const laneElement = document.createElement("div");
         laneElement.className = "lane-card";
 
-        const laneDisplayName = laneData.customName || `レーン ${laneData.laneNum}`;
-        const staffNameDisplay = laneData.staffName ? `担当: ${laneData.staffName}` : "担当: ---";
+        const laneDisplayName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
+        const staffNameDisplay = laneData.staffName ? `担当: ${escapeHtml(laneData.staffName)}` : "担当: ---";
         const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
         const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
 
         let receptionStatusDisplay = receptionStatusConfig.name;
-        let receptionStatusClass = "text-gray-500";
+        let receptionStatusClass = "text-slate-500";
         let arrivalButton = "";
         let optionsDisplay = "";
         let notesDisplay = "";
@@ -688,8 +745,8 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
             receptionStatusClass = "text-blue-600 font-bold animate-pulse";
             arrivalButton = `
                 <button data-action="confirm-arrival" data-docid="${docId}"
-                        class="w-full mt-3 px-3 py-2 text-sm font-medium text-white bg-green-500 rounded-md shadow-sm hover:bg-green-600 active:scale-95 transition-transform">
-                    <i class="fa-solid fa-user-check mr-1"></i> お客様 到着確認
+                        class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
+                    <span class="mr-2 inline-flex">${UI_ICON_SVGS.arrival}</span>お客様 到着確認
                 </button>
             `;
         } else if (laneData.receptionStatus === "available" && laneData.status === "available") {
@@ -700,34 +757,34 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
             if (laneData.selectedOptions?.length) {
                 optionsDisplay = `
-                    <div class="mt-2 text-xs text-gray-700 font-medium bg-gray-100 p-2 rounded">
-                        <i class="fa-solid fa-check-double mr-1 text-blue-600"></i>
-                        プラン: ${laneData.selectedOptions.join(", ")}
+                    <div class="info-strip info-strip-options">
+                        <span class="inline-flex">${UI_ICON_SVGS.options}</span>
+                        <span>プラン: ${laneData.selectedOptions.map((option) => escapeHtml(option)).join(", ")}</span>
                     </div>
                 `;
             }
             if (laneData.receptionNotes) {
                 notesDisplay = `
-                    <div class="mt-2 text-xs text-gray-700 font-medium bg-yellow-50 p-2 rounded border border-yellow-200">
-                        <i class="fa-solid fa-flag mr-1 text-yellow-500"></i>
-                        備考: ${laneData.receptionNotes}
+                    <div class="info-strip info-strip-notes">
+                        <span class="inline-flex">${UI_ICON_SVGS.note}</span>
+                        <span>備考: ${escapeHtml(laneData.receptionNotes)}</span>
                     </div>
                 `;
             }
         } else if (laneData.receptionStatus === "guiding" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
             if (laneData.selectedOptions?.length) {
                 optionsDisplay = `
-                    <div class="mt-2 text-xs text-blue-600 font-medium bg-blue-50 p-2 rounded">
-                        <i class="fa-solid fa-check-double mr-1"></i>
-                        プラン: ${laneData.selectedOptions.join(", ")}
+                    <div class="info-strip info-strip-options">
+                        <span class="inline-flex">${UI_ICON_SVGS.options}</span>
+                        <span>プラン: ${laneData.selectedOptions.map((option) => escapeHtml(option)).join(", ")}</span>
                     </div>
                 `;
             }
             if (laneData.receptionNotes) {
                 notesDisplay = `
-                    <div class="mt-2 text-xs text-yellow-600 font-medium bg-yellow-50 p-2 rounded border border-yellow-200">
-                        <i class="fa-solid fa-flag mr-1 text-yellow-500"></i>
-                        備考: ${laneData.receptionNotes}
+                    <div class="info-strip info-strip-notes">
+                        <span class="inline-flex">${UI_ICON_SVGS.note}</span>
+                        <span>備考: ${escapeHtml(laneData.receptionNotes)}</span>
                     </div>
                 `;
             }
@@ -737,25 +794,25 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
             const isCurrent = laneData.status === status.id;
             return `
                 <button data-action="set-lane-status" data-docid="${docId}" data-status="${status.id}" 
-                        class="flex-1 px-3 py-2 text-sm font-medium rounded-md transition ${
+                        class="status-action-button ${
                             isCurrent
-                            ? `text-white shadow ${status.colorClass}`
-                            : "text-gray-700 bg-gray-100 hover:bg-gray-200"
+                            ? `status-action-active ${status.colorClass}`
+                            : "status-action-idle"
                         }">
-                    <span class="mr-1 inline-flex">${status.icon}</span>${status.name}
+                    <span class="inline-flex">${status.icon}</span>${status.name}
                 </button>
             `;
         }).join("");
 
         const pauseReasonsOptionsHtml = (config.pauseReasons || []).map((reason) =>
-            `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${reason.name}</option>`
+            `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${escapeHtml(reason.name)}</option>`
         ).join("");
 
         const pauseReasonSelect = `
-            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "mt-3" : "hidden"}">
-                <label for="pause-reason-select-${docId}" class="block text-sm font-medium text-gray-700 mb-1">休止理由:</label>
+            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-2xl bg-slate-50/80 p-4" : "hidden"}">
+                <label for="pause-reason-select-${docId}" class="mb-2 block text-sm font-bold text-slate-700">休止理由</label>
                 <select id="pause-reason-select-${docId}" data-action="set-pause-reason" data-docid="${docId}" 
-                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        class="block w-full px-4 py-3 text-sm">
                     <option value="">--- 理由を選択 ---</option>
                     ${pauseReasonsOptionsHtml}
                 </select>
@@ -763,16 +820,21 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         `;
 
         laneElement.innerHTML = `
-            <h4 class="font-semibold text-gray-800">${laneDisplayName}</h4>
-            
-            <div class="text-xs text-gray-400 text-center mt-1">
-                ${staffNameDisplay}
+            <div class="lane-card-header">
+                <div>
+                    <h4 class="lane-card-title">${laneDisplayName}</h4>
+                    <p class="lane-card-subtext">${staffNameDisplay}</p>
+                </div>
+                <span class="${getLanePillClass(laneData.status)}">
+                    <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
+                    <span>${escapeHtml(laneStatusConfig.name || "不明")}</span>
+                </span>
             </div>
-            
-            <div class="text-center mt-2">
-                <p class="inline-flex items-center gap-1 text-sm ${receptionStatusClass}">
-                    <span class="inline-flex">${receptionStatusConfig.icon || ""}</span>
-                    <span>${receptionStatusDisplay}</span>
+
+            <div class="lane-card-reception">
+                <p class="inline-flex items-center gap-2 text-sm ${receptionStatusClass}">
+                    <span class="inline-flex">${receptionStatusConfig.icon || STATUS_ICON_SVGS.guiding}</span>
+                    <span>${escapeHtml(receptionStatusDisplay || "状態未設定")}</span>
                 </p>
             </div>
 
@@ -782,8 +844,8 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
 
             ${arrivalButton}
             
-            <div class="mt-4 pt-4 border-t">
-                <p class="text-sm font-medium text-gray-700 mb-2">レーンの状況を変更:</p>
+            <div class="mt-2 border-t border-slate-200/80 pt-4">
+                <p class="mb-3 text-sm font-bold text-slate-700">レーンの状況を変更</p>
                 <div class="flex flex-wrap gap-2">
                     ${statusButtons}
                 </div>
