@@ -1,12 +1,30 @@
 import * as FirebaseFirestore from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
+import { scheduleRender } from "./render.js";
 import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStateData } from "./room-state.js";
 const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
 const runTransaction = FirebaseFirestore.runTransaction;
 function getRoomLaneCount(context, roomId) {
     return context.state.dynamicAppConfig.rooms.find((room) => room.id === roomId)?.lanes
         || Number(context.state.currentRoomState[roomId]?.totalLanes || 0);
+}
+function getWaitingGroupDelta(record, roomId) {
+    return Number(record[roomId] || 0);
+}
+function setWaitingGroupDelta(record, roomId, value) {
+    if (value === 0) {
+        delete record[roomId];
+        return;
+    }
+    record[roomId] = value;
+}
+function getDisplayedWaitingGroups(context, roomId) {
+    const baseWaitingGroups = Number(context.state.currentRoomState[roomId]?.waitingGroups || 0);
+    const pendingDelta = getWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId)
+        + getWaitingGroupDelta(context.state.waitingGroupInFlightDeltas, roomId)
+        + getWaitingGroupDelta(context.state.waitingGroupAwaitingSnapshotDeltas, roomId);
+    return Math.max(0, baseWaitingGroups + pendingDelta);
 }
 function normalizeLaneData(rawData) {
     return {
@@ -276,7 +294,6 @@ export async function saveAdminSettings(context) {
     }, 3000);
 }
 export async function updateWaitingGroups(context, roomId, delta) {
-    const { db, paths } = context;
     if (!canManageRoom(context, roomId)) {
         alert("この部屋の待機組数は更新できません。");
         return;
@@ -284,17 +301,43 @@ export async function updateWaitingGroups(context, roomId, delta) {
     if (delta === 0) {
         return;
     }
+    const currentWaitingGroups = getDisplayedWaitingGroups(context, roomId);
+    const nextWaitingGroups = Math.max(0, currentWaitingGroups + delta);
+    const boundedDelta = nextWaitingGroups - currentWaitingGroups;
+    if (boundedDelta === 0) {
+        return;
+    }
+    setWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId, getWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId) + boundedDelta);
+    scheduleRender(context);
+    void flushWaitingGroupSync(context, roomId);
+}
+export async function flushWaitingGroupSync(context, roomId) {
+    const { db, paths, state } = context;
+    if (state.waitingGroupSyncInFlight[roomId]) {
+        return;
+    }
+    if (getWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId) !== 0) {
+        return;
+    }
+    const queuedDelta = getWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId);
+    if (queuedDelta === 0) {
+        return;
+    }
+    setWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId, 0);
+    setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, queuedDelta);
+    state.waitingGroupSyncInFlight[roomId] = true;
+    scheduleRender(context);
     try {
         const roomLaneCount = getRoomLaneCount(context, roomId);
         const docRef = doc(db, paths.roomStateCollectionPath, roomId);
-        await runTransaction(db, async (transaction) => {
+        const didMutate = await runTransaction(db, async (transaction) => {
             const roomStateSnap = await transaction.get(docRef);
             const currentRoomState = roomStateSnap.exists()
                 ? normalizeRoomStateData(roomStateSnap.data(), roomLaneCount)
                 : createEmptyRoomState(roomLaneCount);
-            const nextWaitingGroups = Math.max(0, Number(currentRoomState.waitingGroups || 0) + delta);
+            const nextWaitingGroups = Math.max(0, Number(currentRoomState.waitingGroups || 0) + queuedDelta);
             if (nextWaitingGroups === Number(currentRoomState.waitingGroups || 0)) {
-                return;
+                return false;
             }
             transaction.set(docRef, {
                 ...currentRoomState,
@@ -302,10 +345,23 @@ export async function updateWaitingGroups(context, roomId, delta) {
                 totalLanes: roomLaneCount,
                 updatedAt: serverTimestamp()
             }, { merge: true });
+            return true;
         });
+        setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, 0);
+        setWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId, didMutate ? queuedDelta : 0);
+        scheduleRender(context);
     }
     catch (error) {
+        setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, 0);
+        scheduleRender(context);
         console.error("Failed to update waiting groups:", error);
+    }
+    finally {
+        delete state.waitingGroupSyncInFlight[roomId];
+        if (getWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId) !== 0
+            && getWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId) === 0) {
+            void flushWaitingGroupSync(context, roomId);
+        }
     }
 }
 // ★新規追加: イベント情報をレジストリに書き込む関数

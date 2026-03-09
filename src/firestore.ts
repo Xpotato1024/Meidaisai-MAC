@@ -13,6 +13,7 @@ import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
 import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
+import { flushWaitingGroupSync } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneStatusConfig, NamedOption, ReceptionStatusConfig } from "./types.js";
 
 function toTimestampMillis(value: unknown): number {
@@ -186,12 +187,20 @@ export function listenToRoomStateChanges(context: AppContext): void {
         (querySnapshot: any) => {
             console.log("Room state data updated...");
             state.currentRoomState = {};
+            const roomsReadyToResume: string[] = [];
             querySnapshot.forEach((roomStateDoc: any) => {
                 const totalLanes = context.state.dynamicAppConfig.rooms.find((room) => room.id === roomStateDoc.id)?.lanes || 0;
                 state.currentRoomState[roomStateDoc.id] = normalizeRoomStateData(roomStateDoc.data(), totalLanes);
+                if (Number(state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id] || 0) !== 0) {
+                    delete state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id];
+                    roomsReadyToResume.push(roomStateDoc.id);
+                }
             });
 
             scheduleRender(context);
+            roomsReadyToResume.forEach((roomId) => {
+                void flushWaitingGroupSync(context, roomId);
+            });
         },
         (error: unknown) => {
             console.error("Room state listener error:", error);
