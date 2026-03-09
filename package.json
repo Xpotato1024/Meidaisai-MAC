@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "tsc -p tsconfig.json",
+    "build:css": "tailwindcss -c tailwind.config.cjs -i ./src/styles.css -o ./public/styles.css --minify",
     "check": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3"
   }
 }
