@@ -708,17 +708,12 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
         return;
     }
-    const selectedRoomName = config.rooms.find((room) => room.id === selectedRoomId)?.name || "未選択";
     const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
     const currentWaitingGroups = currentState.waitingGroups || 0;
     const waitControlElement = document.createElement("div");
     waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
-            <div class="wait-control-main">
-                <p class="pill-eyebrow">Room Operations</p>
-                <h3 class="mt-2 text-[1.28rem] font-black tracking-tight text-slate-900 sm:text-[1.4rem]">担当部屋オペレーション</h3>
-            </div>
             <div class="wait-control-grid">
                 <div class="wait-control-panel wait-control-room-slot" data-room-select-slot></div>
                 <div class="wait-control-panel wait-control-panel-counter">
