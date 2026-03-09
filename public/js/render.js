@@ -112,7 +112,7 @@ function renderAuthShell(context) {
     if (member?.isActive) {
         dom.authStatusText.textContent = "承認済みメンバーとして利用できます。";
         dom.authRoleBadge.textContent = ROLE_LABELS[member.role];
-        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100 border border-emerald-300/30";
+        dom.authRoleBadge.className = "inline-flex items-center rounded-lg border border-emerald-300/30 bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100";
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.add("hidden");
         dom.appShell.classList.remove("hidden");
@@ -120,7 +120,7 @@ function renderAuthShell(context) {
     else if (member && !member.isActive) {
         dom.authStatusText.textContent = "このアカウントは現在利用停止です。";
         dom.authRoleBadge.textContent = "利用停止";
-        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-rose-400/15 px-3 py-1 text-xs font-bold text-rose-100 border border-rose-300/30";
+        dom.authRoleBadge.className = "inline-flex items-center rounded-lg border border-rose-300/30 bg-rose-400/15 px-3 py-1 text-xs font-bold text-rose-100";
         dom.authPendingMessage.textContent = "今年度名簿に含まれていないか、管理者が利用停止にしています。必要なら管理者へ連絡してください。";
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
@@ -133,7 +133,7 @@ function renderAuthShell(context) {
             : "ログインは完了しました。名簿登録済みなら自動承認、名簿外アカウントは管理者承認後に利用できます。";
         dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
         dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
-        dom.authRoleBadge.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${status === "rejected"
+        dom.authRoleBadge.className = `inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold border ${status === "rejected"
             ? "bg-rose-400/15 text-rose-100 border-rose-300/30"
             : "bg-amber-300/15 text-amber-100 border-amber-200/30"}`;
         dom.authPendingMessage.textContent = pendingMessage;
@@ -362,12 +362,14 @@ function renderReceptionList(context) {
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         headerElement.innerHTML = `
             <div>
-                <p class="pill-eyebrow">Reception Overview</p>
-                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                <p class="mt-2 text-sm text-slate-500">全 ${room.lanes} レーンをリアルタイム同期中</p>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Room</p>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                    <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                </div>
             </div>
-            <div class="flex flex-col items-center">
-                <span class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">待機</span>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">待機</span>
                 <div class="${waitBadgeClass} wait-badge-large">
                     ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
                 </div>
@@ -395,7 +397,6 @@ function renderReceptionList(context) {
                 tileClass = "tile-guiding";
                 statusIcon = STATUS_ICON_SVGS.guiding;
                 statusText = "案内中";
-                additionalInfo = '<span class="lane-tile-note">受付からご案内中</span>';
             }
             else {
                 switch (laneData.status) {
