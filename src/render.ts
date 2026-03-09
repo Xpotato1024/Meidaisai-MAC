@@ -91,10 +91,7 @@ function getRoomStateSnapshot(context: AppContext, roomId: string, totalLanes: n
 
 function setChevronToggleState(button: HTMLButtonElement, expanded: boolean): void {
     button.setAttribute("aria-expanded", String(expanded));
-    const icon = button.querySelector("i");
-    if (icon) {
-        icon.className = `fa-solid fa-chevron-${expanded ? "up" : "down"}`;
-    }
+    button.innerHTML = expanded ? UI_ICON_SVGS.triangleUp : UI_ICON_SVGS.triangleDown;
 }
 
 function setMenuToggleState(button: HTMLButtonElement, expanded: boolean): void {

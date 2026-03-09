@@ -54,5 +54,11 @@ export const UI_ICON_SVGS = {
         `, "status-svg-xl"),
     minus: buildUtilityIcon(`
             <path d="M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" />
-        `, "status-svg-xl")
+        `, "status-svg-xl"),
+    triangleDown: buildUtilityIcon(`
+            <path d="M12 15.8 6.5 9.2h11L12 15.8Z" fill="currentColor" />
+        `, "status-svg-lg"),
+    triangleUp: buildUtilityIcon(`
+            <path d="M12 8.2 17.5 14.8h-11L12 8.2Z" fill="currentColor" />
+        `, "status-svg-lg")
 };
