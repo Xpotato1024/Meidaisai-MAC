@@ -35,42 +35,25 @@ function getAuthorizationSourceBadge(member) {
     }
     return '<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">手動承認</span>';
 }
-function getLanePillClass(status) {
-    switch (status) {
-        case "available":
-            return "lane-pill lane-pill-available";
-        case "occupied":
-            return "lane-pill lane-pill-occupied";
-        case "preparing":
-            return "lane-pill lane-pill-preparing";
-        case "paused":
-            return "lane-pill lane-pill-paused";
-        default:
-            return "lane-pill lane-pill-paused";
-    }
-}
 function getRoomSummaryState(waiting, availableCount) {
     if (waiting > 0) {
         return {
             chipClass: "summary-chip summary-chip-alert",
             icon: UI_ICON_SVGS.queue,
-            label: `待機 ${waiting}組`,
-            helper: "受付対応が必要です"
+            label: "待機あり"
         };
     }
     if (availableCount > 0) {
         return {
             chipClass: "summary-chip summary-chip-positive",
             icon: STATUS_ICON_SVGS.available,
-            label: `空き ${availableCount}レーン`,
-            helper: "すぐ案内できます"
+            label: "案内可"
         };
     }
     return {
         chipClass: "summary-chip summary-chip-neutral",
         icon: UI_ICON_SVGS.full,
-        label: "満室",
-        helper: "空き待ちなし"
+        label: "満室"
     };
 }
 // --- UI描画 (Render) ---
@@ -107,12 +90,14 @@ function renderAuthShell(context) {
     const request = state.selfAccessRequest;
     dom.authUserName.textContent = state.authUser?.displayName || "未ログイン";
     dom.authUserEmail.textContent = state.authUser?.email || "アクセス権が必要です";
+    dom.authStatusText.classList.remove("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
     if (member?.isActive) {
-        dom.authStatusText.textContent = "承認済みメンバーとして利用できます。";
+        dom.authStatusText.textContent = "";
+        dom.authStatusText.classList.add("hidden");
         dom.authRoleBadge.textContent = ROLE_LABELS[member.role];
-        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100 border border-emerald-300/30";
+        dom.authRoleBadge.className = "inline-flex items-center rounded-lg border border-emerald-300/30 bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-100";
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.add("hidden");
         dom.appShell.classList.remove("hidden");
@@ -120,7 +105,7 @@ function renderAuthShell(context) {
     else if (member && !member.isActive) {
         dom.authStatusText.textContent = "このアカウントは現在利用停止です。";
         dom.authRoleBadge.textContent = "利用停止";
-        dom.authRoleBadge.className = "inline-flex items-center rounded-full bg-rose-400/15 px-3 py-1 text-xs font-bold text-rose-100 border border-rose-300/30";
+        dom.authRoleBadge.className = "inline-flex items-center rounded-lg border border-rose-300/30 bg-rose-400/15 px-3 py-1 text-xs font-bold text-rose-100";
         dom.authPendingMessage.textContent = "今年度名簿に含まれていないか、管理者が利用停止にしています。必要なら管理者へ連絡してください。";
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
@@ -133,7 +118,7 @@ function renderAuthShell(context) {
             : "ログインは完了しました。名簿登録済みなら自動承認、名簿外アカウントは管理者承認後に利用できます。";
         dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
         dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
-        dom.authRoleBadge.className = `inline-flex items-center rounded-full px-3 py-1 text-xs font-bold border ${status === "rejected"
+        dom.authRoleBadge.className = `inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold border ${status === "rejected"
             ? "bg-rose-400/15 text-rose-100 border-rose-300/30"
             : "bg-amber-300/15 text-amber-100 border-amber-200/30"}`;
         dom.authPendingMessage.textContent = pendingMessage;
@@ -142,7 +127,7 @@ function renderAuthShell(context) {
         dom.appShell.classList.add("hidden");
     }
     else {
-        dom.authStatusText.textContent = "Google アカウントでログインしてください。名簿登録済み Gmail は自動承認、名簿外アカウントは承認待ちになります。";
+        dom.authStatusText.textContent = "Google アカウントでログインすると権限を確認します。";
         dom.authRoleBadge.textContent = "";
         dom.authRoleBadge.className = "hidden";
         dom.authPendingMessage.textContent = "";
@@ -288,9 +273,13 @@ function renderRoomSummaryBar(context) {
         const chip = document.createElement("div");
         chip.className = summaryState.chipClass;
         chip.innerHTML = `
-            <div>
+            <div class="summary-chip-main">
                 <p class="summary-chip-room">${escapeHtml(room.name)}</p>
-                <p class="summary-chip-copy">${summaryState.helper}</p>
+                <div class="summary-chip-metrics">
+                    <span class="summary-chip-metric">空き ${availableCount}</span>
+                    <span class="summary-chip-metric">待機 ${waiting}</span>
+                    <span class="summary-chip-metric">全 ${room.lanes}</span>
+                </div>
             </div>
             <span class="summary-chip-state">
                 <span class="inline-flex">${summaryState.icon}</span>
@@ -362,12 +351,14 @@ function renderReceptionList(context) {
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         headerElement.innerHTML = `
             <div>
-                <p class="pill-eyebrow">Reception Overview</p>
-                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                <p class="mt-2 text-sm text-slate-500">全 ${room.lanes} レーンをリアルタイム同期中</p>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Room</p>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                    <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                </div>
             </div>
-            <div class="flex flex-col items-center">
-                <span class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">待機</span>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">待機</span>
                 <div class="${waitBadgeClass} wait-badge-large">
                     ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
                 </div>
@@ -395,7 +386,6 @@ function renderReceptionList(context) {
                 tileClass = "tile-guiding";
                 statusIcon = STATUS_ICON_SVGS.guiding;
                 statusText = "案内中";
-                additionalInfo = '<span class="lane-tile-note">受付からご案内中</span>';
             }
             else {
                 switch (laneData.status) {
@@ -581,34 +571,51 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
         return;
     }
+    const selectedRoomName = config.rooms.find((room) => room.id === selectedRoomId)?.name || "未選択";
     const currentState = state.currentRoomState[selectedRoomId] || { waitingGroups: 0 };
     const currentWaitingGroups = currentState.waitingGroups || 0;
     const waitControlElement = document.createElement("div");
     waitControlElement.className = "wait-control-card mb-6";
     waitControlElement.innerHTML = `
         <div class="wait-control-shell">
-            <div>
-                <p class="pill-eyebrow">Queue Control</p>
-                <h3 class="mt-3 text-2xl font-black tracking-tight text-slate-900">待機組数 管理</h3>
-                <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">受付が見ている待機数をこの部屋単位で同期します。案内前後のタイミングで更新してください。</p>
+            <div class="wait-control-main">
+                <p class="pill-eyebrow">Room Operations</p>
+                <h3 class="mt-2 text-[1.28rem] font-black tracking-tight text-slate-900 sm:text-[1.4rem]">担当部屋オペレーション</h3>
             </div>
-            <div class="wait-control-actions">
-                <button data-action="dec-wait" data-roomid="${selectedRoomId}"
-                        class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
-                        ${currentWaitingGroups === 0 ? "disabled" : ""}>
-                    <span class="inline-flex">${UI_ICON_SVGS.minus}</span>
-                </button>
-                <div class="wait-counter-card">
-                    <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">現在</div>
-                    <div class="mt-2 text-4xl font-black tracking-tight text-blue-700">${currentWaitingGroups}</div>
+            <div class="wait-control-grid">
+                <div class="wait-control-panel wait-control-room-slot" data-room-select-slot></div>
+                <div class="wait-control-panel wait-control-panel-counter">
+                    <div class="wait-control-panel-title">待機組数</div>
+                    <div class="wait-control-actions">
+                        <button data-action="dec-wait" data-roomid="${selectedRoomId}"
+                                class="wait-adjust-button wait-adjust-button-dec ${currentWaitingGroups === 0 ? "opacity-50 cursor-not-allowed" : ""}"
+                                ${currentWaitingGroups === 0 ? "disabled" : ""}>
+                            <span class="inline-flex">${UI_ICON_SVGS.minus}</span>
+                        </button>
+                        <div class="wait-counter-card">
+                            <div class="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">現在</div>
+                            <div class="mt-2 text-4xl font-black tracking-tight text-blue-700">${currentWaitingGroups}</div>
+                        </div>
+                        <button data-action="inc-wait" data-roomid="${selectedRoomId}"
+                                class="wait-adjust-button wait-adjust-button-inc">
+                            <span class="inline-flex">${UI_ICON_SVGS.plus}</span>
+                        </button>
+                    </div>
                 </div>
-                <button data-action="inc-wait" data-roomid="${selectedRoomId}"
-                        class="wait-adjust-button wait-adjust-button-inc">
-                    <span class="inline-flex">${UI_ICON_SVGS.plus}</span>
-                </button>
             </div>
         </div>
     `;
+    const roomSelectSlot = waitControlElement.querySelector("[data-room-select-slot]");
+    if (roomSelectSlot instanceof HTMLElement) {
+        const roomPicker = document.createElement("div");
+        roomPicker.className = "wait-control-room";
+        roomPicker.innerHTML = `
+            <div class="wait-control-panel-title">担当する部屋</div>
+        `;
+        dom.staffRoomSelect.className = "wait-control-select";
+        roomPicker.appendChild(dom.staffRoomSelect);
+        roomSelectSlot.appendChild(roomPicker);
+    }
     dom.staffLaneDashboard.appendChild(waitControlElement);
     const roomLanes = getAllLanes(context)
         .filter((lane) => lane.data.roomId === selectedRoomId)
@@ -625,37 +632,27 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         const laneElement = document.createElement("div");
         laneElement.className = "lane-card";
         const laneDisplayName = escapeHtml(laneData.customName || `レーン ${laneData.laneNum}`);
-        const staffNameDisplay = laneData.staffName ? `担当: ${escapeHtml(laneData.staffName)}` : "担当: ---";
+        const staffNameDisplay = laneData.staffName ? `最終操作: ${escapeHtml(laneData.staffName)}` : "最終操作: まだありません";
         const laneStatusConfig = config.laneStatuses.find((status) => status.id === laneData.status) || { name: "不明", icon: "" };
-        const receptionStatusConfig = config.receptionStatuses.find((status) => status.id === laneData.receptionStatus) || { name: "不明", icon: "" };
-        let receptionStatusDisplay = receptionStatusConfig.name;
-        let receptionStatusClass = "text-slate-500";
+        const pauseReason = laneData.pauseReasonId
+            ? config.pauseReasons.find((item) => item.id === laneData.pauseReasonId) || null
+            : null;
+        const laneStatusDisplay = escapeHtml(laneData.status === "paused" && pauseReason
+            ? pauseReason.name
+            : laneStatusConfig.name || "不明");
+        const laneStatusTone = `lane-current-status lane-current-status-${escapeHtml(laneData.status || "paused")}`;
+        let receptionStatusDisplay = "";
         let arrivalButton = "";
         let optionsDisplay = "";
         let notesDisplay = "";
-        if (laneData.status !== "available" && laneData.receptionStatus === "available") {
-            let statusName = laneStatusConfig.name;
-            if (laneData.status === "paused" && laneData.pauseReasonId) {
-                const reason = config.pauseReasons.find((item) => item.id === laneData.pauseReasonId);
-                if (reason) {
-                    statusName = `休止中 (${reason.name})`;
-                }
-            }
-            receptionStatusDisplay = `(${statusName})`;
-        }
         if (laneData.receptionStatus === "guiding") {
-            receptionStatusDisplay = "お客様 案内中";
-            receptionStatusClass = "text-blue-600 font-bold animate-pulse";
+            receptionStatusDisplay = "受付状態: お客様 案内中";
             arrivalButton = `
                 <button data-action="confirm-arrival" data-docid="${docId}"
-                        class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
+                        class="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
                     <span class="mr-2 inline-flex">${UI_ICON_SVGS.arrival}</span>お客様 到着確認
                 </button>
             `;
-        }
-        else if (laneData.receptionStatus === "available" && laneData.status === "available") {
-            receptionStatusDisplay = "案内可";
-            receptionStatusClass = "text-green-600";
         }
         if (laneData.receptionStatus === "available" && laneData.status === "occupied" && (laneData.selectedOptions?.length || laneData.receptionNotes)) {
             if (laneData.selectedOptions?.length) {
@@ -693,7 +690,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                 `;
             }
         }
-        const statusButtons = config.laneStatuses.map((status) => {
+        const primaryStatusButtons = config.laneStatuses.filter((status) => status.id !== "paused").map((status) => {
             const isCurrent = laneData.status === status.id;
             return `
                 <button data-action="set-lane-status" data-docid="${docId}" data-status="${status.id}" 
@@ -704,9 +701,18 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
                 </button>
             `;
         }).join("");
+        const pauseStatus = config.laneStatuses.find((status) => status.id === "paused");
+        const pauseButton = pauseStatus ? `
+            <button data-action="set-lane-status" data-docid="${docId}" data-status="${pauseStatus.id}" 
+                    class="status-action-button status-action-pause-row ${laneData.status === pauseStatus.id
+            ? `status-action-active ${pauseStatus.colorClass}`
+            : "status-action-idle"}">
+                <span class="inline-flex">${pauseStatus.icon}</span>${pauseStatus.name}
+            </button>
+        ` : "";
         const pauseReasonsOptionsHtml = (config.pauseReasons || []).map((reason) => `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${escapeHtml(reason.name)}</option>`).join("");
         const pauseReasonSelect = `
-            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-2xl bg-slate-50/80 p-4" : "hidden"}">
+            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-xl border border-slate-200/80 bg-slate-50/80 p-4" : "hidden"}">
                 <label for="pause-reason-select-${docId}" class="mb-2 block text-sm font-bold text-slate-700">休止理由</label>
                 <select id="pause-reason-select-${docId}" data-action="set-pause-reason" data-docid="${docId}" 
                         class="block w-full px-4 py-3 text-sm">
@@ -717,21 +723,17 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         `;
         laneElement.innerHTML = `
             <div class="lane-card-header">
-                <div>
-                    <h4 class="lane-card-title">${laneDisplayName}</h4>
+                <div class="w-full">
+                    <div class="lane-card-title-row">
+                        <h4 class="lane-card-title">${laneDisplayName}</h4>
+                        <span class="${laneStatusTone}">
+                            <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
+                            <span>${laneStatusDisplay}</span>
+                        </span>
+                    </div>
                     <p class="lane-card-subtext">${staffNameDisplay}</p>
+                    ${receptionStatusDisplay ? `<p class="lane-card-aux">${receptionStatusDisplay}</p>` : ""}
                 </div>
-                <span class="${getLanePillClass(laneData.status)}">
-                    <span class="inline-flex">${laneStatusConfig.icon || STATUS_ICON_SVGS.paused}</span>
-                    <span>${escapeHtml(laneStatusConfig.name || "不明")}</span>
-                </span>
-            </div>
-
-            <div class="lane-card-reception">
-                <p class="inline-flex items-center gap-2 text-sm ${receptionStatusClass}">
-                    <span class="inline-flex">${receptionStatusConfig.icon || STATUS_ICON_SVGS.guiding}</span>
-                    <span>${escapeHtml(receptionStatusDisplay || "状態未設定")}</span>
-                </p>
             </div>
 
             ${optionsDisplay}
@@ -740,11 +742,12 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
 
             ${arrivalButton}
             
-            <div class="mt-2 border-t border-slate-200/80 pt-4">
+            <div class="lane-card-actions">
                 <p class="mb-3 text-sm font-bold text-slate-700">レーンの状況を変更</p>
-                <div class="flex flex-wrap gap-2">
-                    ${statusButtons}
+                <div class="status-action-grid">
+                    ${primaryStatusButtons}
                 </div>
+                ${pauseButton}
                 ${pauseReasonSelect}
             </div>
         `;
@@ -794,7 +797,7 @@ export function renderAdminSettings(context) {
             </div>
 
             <button data-action="delete-room" data-id="${room.id}" 
-                    class="ml-1 sm:ml-2 w-8 h-8 flex flex-shrink-0 items-center justify-center bg-white border border-red-200 text-red-500 rounded-full hover:bg-red-50 transition"
+                    class="admin-delete-button ml-1 sm:ml-2"
                     title="削除">
                 <i class="fa-solid fa-trash"></i>
             </button>
@@ -810,7 +813,7 @@ export function renderAdminSettings(context) {
         optionElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
         optionElement.innerHTML = `
             <input type="text" data-action="edit-option-name" data-id="${option.id}" value="${option.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
-            <button data-action="delete-option" data-id="${option.id}" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs flex-shrink-0">
+            <button data-action="delete-option" data-id="${option.id}" class="admin-delete-button">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;
@@ -825,7 +828,7 @@ export function renderAdminSettings(context) {
         reasonElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
         reasonElement.innerHTML = `
             <input type="text" data-action="edit-pause-reason-name" data-id="${reason.id}" value="${reason.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
-            <button data-action="delete-pause-reason" data-id="${reason.id}" class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs flex-shrink-0">
+            <button data-action="delete-pause-reason" data-id="${reason.id}" class="admin-delete-button">
                 <i class="fa-solid fa-trash"></i>
             </button>
         `;

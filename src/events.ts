@@ -6,7 +6,7 @@ import {
     writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { canAccessTab, hasRole } from "./access.js";
+import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
@@ -575,14 +575,11 @@ export function setupEventListeners(context: AppContext): void {
             }
 
             if (action === "confirm-arrival") {
-                const staffName = dom.staffNameInput.value.trim() || null;
+                const staffName = getActorDisplayName(context);
                 if (!staffName) {
-                    console.warn("担当者名を入力してください。");
-                    dom.staffNameInput.focus();
-                    dom.staffNameInput.classList.add("border-red-500", "ring-red-500");
+                    alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
                     return;
                 }
-                dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
 
                 void updateReceptionStatus(context, docId, "available", staffName, []);
             }

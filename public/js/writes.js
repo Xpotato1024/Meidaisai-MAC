@@ -1,11 +1,11 @@
 import { doc, serverTimestamp, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { canManageRoom, hasRole } from "./access.js";
+import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 /**
  * レーン担当者がレーンの物理ステータスを更新
  */
 export async function updateLaneStatus(context, docId, newStatus) {
-    const { db, dom, paths } = context;
+    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -14,14 +14,11 @@ export async function updateLaneStatus(context, docId, newStatus) {
         alert("この部屋のレーンは操作できません。");
         return;
     }
-    const staffName = dom.staffNameInput.value.trim() || null;
+    const staffName = getActorDisplayName(context);
     if (!staffName) {
-        console.warn("担当者名を入力してください。");
-        dom.staffNameInput.focus();
-        dom.staffNameInput.classList.add("border-red-500", "ring-red-500");
+        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
         return;
     }
-    dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
     if (currentLane.status === newStatus && currentLane.staffName === staffName) {
         return;
     }
@@ -97,7 +94,7 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
     }
 }
 export async function updateLanePauseReason(context, docId, reasonId) {
-    const { db, dom, paths } = context;
+    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -106,14 +103,11 @@ export async function updateLanePauseReason(context, docId, reasonId) {
         alert("この部屋のレーンは操作できません。");
         return;
     }
-    const staffName = dom.staffNameInput.value.trim() || null;
+    const staffName = getActorDisplayName(context);
     if (!staffName) {
-        console.warn("担当者名を入力してください。");
-        dom.staffNameInput.focus();
-        dom.staffNameInput.classList.add("border-red-500", "ring-red-500");
+        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
         return;
     }
-    dom.staffNameInput.classList.remove("border-red-500", "ring-red-500");
     if ((currentLane.pauseReasonId || "") === (reasonId || "") && currentLane.staffName === staffName) {
         return;
     }
@@ -148,7 +142,7 @@ export async function updateLaneCustomName(context, docId, newName) {
         const button = document.querySelector(`button[data-action='save-custom-name'][data-docid='${docId}']`);
         if (button) {
             const originalText = button.textContent;
-            button.textContent = "✅";
+            button.textContent = "保存済";
             button.classList.add("bg-green-500", "hover:bg-green-500");
             button.classList.remove("bg-blue-500", "hover:bg-blue-600");
             setTimeout(() => {
@@ -174,22 +168,22 @@ export async function saveAdminSettings(context) {
     try {
         await setDoc(configRef, state.localAdminConfig);
         await updateEventRegistry(context);
-        dom.adminSaveStatus.textContent = "✅ 設定を保存しました。DB同期を開始します...";
+        dom.adminSaveStatus.textContent = "設定を保存しました。DB同期を開始します...";
         console.log("Config saved. Explicitly starting migration...");
         if (!state.isDbMigrating) {
             state.isDbMigrating = true;
             console.log("Migration lock ACQUIRED by saveAdminSettings.");
             await checkAndInitDatabase(context, state.localAdminConfig);
-            dom.adminSaveStatus.textContent = "✅ DB同期が完了しました。";
+            dom.adminSaveStatus.textContent = "DB同期が完了しました。";
         }
         else {
             console.warn("Migration is already in progress. Skipping call.");
-            dom.adminSaveStatus.textContent = "✅ 設定を保存しました。(DB同期は他で実行中です)";
+            dom.adminSaveStatus.textContent = "設定を保存しました。(DB同期は他で実行中です)";
         }
     }
     catch (error) {
         console.error("Failed to save settings:", error);
-        dom.adminSaveStatus.textContent = "❌ 保存に失敗しました。";
+        dom.adminSaveStatus.textContent = "保存に失敗しました。";
         dom.adminSaveStatus.className = "text-sm text-center mt-3 text-red-500";
     }
     setTimeout(() => {

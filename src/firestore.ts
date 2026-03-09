@@ -12,7 +12,7 @@ import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
-import type { AccessMember, AccessRequest, AppContext } from "./types.js";
+import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneStatusConfig, NamedOption, ReceptionStatusConfig } from "./types.js";
 
 function toTimestampMillis(value: unknown): number {
     if (value && typeof value === "object" && "toDate" in value && typeof (value as any).toDate === "function") {
@@ -34,6 +34,35 @@ function sortRequests(requests: AccessRequest[]): AccessRequest[] {
         }
         return toTimestampMillis(right.requestedAt) - toTimestampMillis(left.requestedAt);
     });
+}
+
+function mergeNamedCollection<T extends { id: string }>(defaults: T[], currentValue: unknown): T[] {
+    if (!Array.isArray(currentValue)) {
+        return [...defaults];
+    }
+
+    const providedItems = currentValue.filter((item): item is T => {
+        return Boolean(item && typeof item === "object" && "id" in item && typeof (item as { id?: unknown }).id === "string");
+    });
+
+    const defaultIds = new Set(defaults.map((item) => item.id));
+    const mergedDefaults = defaults.map((defaultItem) => {
+        const matched = providedItems.find((item) => item.id === defaultItem.id);
+        return matched ? { ...defaultItem, ...matched } : defaultItem;
+    });
+    const extraItems = providedItems.filter((item) => !defaultIds.has(item.id));
+    return [...mergedDefaults, ...extraItems];
+}
+
+function normalizeConfig(rawConfig: Record<string, unknown>): AppConfig {
+    return {
+        ...APP_CONFIG,
+        ...rawConfig,
+        laneStatuses: mergeNamedCollection<LaneStatusConfig>(APP_CONFIG.laneStatuses, rawConfig.laneStatuses),
+        receptionStatuses: mergeNamedCollection<ReceptionStatusConfig>(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses),
+        pauseReasons: mergeNamedCollection<NamedOption>(APP_CONFIG.pauseReasons, rawConfig.pauseReasons),
+        options: Array.isArray(rawConfig.options) ? rawConfig.options as NamedOption[] : APP_CONFIG.options
+    };
 }
 
 export function cleanupDataSubscriptions(context: AppContext): void {
@@ -89,22 +118,12 @@ export function listenToConfigChanges(context: AppContext): void {
         (docSnap: any) => {
             if (docSnap.exists()) {
                 console.log("Config loaded from Firestore.");
-                const firestoreData = docSnap.data();
+                const firestoreData = docSnap.data() as Record<string, unknown>;
 
-                state.dynamicAppConfig = {
-                    ...APP_CONFIG,
-                    ...firestoreData
-                };
-
-                if (!firestoreData.laneStatuses) {
-                    state.dynamicAppConfig.laneStatuses = APP_CONFIG.laneStatuses;
-                }
-                if (!firestoreData.pauseReasons) {
-                    state.dynamicAppConfig.pauseReasons = APP_CONFIG.pauseReasons;
-                }
+                state.dynamicAppConfig = normalizeConfig(firestoreData);
 
                 if (dom.firestoreStatus.textContent?.includes("設定なし")) {
-                    dom.firestoreStatus.textContent = "✅ 設定を読み込みました";
+                    dom.firestoreStatus.textContent = "設定を読み込みました";
                 }
             } else {
                 console.warn("No config found in Firestore. Using local default settings (READ-ONLY).");

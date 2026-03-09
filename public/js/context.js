@@ -28,7 +28,6 @@ function createDomRefs() {
         receptionList: requireElement("reception-list"),
         staffRoomSelect: requireElement("staff-room-select"),
         staffLaneDashboard: requireElement("staff-lane-dashboard"),
-        staffNameInput: requireElement("staff-name"),
         firestoreStatus: requireElement("firestore-status"),
         globalEventDisplay: requireElement("global-event-display"),
         globalEventNameText: requireElement("global-event-name-text"),
