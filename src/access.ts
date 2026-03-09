@@ -30,7 +30,7 @@ export function canAccessTab(context: AppContext, tabId: TabId): boolean {
 }
 
 export function getDefaultTab(context: AppContext): TabId {
-    const candidates: TabId[] = ["reception", "staff", "admin", "database"];
+    const candidates: TabId[] = ["staff", "reception", "admin", "database"];
     return candidates.find((tabId) => canAccessTab(context, tabId)) || "staff";
 }
 

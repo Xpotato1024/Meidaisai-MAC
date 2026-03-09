@@ -24,7 +24,7 @@ export function canAccessTab(context, tabId) {
     return false;
 }
 export function getDefaultTab(context) {
-    const candidates = ["reception", "staff", "admin", "database"];
+    const candidates = ["staff", "reception", "admin", "database"];
     return candidates.find((tabId) => canAccessTab(context, tabId)) || "staff";
 }
 export function getAllowedRoomIds(context) {

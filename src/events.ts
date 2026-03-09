@@ -415,22 +415,10 @@ export function setupEventListeners(context: AppContext): void {
 
         state.activeTab = tabId as TabId;
         state.isNavMenuOpen = false;
+        renderAllUI(context);
         if (state.activeTab === "database" && hasRole(context, ["admin"])) {
             void fetchAndRenderEventList(context);
         }
-
-        dom.tabs.querySelectorAll(".tab-button").forEach((tabButton) => {
-            tabButton.classList.remove("active");
-        });
-        button.classList.add("active");
-
-        dom.tabContents.querySelectorAll(".tab-pane").forEach((pane) => {
-            if (pane.id === `tab-${state.activeTab}`) {
-                pane.classList.remove("hidden");
-            } else {
-                pane.classList.add("hidden");
-            }
-        });
     });
 
     // --- DB管理画面: 検索・リフレッシュ ---

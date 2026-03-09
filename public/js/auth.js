@@ -1,6 +1,6 @@
 import { GoogleAuthProvider, onAuthStateChanged, signInWithCustomToken, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getDefaultTab } from "./access.js";
+import { canAccessTab, getDefaultTab } from "./access.js";
 import { browserLocalPersistence, setPersistence } from "./firebase-config.js";
 import { cloneConfig } from "./context.js";
 import { APP_CONFIG } from "./default-config.js";
@@ -192,7 +192,9 @@ function attachSelfAccessListeners(context, user) {
         const effectiveMember = resolveEffectiveAccessMember(context);
         state.accessMember = effectiveMember;
         if (effectiveMember) {
-            state.activeTab = getDefaultTab(context);
+            if (!canAccessTab(context, state.activeTab)) {
+                state.activeTab = getDefaultTab(context);
+            }
             dom.firestoreStatus.textContent = effectiveMember.isActive
                 ? "権限確認済み / リアルタイム接続完了"
                 : "このアカウントは無効化されています";
