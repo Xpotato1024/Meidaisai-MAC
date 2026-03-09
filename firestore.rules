@@ -11,7 +11,7 @@ service cloud.firestore {
     }
 
     function globalMemberPath(uid) {
-      return /databases/$(database)/documents/sys_access/globalMembers/$(uid);
+      return /databases/$(database)/documents/sys_globalAccessMembers/$(uid);
     }
 
     function memberDirectoryPath(appId, emailKey) {
@@ -113,7 +113,7 @@ service cloud.firestore {
         && request.resource.data.authorizationSource == 'roster';
     }
 
-    match /sys_access/globalMembers/{uid} {
+    match /sys_globalAccessMembers/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isGlobalAdmin());
       allow list: if isGlobalAdmin();
       allow create, update, delete: if isGlobalAdmin();
