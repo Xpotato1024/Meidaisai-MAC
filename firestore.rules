@@ -133,16 +133,16 @@ service cloud.firestore {
       allow update: if isAdmin(appId)
         || (
           isReception(appId)
-          && changedKeys().hasOnly(['receptionStatus', 'selectedOptions', 'receptionNotes', 'updatedAt'])
+          && changedKeys().hasOnly(['receptionStatus', 'selectedOptions', 'receptionNotes', 'updatedAt', 'revision'])
         )
         || (
           canOperateAssignedRoom(appId, resource.data.roomId)
-          && changedKeys().hasOnly(['status', 'pauseReasonId', 'staffName', 'updatedAt', 'selectedOptions', 'receptionNotes'])
+          && changedKeys().hasOnly(['status', 'pauseReasonId', 'staffName', 'updatedAt', 'selectedOptions', 'receptionNotes', 'revision'])
           && request.resource.data.receptionStatus == resource.data.receptionStatus
         )
         || (
           canOperateAssignedRoom(appId, resource.data.roomId)
-          && changedKeys().hasOnly(['status', 'staffName', 'updatedAt', 'receptionStatus'])
+          && changedKeys().hasOnly(['status', 'staffName', 'updatedAt', 'receptionStatus', 'revision'])
           && resource.data.receptionStatus == 'guiding'
           && request.resource.data.receptionStatus == 'available'
           && request.resource.data.status == 'occupied'

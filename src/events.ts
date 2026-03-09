@@ -7,9 +7,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
+import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
-import { renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
+import { openReceptionRoomModal, renderAdminSettings, renderStaffLaneDashboard } from "./render.js";
 import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
     approveAccessRequest,
@@ -251,6 +252,8 @@ async function importBackup(context: AppContext, file: File): Promise<void> {
                 );
 
                 await batch.commit();
+                state.isDbMigrating = true;
+                await checkAndInitDatabase(context, state.localAdminConfig);
             } else {
                 // === B. 旧形式(設定のみ)復元 ===
                 state.localAdminConfig = cloneJson(json);
@@ -494,6 +497,15 @@ export function setupEventListeners(context: AppContext): void {
 
         const action = button.dataset.action;
 
+        if (action === "open-room-guiding") {
+            const roomId = button.dataset.roomid;
+            if (!roomId) {
+                return;
+            }
+            void openReceptionRoomModal(context, roomId);
+            return;
+        }
+
         if (action === "set-guiding") {
             const docId = button.dataset.docid;
             if (!docId) {
@@ -590,15 +602,12 @@ export function setupEventListeners(context: AppContext): void {
             return;
         }
 
-        const currentState = state.currentRoomState[roomId] || { waitingGroups: 0 };
-        const currentWaitingGroups = currentState.waitingGroups || 0;
-
         if (action === "inc-wait") {
-            void updateWaitingGroups(context, roomId, currentWaitingGroups + 1);
+            void updateWaitingGroups(context, roomId, 1);
         }
 
-        if (action === "dec-wait" && currentWaitingGroups > 0) {
-            void updateWaitingGroups(context, roomId, currentWaitingGroups - 1);
+        if (action === "dec-wait") {
+            void updateWaitingGroups(context, roomId, -1);
         }
     });
 

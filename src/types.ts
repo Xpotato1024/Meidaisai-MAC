@@ -94,12 +94,19 @@ export interface LaneData {
     customName?: string | null;
     receptionNotes?: string | null;
     pauseReasonId?: string | null;
+    revision?: number;
     updatedAt?: unknown;
     [key: string]: unknown;
 }
 
 export interface RoomStateData {
     waitingGroups?: number;
+    totalLanes?: number;
+    availableLanes?: number;
+    occupiedLanes?: number;
+    preparingLanes?: number;
+    pausedLanes?: number;
+    guidingLanes?: number;
     updatedAt?: unknown;
     [key: string]: unknown;
 }

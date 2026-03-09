@@ -335,6 +335,183 @@
         padding: 0.85rem;
     }
 
+    .room-dashboard-summary {
+        display: grid;
+        gap: 0.85rem;
+        padding: 0.95rem 1rem 1rem;
+    }
+
+    .room-dashboard-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+    }
+
+    .room-dashboard-metric {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #f8fafc;
+        padding: 0.36rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .room-dashboard-metric-positive {
+        border-color: rgba(5, 150, 105, 0.18);
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .room-dashboard-metric-guiding {
+        border-color: rgba(37, 99, 235, 0.16);
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .reception-room-action {
+        display: inline-flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.86rem;
+        font-weight: 700;
+        transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .reception-room-action-ready {
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        background: linear-gradient(180deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        box-shadow: 0 14px 28px rgba(37, 99, 235, 0.16);
+    }
+
+    .reception-room-action-muted {
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #f8fafc;
+        color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .reception-modal-grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .reception-modal-section {
+        margin-bottom: 1rem;
+    }
+
+    .reception-modal-section-title {
+        display: block;
+        margin-bottom: 0.55rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #475569;
+    }
+
+    .reception-modal-lane-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.7rem;
+    }
+
+    .reception-modal-lane-card {
+        display: flex;
+        min-height: 5rem;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 0.6rem;
+        border-radius: 14px;
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        background: #ffffff;
+        padding: 0.85rem 0.9rem;
+        text-align: left;
+        color: #0f172a;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .reception-modal-lane-card.is-selected {
+        border-color: rgba(37, 99, 235, 0.24);
+        box-shadow: 0 14px 24px rgba(37, 99, 235, 0.12);
+    }
+
+    .reception-modal-lane-card:disabled {
+        cursor: default;
+        opacity: 0.72;
+    }
+
+    .reception-modal-lane-card-available {
+        border-color: rgba(5, 150, 105, 0.22);
+        background: linear-gradient(180deg, #ffffff, #f0fdf4);
+    }
+
+    .reception-modal-lane-card-guiding {
+        border-color: rgba(37, 99, 235, 0.24);
+        background: linear-gradient(180deg, #ffffff, #eff6ff);
+    }
+
+    .reception-modal-lane-card-occupied {
+        border-color: rgba(225, 29, 72, 0.22);
+        background: linear-gradient(180deg, #ffffff, #fff1f2);
+    }
+
+    .reception-modal-lane-card-preparing {
+        border-color: rgba(217, 119, 6, 0.22);
+        background: linear-gradient(180deg, #ffffff, #fffbeb);
+    }
+
+    .reception-modal-lane-card-paused {
+        border-color: rgba(71, 85, 105, 0.18);
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .reception-modal-lane-name {
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .reception-modal-lane-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.38rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .reception-modal-options {
+        max-height: 12rem;
+        overflow-y: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(226, 232, 240, 0.85);
+        background: #ffffff;
+        padding: 0.55rem;
+    }
+
+    .reception-modal-option-row {
+        display: flex;
+        cursor: pointer;
+        align-items: center;
+        gap: 0.55rem;
+        border-radius: 12px;
+        padding: 0.55rem 0.6rem;
+        font-size: 0.85rem;
+        color: #1e293b;
+    }
+
+    .reception-modal-option-row:hover {
+        background: #f8fafc;
+    }
+
     .wait-badge-large {
         min-width: 4.4rem;
         border-radius: 12px;

@@ -2,6 +2,7 @@ import { collection, doc, documentId, getDocs, onSnapshot, query, where } from "
 import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
+import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
 function toTimestampMillis(value) {
     if (value && typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
@@ -67,7 +68,12 @@ export function configureDataSubscriptions(context) {
     }
     listenToConfigChanges(context);
     listenToRoomStateChanges(context);
-    listenToLaneChanges(context);
+    if (hasRole(context, ["admin", "staff"])) {
+        listenToLaneChanges(context);
+    }
+    else {
+        context.state.currentLanesState = {};
+    }
     if (hasRole(context, ["admin"])) {
         listenToAccessRequestsChanges(context);
         listenToAccessMembersChanges(context);
@@ -140,7 +146,8 @@ export function listenToRoomStateChanges(context) {
         console.log("Room state data updated...");
         state.currentRoomState = {};
         querySnapshot.forEach((roomStateDoc) => {
-            state.currentRoomState[roomStateDoc.id] = roomStateDoc.data();
+            const totalLanes = context.state.dynamicAppConfig.rooms.find((room) => room.id === roomStateDoc.id)?.lanes || 0;
+            state.currentRoomState[roomStateDoc.id] = normalizeRoomStateData(roomStateDoc.data(), totalLanes);
         });
         scheduleRender(context);
     }, (error) => {

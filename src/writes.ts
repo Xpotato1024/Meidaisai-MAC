@@ -1,19 +1,82 @@
-import {
-    doc,
-    serverTimestamp,
-    setDoc,
-    updateDoc
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import * as FirebaseFirestore from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
-import type { AppContext, RoleId } from "./types.js";
+import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStateData } from "./room-state.js";
+import type { AppContext, LaneData, RoleId, RoomStateData } from "./types.js";
+
+const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
+const runTransaction = (FirebaseFirestore as any).runTransaction as
+    <T>(db: unknown, updateFn: (transaction: any) => Promise<T>) => Promise<T>;
+
+function getRoomLaneCount(context: AppContext, roomId: string): number {
+    return context.state.dynamicAppConfig.rooms.find((room) => room.id === roomId)?.lanes
+        || Number(context.state.currentRoomState[roomId]?.totalLanes || 0);
+}
+
+function normalizeLaneData(rawData: Record<string, unknown>): LaneData {
+    return {
+        ...(rawData as LaneData),
+        roomId: String(rawData.roomId || ""),
+        roomName: typeof rawData.roomName === "string" ? rawData.roomName : undefined,
+        laneNum: Number(rawData.laneNum || 0),
+        status: String(rawData.status || "paused"),
+        receptionStatus: String(rawData.receptionStatus || "available"),
+        selectedOptions: Array.isArray(rawData.selectedOptions) ? rawData.selectedOptions.map(String) : [],
+        staffName: typeof rawData.staffName === "string" ? rawData.staffName : null,
+        customName: typeof rawData.customName === "string" ? rawData.customName : null,
+        receptionNotes: typeof rawData.receptionNotes === "string" ? rawData.receptionNotes : null,
+        pauseReasonId: typeof rawData.pauseReasonId === "string" ? rawData.pauseReasonId : null,
+        revision: typeof rawData.revision === "number" ? rawData.revision : 0,
+        updatedAt: rawData.updatedAt
+    };
+}
+
+async function mutateLaneWithRoomState(
+    context: AppContext,
+    docId: string,
+    mutation: (currentLane: LaneData) => LaneData | null
+): Promise<boolean> {
+    const { db, paths } = context;
+    const laneRef = doc(db, paths.lanesCollectionPath, docId);
+
+    return runTransaction(db, async (transaction) => {
+        const laneSnap = await transaction.get(laneRef);
+        if (!laneSnap.exists()) {
+            throw new Error("レーン情報が見つかりません。");
+        }
+
+        const currentLane = normalizeLaneData(laneSnap.data() as Record<string, unknown>);
+        const nextLane = mutation(currentLane);
+        if (!nextLane) {
+            return false;
+        }
+
+        const roomLaneCount = getRoomLaneCount(context, currentLane.roomId);
+        const roomStateRef = doc(db, paths.roomStateCollectionPath, currentLane.roomId);
+        const roomStateSnap = await transaction.get(roomStateRef);
+        const currentRoomState: RoomStateData = roomStateSnap.exists()
+            ? normalizeRoomStateData(roomStateSnap.data() as Record<string, unknown>, roomLaneCount)
+            : createEmptyRoomState(roomLaneCount);
+        const nextRoomState = applyLaneTransitionToRoomState(currentRoomState, currentLane, nextLane, roomLaneCount);
+
+        transaction.set(laneRef, {
+            ...nextLane,
+            revision: Number(currentLane.revision || 0) + 1,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+        transaction.set(roomStateRef, {
+            ...nextRoomState,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+        return true;
+    });
+}
 
 /**
  * レーン担当者がレーンの物理ステータスを更新
  */
 export async function updateLaneStatus(context: AppContext, docId: string, newStatus: string): Promise<void> {
-    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -33,28 +96,29 @@ export async function updateLaneStatus(context: AppContext, docId: string, newSt
         return;
     }
 
-    console.log(`Updating lane ${docId} to ${newStatus} by ${staffName}`);
-    const docRef = doc(db, paths.lanesCollectionPath, docId);
-
-    const updateData: Record<string, unknown> = {
-        status: newStatus,
-        staffName,
-        updatedAt: serverTimestamp()
-    };
-
-    // 「休止中」以外になったら、休止理由をリセット
-    if (newStatus !== "paused") {
-        updateData.pauseReasonId = null;
-    }
-
-    // ★修正箇所: 「空き」「準備中」に加えて「休止中」の場合も、客固有のデータ(オプション・備考)をリセットする
-    if (newStatus === "available" || newStatus === "preparing" || newStatus === "paused") {
-        updateData.selectedOptions = [];
-        updateData.receptionNotes = null;
-    }
-
     try {
-        await updateDoc(docRef, updateData);
+        await mutateLaneWithRoomState(context, docId, (liveLane) => {
+            if (liveLane.status === newStatus && liveLane.staffName === staffName) {
+                return null;
+            }
+
+            const nextLane: LaneData = {
+                ...liveLane,
+                status: newStatus,
+                staffName
+            };
+
+            if (newStatus !== "paused") {
+                nextLane.pauseReasonId = null;
+            }
+
+            if (newStatus === "available" || newStatus === "preparing" || newStatus === "paused") {
+                nextLane.selectedOptions = [];
+                nextLane.receptionNotes = null;
+            }
+
+            return nextLane;
+        });
     } catch (error) {
         console.error("Failed to update lane status:", error);
     }
@@ -68,14 +132,14 @@ export async function updateReceptionStatus(
     options: string[] = [],
     notes: string | null = null
 ): Promise<void> {
-    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
-        return;
+        // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
     }
 
+    const roomId = currentLane?.roomId || "";
     const canGuide = hasRole(context, ["admin", "reception"]);
-    const canConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, currentLane.roomId);
+    const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
 
     if (newStatus === "guiding" && !canGuide) {
         alert("受付権限を持つメンバーのみ案内操作できます。");
@@ -91,43 +155,72 @@ export async function updateReceptionStatus(
         return;
     }
 
-    const sameOptions = JSON.stringify(currentLane.selectedOptions || []) === JSON.stringify(options || []);
-    const sameNotes = (currentLane.receptionNotes || null) === notes;
-    const sameStaffName = (currentLane.staffName || null) === staffName;
-    if (currentLane.receptionStatus === newStatus && sameOptions && sameNotes && sameStaffName) {
-        return;
-    }
-
-    console.log(`Updating reception status ${docId} to ${newStatus}`);
-    const docRef = doc(db, paths.lanesCollectionPath, docId);
-
-    const updateData: Record<string, unknown> = {
-        receptionStatus: newStatus,
-        updatedAt: serverTimestamp()
-    };
-
-    if (staffName) {
-        updateData.staffName = staffName;
-    }
-
-    if (newStatus === "guiding") {
-        updateData.selectedOptions = options;
-        updateData.receptionNotes = notes;
-    }
-
-    if (newStatus === "available" && staffName) {
-        updateData.status = "occupied";
-    }
-
     try {
-        await updateDoc(docRef, updateData);
+        await mutateLaneWithRoomState(context, docId, (liveLane) => {
+            const liveRoomId = liveLane.roomId;
+            const canLiveConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, liveRoomId);
+
+            if (newStatus === "guiding") {
+                if (!canGuide) {
+                    throw new Error("受付権限を持つメンバーのみ案内操作できます。");
+                }
+                if (liveLane.status !== "available" || liveLane.receptionStatus === "guiding") {
+                    throw new Error("このレーンはすでに案内に使用されています。");
+                }
+
+                const sameOptions = JSON.stringify(liveLane.selectedOptions || []) === JSON.stringify(options || []);
+                const sameNotes = (liveLane.receptionNotes || null) === notes;
+                if (liveLane.receptionStatus === "guiding" && sameOptions && sameNotes) {
+                    return null;
+                }
+
+                return {
+                    ...liveLane,
+                    receptionStatus: "guiding",
+                    selectedOptions: options,
+                    receptionNotes: notes
+                };
+            }
+
+            if (newStatus === "available") {
+                if (!canLiveConfirmArrival) {
+                    throw new Error("このレーンの到着確認を行う権限がありません。");
+                }
+                if (liveLane.receptionStatus !== "guiding") {
+                    throw new Error("案内中のレーンのみ到着確認できます。");
+                }
+
+                const nextLane: LaneData = {
+                    ...liveLane,
+                    receptionStatus: "available",
+                    status: "occupied"
+                };
+
+                if (staffName) {
+                    nextLane.staffName = staffName;
+                }
+
+                return nextLane;
+            }
+
+            if (!hasRole(context, ["admin", "reception"])) {
+                throw new Error("この受付状態を変更する権限がありません。");
+            }
+
+            return {
+                ...liveLane,
+                receptionStatus: newStatus
+            };
+        });
     } catch (error) {
         console.error("Failed to update reception status:", error);
+        if (error instanceof Error) {
+            alert(error.message);
+        }
     }
 }
 
 export async function updateLanePauseReason(context: AppContext, docId: string, reasonId: string): Promise<void> {
-    const { db, paths } = context;
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         return;
@@ -147,14 +240,17 @@ export async function updateLanePauseReason(context: AppContext, docId: string, 
         return;
     }
 
-    console.log(`Updating pause reason ${docId} to ${reasonId} by ${staffName}`);
-    const docRef = doc(db, paths.lanesCollectionPath, docId);
-
     try {
-        await updateDoc(docRef, {
-            pauseReasonId: reasonId || null,
-            staffName,
-            updatedAt: serverTimestamp()
+        await mutateLaneWithRoomState(context, docId, (liveLane) => {
+            if ((liveLane.pauseReasonId || "") === (reasonId || "") && liveLane.staffName === staffName) {
+                return null;
+            }
+
+            return {
+                ...liveLane,
+                pauseReasonId: reasonId || null,
+                staffName
+            };
         });
     } catch (error) {
         console.error("Failed to update pause reason:", error);
@@ -238,32 +334,38 @@ export async function saveAdminSettings(context: AppContext): Promise<void> {
     }, 3000);
 }
 
-export async function updateWaitingGroups(context: AppContext, roomId: string, newCount: number): Promise<void> {
+export async function updateWaitingGroups(context: AppContext, roomId: string, delta: number): Promise<void> {
     const { db, paths } = context;
     if (!canManageRoom(context, roomId)) {
         alert("この部屋の待機組数は更新できません。");
         return;
     }
 
-    const safeCount = newCount < 0 ? 0 : newCount;
-    const currentCount = context.state.currentRoomState[roomId]?.waitingGroups || 0;
-    if (currentCount === safeCount) {
+    if (delta === 0) {
         return;
     }
 
-    console.log(`Updating waiting groups for room ${roomId} to ${safeCount}`);
-
-    const docRef = doc(db, paths.roomStateCollectionPath, roomId);
-
     try {
-        await setDoc(
-            docRef,
-            {
-                waitingGroups: safeCount,
+        const roomLaneCount = getRoomLaneCount(context, roomId);
+        const docRef = doc(db, paths.roomStateCollectionPath, roomId);
+        await runTransaction(db, async (transaction) => {
+            const roomStateSnap = await transaction.get(docRef);
+            const currentRoomState = roomStateSnap.exists()
+                ? normalizeRoomStateData(roomStateSnap.data() as Record<string, unknown>, roomLaneCount)
+                : createEmptyRoomState(roomLaneCount);
+            const nextWaitingGroups = Math.max(0, Number(currentRoomState.waitingGroups || 0) + delta);
+
+            if (nextWaitingGroups === Number(currentRoomState.waitingGroups || 0)) {
+                return;
+            }
+
+            transaction.set(docRef, {
+                ...currentRoomState,
+                waitingGroups: nextWaitingGroups,
+                totalLanes: roomLaneCount,
                 updatedAt: serverTimestamp()
-            },
-            { merge: true }
-        );
+            }, { merge: true });
+        });
     } catch (error) {
         console.error("Failed to update waiting groups:", error);
     }
