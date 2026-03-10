@@ -58,6 +58,7 @@ function createDomRefs(): DomRefs {
         receptionModalTitle: requireElement("reception-modal-title"),
         receptionModalContent: requireElement("reception-modal-content"),
         adminRoomList: requireElement("admin-room-list"),
+        adminLayoutEditorRoot: requireElement("admin-layout-editor-root"),
         adminNewRoomInput: requireElement("admin-new-room-input"),
         adminNewRoomLanesInput: requireElement("admin-new-room-lanes-input"),
         adminAddRoomBtn: requireElement("admin-add-room-btn"),

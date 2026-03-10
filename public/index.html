@@ -9,6 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="./styles.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "react": "https://esm.sh/react@18.3.1",
+                "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+                "react-dom": "https://esm.sh/react-dom@18.3.1?external=react",
+                "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react"
+            }
+        }
+    </script>
 </head>
 <body class="page-shell flex min-h-screen flex-col">
 
@@ -201,6 +211,16 @@
                                 <button id="admin-add-room-btn" class="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700">
                                     <i class="fa-solid fa-plus mr-2"></i> 部屋追加
                                 </button>
+                            </div>
+
+                            <div class="admin-layout-editor-shell mt-5 rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+                                <div class="admin-layout-editor-header">
+                                    <div>
+                                        <h4 class="text-sm font-bold text-slate-900">受付レイアウト編集モード</h4>
+                                        <p class="mt-1 text-xs leading-6 text-slate-500">カードの位置と幅、部屋ごとのレーンタイル列数をドラッグで調整します。保存すると受付画面に反映されます。</p>
+                                    </div>
+                                </div>
+                                <div id="admin-layout-editor-root" class="mt-4"></div>
                             </div>
                         </div>
 

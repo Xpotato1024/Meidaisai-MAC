@@ -1,6 +1,8 @@
 import { collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
+import { renderReceptionLayoutEditor } from "./admin-layout-editor.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
+import { getReceptionDisplayCardHeightPx, getReceptionRoomLayout, normalizeReceptionLayoutConfig, packReceptionRoomLayout, RECEPTION_LAYOUT_DISPLAY_GAP_PX } from "./reception-layout.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
 const TAB_LABELS = {
@@ -450,6 +452,7 @@ function renderReceptionList(context) {
     const config = state.dynamicAppConfig;
     dom.receptionList.innerHTML = "";
     dom.receptionList.className = "dashboard-grid";
+    dom.receptionList.style.removeProperty("--packed-canvas-height");
     if (!canAccessTab(context, "reception")) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">受付権限を持つメンバーのみ表示できます。</div>';
         return;
@@ -458,9 +461,25 @@ function renderReceptionList(context) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
-    getVisibleRooms(context).forEach((room) => {
+    dom.receptionList.className = "dashboard-grid dashboard-grid-reception-layout";
+    const visibleRooms = getVisibleRooms(context);
+    const roomById = new Map(visibleRooms.map((room) => [room.id, room]));
+    const packedLayout = packReceptionRoomLayout(visibleRooms, normalizeReceptionLayoutConfig(config.receptionLayout, config.rooms), RECEPTION_LAYOUT_DISPLAY_GAP_PX, getReceptionDisplayCardHeightPx);
+    dom.receptionList.style.setProperty("--packed-canvas-height", `${packedLayout.canvasHeightPx}px`);
+    packedLayout.placements.forEach((placement) => {
+        const room = roomById.get(placement.roomId);
+        if (!room) {
+            return;
+        }
         const roomElement = document.createElement("div");
+        const roomLayout = getReceptionRoomLayout(config.receptionLayout, config.rooms, room.id);
         roomElement.className = "room-dashboard-card";
+        roomElement.style.setProperty("--room-card-span", String(placement.widthUnits));
+        roomElement.style.setProperty("--room-card-x", String(placement.xUnits));
+        roomElement.style.setProperty("--room-card-y", `${placement.yPx}px`);
+        roomElement.style.setProperty("--room-card-height", `${placement.heightPx}px`);
+        roomElement.style.setProperty("--lane-grid-columns-mobile", String(Math.min(roomLayout.tileColumns, 2)));
+        roomElement.style.setProperty("--lane-grid-columns-desktop", String(roomLayout.tileColumns));
         const roomState = getRoomStateSnapshot(context, room.id, room.lanes);
         const waitingGroups = Number(roomState.waitingGroups || 0);
         const availableLanes = Number(roomState.availableLanes || 0);
@@ -472,26 +491,23 @@ function renderReceptionList(context) {
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
-                <div class="room-dashboard-header-topline">
-                    <span class="room-dashboard-meta-label">Room</span>
-                    <div class="room-dashboard-metrics room-dashboard-metrics-header">
-                        ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
-                        ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
-                        ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
-                        ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
-                        ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
-                    </div>
-                    <span class="room-dashboard-meta-label room-dashboard-meta-label-end">待機</span>
+                <div class="room-dashboard-metrics room-dashboard-metrics-header">
+                    ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
+                    ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
+                    ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
+                    ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
+                    ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
                 </div>
                 <div class="room-dashboard-header-main">
-                    <div>
+                    <div class="room-dashboard-title-block">
                         <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                        <div class="mt-2 flex items-baseline gap-2">
+                        <div class="room-dashboard-submeta">
                             <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
                         </div>
                     </div>
                     <div class="${waitBadgeClass} wait-badge-large">
-                        ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
+                        <span class="wait-badge-label">待機</span>
+                        <span class="wait-badge-count">${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}</span>
                     </div>
                 </div>
             </div>
@@ -909,25 +925,10 @@ export function renderAdminSettings(context) {
     if (!config.rooms || config.rooms.length === 0) {
         dom.adminRoomList.innerHTML = '<p class="text-gray-400 text-sm">部屋がありません。</p>';
     }
-    config.rooms.forEach((room, index) => {
-        const isFirst = index === 0;
-        const isLast = index === config.rooms.length - 1;
+    config.rooms.forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "flex items-center gap-2 p-2 bg-gray-50 rounded hover:bg-gray-100 transition";
         roomElement.innerHTML = `
-            <div class="flex flex-col space-y-1 mr-1 flex-shrink-0">
-                <button data-action="move-room-up" data-index="${index}" 
-                        class="w-6 h-5 flex items-center justify-center bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        ${isFirst ? "disabled" : ""}>
-                    <i class="fa-solid fa-chevron-up"></i>
-                </button>
-                <button data-action="move-room-down" data-index="${index}" 
-                        class="w-6 h-5 flex items-center justify-center bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        ${isLast ? "disabled" : ""}>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </div>
-
             <input type="text" data-action="edit-room-name" data-id="${room.id}" value="${room.name}" 
                    class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm focus:ring-indigo-500 focus:border-indigo-500"
                    placeholder="部屋名">
@@ -975,6 +976,14 @@ export function renderAdminSettings(context) {
             </button>
         `;
         dom.adminPauseReasonsList.appendChild(reasonElement);
+    });
+    renderReceptionLayoutEditor({
+        container: dom.adminLayoutEditorRoot,
+        rooms: config.rooms,
+        layout: config.receptionLayout,
+        onChange: (nextLayout) => {
+            state.localAdminConfig.receptionLayout = nextLayout;
+        }
     });
 }
 /**
