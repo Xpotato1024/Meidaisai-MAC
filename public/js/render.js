@@ -2,7 +2,7 @@ import { collection, getDocs, query, where } from "https://www.gstatic.com/fireb
 import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { renderReceptionLayoutEditor } from "./admin-layout-editor.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
-import { getReceptionCardGridSpan, getReceptionRoomLayout, normalizeReceptionLayoutConfig, sortRoomsByReceptionLayout } from "./reception-layout.js";
+import { getReceptionDisplayCardHeightPx, getReceptionRoomLayout, normalizeReceptionLayoutConfig, packReceptionRoomLayout, RECEPTION_LAYOUT_DISPLAY_GAP_PX } from "./reception-layout.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
 const TAB_LABELS = {
@@ -452,6 +452,7 @@ function renderReceptionList(context) {
     const config = state.dynamicAppConfig;
     dom.receptionList.innerHTML = "";
     dom.receptionList.className = "dashboard-grid";
+    dom.receptionList.style.removeProperty("--packed-canvas-height");
     if (!canAccessTab(context, "reception")) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">受付権限を持つメンバーのみ表示できます。</div>';
         return;
@@ -461,12 +462,22 @@ function renderReceptionList(context) {
         return;
     }
     dom.receptionList.className = "dashboard-grid dashboard-grid-reception-layout";
-    const visibleRooms = sortRoomsByReceptionLayout(getVisibleRooms(context), normalizeReceptionLayoutConfig(config.receptionLayout, config.rooms));
-    visibleRooms.forEach((room) => {
+    const visibleRooms = getVisibleRooms(context);
+    const roomById = new Map(visibleRooms.map((room) => [room.id, room]));
+    const packedLayout = packReceptionRoomLayout(visibleRooms, normalizeReceptionLayoutConfig(config.receptionLayout, config.rooms), RECEPTION_LAYOUT_DISPLAY_GAP_PX, getReceptionDisplayCardHeightPx);
+    dom.receptionList.style.setProperty("--packed-canvas-height", `${packedLayout.canvasHeightPx}px`);
+    packedLayout.placements.forEach((placement) => {
+        const room = roomById.get(placement.roomId);
+        if (!room) {
+            return;
+        }
         const roomElement = document.createElement("div");
         const roomLayout = getReceptionRoomLayout(config.receptionLayout, config.rooms, room.id);
         roomElement.className = "room-dashboard-card";
-        roomElement.style.setProperty("--room-card-span", String(getReceptionCardGridSpan(roomLayout.widthRatio)));
+        roomElement.style.setProperty("--room-card-span", String(placement.widthUnits));
+        roomElement.style.setProperty("--room-card-x", String(placement.xUnits));
+        roomElement.style.setProperty("--room-card-y", `${placement.yPx}px`);
+        roomElement.style.setProperty("--room-card-height", `${placement.heightPx}px`);
         roomElement.style.setProperty("--lane-grid-columns-mobile", String(Math.min(roomLayout.tileColumns, 2)));
         roomElement.style.setProperty("--lane-grid-columns-desktop", String(roomLayout.tileColumns));
         const roomState = getRoomStateSnapshot(context, room.id, room.lanes);

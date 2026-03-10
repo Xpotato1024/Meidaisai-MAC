@@ -4,9 +4,11 @@ import { createRoot, type Root } from "react-dom/client";
 import {
     createDefaultReceptionLayout,
     formatReceptionWidthRatio,
-    getReceptionCardGridSpan,
+    getReceptionEditorCardHeightPx,
     getReceptionWidthOptions,
-    normalizeReceptionLayoutConfig
+    normalizeReceptionLayoutConfig,
+    packReceptionRoomLayout,
+    RECEPTION_LAYOUT_EDITOR_GAP_PX
 } from "./reception-layout.js";
 import type { ReceptionLayoutConfig, ReceptionRoomLayout, RoomConfig } from "./types.js";
 
@@ -115,6 +117,14 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
     }, [layoutSignature, normalizedLayout]);
 
     const orderedRooms = useMemo(() => sortLayoutRooms(draftLayout), [draftLayout]);
+    const packedLayout = useMemo(
+        () => packReceptionRoomLayout(rooms, draftLayout, RECEPTION_LAYOUT_EDITOR_GAP_PX, getReceptionEditorCardHeightPx),
+        [rooms, draftLayout]
+    );
+    const placementByRoomId = useMemo(
+        () => new Map(packedLayout.placements.map((placement) => [placement.roomId, placement])),
+        [packedLayout]
+    );
 
     const updateDraftLayout = (nextLayout: ReceptionLayoutConfig) => {
         startTransition(() => {
@@ -149,10 +159,17 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
     };
 
     const handleDragStart = (roomId: string, event: DragEvent<HTMLElement>) => {
+        const dragOrigin = event.target as HTMLElement | null;
+        if (!dragOrigin?.closest(".admin-layout-editor-card-handle")) {
+            event.preventDefault();
+            return;
+        }
+
         setDraggedRoomId(roomId);
         setDropIndicator(null);
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", roomId);
+        event.dataTransfer.setDragImage(event.currentTarget, 28, 28);
     };
 
     const handleDragOverCard = (roomId: string, event: DragEvent<HTMLElement>) => {
@@ -161,6 +178,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
         }
 
         event.preventDefault();
+        event.stopPropagation();
         const target = event.currentTarget;
         const rect = target.getBoundingClientRect();
         const placement: DropPlacement = (event.clientX - rect.left) < (rect.width / 2) ? "before" : "after";
@@ -170,6 +188,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
 
     const handleDropOnCard = (roomId: string, event: DragEvent<HTMLElement>) => {
         event.preventDefault();
+        event.stopPropagation();
         const droppedRoomId = event.dataTransfer.getData("text/plain") || draggedRoomId;
 
         if (!droppedRoomId || droppedRoomId === roomId) {
@@ -229,9 +248,15 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                 </button>
             </div>
 
-            <div className="admin-layout-editor-canvas">
+            <div
+                className="admin-layout-editor-canvas"
+                style={{ "--editor-canvas-height": `${packedLayout.canvasHeightPx}px` } as CSSProperties}
+                onDragOver={handleDragOverEnd}
+                onDrop={handleDropOnEnd}
+            >
                 {orderedRooms.map((item) => {
                     const room = rooms.find((candidate) => candidate.id === item.roomId);
+                    const placement = placementByRoomId.get(item.roomId);
                     if (!room) {
                         return null;
                     }
@@ -242,7 +267,10 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                     const dropBefore = dropIndicator?.roomId === item.roomId && dropIndicator.placement === "before";
                     const dropAfter = dropIndicator?.roomId === item.roomId && dropIndicator.placement === "after";
                     const cardStyle = {
-                        "--editor-card-span": String(getReceptionCardGridSpan(item.widthRatio)),
+                        "--editor-card-span": String(placement?.widthUnits ?? 24),
+                        "--editor-card-x": String(placement?.xUnits ?? 0),
+                        "--editor-card-y": `${placement?.yPx ?? 0}px`,
+                        "--editor-card-height": `${placement?.heightPx ?? getReceptionEditorCardHeightPx(room.lanes, previewColumns)}px`,
                         "--editor-tile-columns": String(previewColumns)
                     } as CSSProperties;
 
@@ -256,17 +284,15 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                                 dropAfter ? "is-drop-after" : ""
                             ].filter(Boolean).join(" ")}
                             style={cardStyle}
+                            draggable
+                            onDragStart={(event) => handleDragStart(item.roomId, event)}
+                            onDragEnd={clearDragState}
                             onDragOver={(event) => handleDragOverCard(item.roomId, event)}
                             onDrop={(event) => handleDropOnCard(item.roomId, event)}
                         >
                             <div className="admin-layout-editor-card">
                                 <div className="admin-layout-editor-card-header">
-                                    <div
-                                        className="admin-layout-editor-card-handle"
-                                        draggable
-                                        onDragStart={(event) => handleDragStart(item.roomId, event)}
-                                        onDragEnd={clearDragState}
-                                    >
+                                    <div className="admin-layout-editor-card-handle">
                                         <span className="inline-flex"><i className="fa-solid fa-grip-vertical"></i></span>
                                         <span>移動</span>
                                     </div>
@@ -321,17 +347,17 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                         </div>
                     );
                 })}
+            </div>
 
-                <div
-                    className={[
-                        "admin-layout-editor-end-drop",
-                        dropIndicator?.roomId === "__end__" ? "is-active" : ""
-                    ].filter(Boolean).join(" ")}
-                    onDragOver={handleDragOverEnd}
-                    onDrop={handleDropOnEnd}
-                >
-                    末尾へ配置
-                </div>
+            <div
+                className={[
+                    "admin-layout-editor-end-drop",
+                    dropIndicator?.roomId === "__end__" ? "is-active" : ""
+                ].filter(Boolean).join(" ")}
+                onDragOver={handleDragOverEnd}
+                onDrop={handleDropOnEnd}
+            >
+                末尾へ配置
             </div>
         </div>
     );

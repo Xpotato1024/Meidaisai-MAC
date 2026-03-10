@@ -1,5 +1,7 @@
 export const RECEPTION_LAYOUT_PACK_COLUMNS = 24;
 export const RECEPTION_LAYOUT_WIDTH_PRESETS = [1, 2 / 3, 1 / 2, 1 / 3, 1 / 4];
+export const RECEPTION_LAYOUT_EDITOR_GAP_PX = 12;
+export const RECEPTION_LAYOUT_DISPLAY_GAP_PX = 16;
 const RECEPTION_LAYOUT_MAX_TILE_COLUMNS = 6;
 const RECEPTION_LAYOUT_WIDTH_OPTIONS = [
     { value: 1, label: "100%" },
@@ -61,6 +63,17 @@ export function getDefaultReceptionTileColumns(totalLanes) {
 }
 export function getReceptionCardGridSpan(widthRatio) {
     return clampInteger(Math.round(clampWidthRatio(widthRatio) * RECEPTION_LAYOUT_PACK_COLUMNS), Math.round(RECEPTION_LAYOUT_PACK_COLUMNS / 4), RECEPTION_LAYOUT_PACK_COLUMNS);
+}
+function getReceptionTileRows(totalLanes, tileColumns) {
+    return Math.max(1, Math.ceil(totalLanes / Math.max(tileColumns, 1)));
+}
+export function getReceptionEditorCardHeightPx(totalLanes, tileColumns) {
+    const tileRows = getReceptionTileRows(totalLanes, tileColumns);
+    return 160 + (tileRows * 34);
+}
+export function getReceptionDisplayCardHeightPx(totalLanes, tileColumns) {
+    const tileRows = getReceptionTileRows(totalLanes, tileColumns);
+    return 166 + (tileRows * 78);
 }
 export function createDefaultReceptionLayout(rooms) {
     return {
@@ -138,4 +151,38 @@ export function sortRoomsByReceptionLayout(rooms, layout) {
         }
         return left.name.localeCompare(right.name, "ja");
     });
+}
+export function packReceptionRoomLayout(rooms, layout, gapPx, getHeightPx) {
+    const orderedRooms = sortRoomsByReceptionLayout(rooms, layout);
+    const skyline = Array.from({ length: RECEPTION_LAYOUT_PACK_COLUMNS }, () => 0);
+    const placements = [];
+    orderedRooms.forEach((room) => {
+        const roomLayout = getReceptionRoomLayout(layout, rooms, room.id);
+        const widthUnits = getReceptionCardGridSpan(roomLayout.widthRatio);
+        const heightPx = getHeightPx(room.lanes, roomLayout.tileColumns);
+        let bestXUnits = 0;
+        let bestYPx = Number.POSITIVE_INFINITY;
+        for (let startXUnits = 0; startXUnits <= RECEPTION_LAYOUT_PACK_COLUMNS - widthUnits; startXUnits += 1) {
+            const candidateYPx = Math.max(...skyline.slice(startXUnits, startXUnits + widthUnits));
+            if (candidateYPx < bestYPx) {
+                bestYPx = candidateYPx;
+                bestXUnits = startXUnits;
+            }
+        }
+        const nextBottom = bestYPx + heightPx + gapPx;
+        for (let unit = bestXUnits; unit < bestXUnits + widthUnits; unit += 1) {
+            skyline[unit] = nextBottom;
+        }
+        placements.push({
+            roomId: room.id,
+            xUnits: bestXUnits,
+            yPx: bestYPx,
+            widthUnits,
+            heightPx
+        });
+    });
+    return {
+        placements,
+        canvasHeightPx: Math.max(0, Math.max(...skyline) - gapPx)
+    };
 }
