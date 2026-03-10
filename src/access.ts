@@ -36,12 +36,10 @@ export function getDefaultTab(context: AppContext): TabId {
 
 export function getAllowedRoomIds(context: AppContext): string[] {
     const allRoomIds = context.state.dynamicAppConfig.rooms.map((room) => room.id);
-    if (hasRole(context, ["admin", "reception"])) {
+    if (hasRole(context, ["admin", "reception", "staff"])) {
         return allRoomIds;
     }
-
-    const assignedRoomIds = context.state.accessMember?.assignedRoomIds || [];
-    return allRoomIds.filter((roomId) => assignedRoomIds.includes(roomId));
+    return [];
 }
 
 export function canManageRoom(context: AppContext, roomId: string): boolean {

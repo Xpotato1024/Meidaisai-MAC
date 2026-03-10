@@ -91,6 +91,79 @@
         z-index: 1;
     }
 
+    .toast-root {
+        position: fixed;
+        top: 5.8rem;
+        right: 1rem;
+        z-index: 80;
+        display: flex;
+        width: min(22rem, calc(100vw - 2rem));
+        flex-direction: column;
+        gap: 0.7rem;
+        pointer-events: none;
+    }
+
+    .toast-card {
+        pointer-events: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.92);
+        padding: 0.85rem 0.95rem;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+        color: #e2e8f0;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 180ms ease, transform 180ms ease;
+        backdrop-filter: blur(12px);
+    }
+
+    .toast-card.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .toast-card-info {
+        border-color: rgba(59, 130, 246, 0.28);
+    }
+
+    .toast-card-success {
+        border-color: rgba(16, 185, 129, 0.32);
+    }
+
+    .toast-card-warning {
+        border-color: rgba(245, 158, 11, 0.32);
+    }
+
+    .toast-card-error {
+        border-color: rgba(244, 63, 94, 0.36);
+    }
+
+    .toast-title {
+        margin-bottom: 0.24rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #bfdbfe;
+    }
+
+    .toast-card-success .toast-title {
+        color: #86efac;
+    }
+
+    .toast-card-warning .toast-title {
+        color: #fcd34d;
+    }
+
+    .toast-card-error .toast-title {
+        color: #fda4af;
+    }
+
+    .toast-message {
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+
     .sticky-header-shell {
         position: sticky;
         top: 0.75rem;
@@ -454,6 +527,12 @@
     }
 
     @media (max-width: 767px) {
+        .toast-root {
+            top: 5.2rem;
+            right: 0.75rem;
+            width: min(20rem, calc(100vw - 1.5rem));
+        }
+
         .hero-panel {
             border-radius: 12px;
         }
