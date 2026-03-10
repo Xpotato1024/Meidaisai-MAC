@@ -481,7 +481,6 @@ function renderReceptionList(context) {
                         ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
                         ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
                     </div>
-                    <span class="room-dashboard-meta-label room-dashboard-meta-label-end">待機</span>
                 </div>
                 <div class="room-dashboard-header-main">
                     <div>
@@ -491,7 +490,8 @@ function renderReceptionList(context) {
                         </div>
                     </div>
                     <div class="${waitBadgeClass} wait-badge-large">
-                        ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
+                        <span class="wait-badge-label">待機</span>
+                        <span class="wait-badge-count">${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}</span>
                     </div>
                 </div>
             </div>
