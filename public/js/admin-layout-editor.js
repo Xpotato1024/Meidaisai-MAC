@@ -91,16 +91,14 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }) {
         setDropIndicator(null);
     };
     const handleDragStart = (roomId, event) => {
-        const dragOrigin = event.target;
-        if (!dragOrigin?.closest(".admin-layout-editor-card-handle")) {
-            event.preventDefault();
-            return;
-        }
         setDraggedRoomId(roomId);
         setDropIndicator(null);
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", roomId);
-        event.dataTransfer.setDragImage(event.currentTarget, 28, 28);
+        const dragCard = event.currentTarget.closest(".admin-layout-editor-item");
+        if (dragCard) {
+            event.dataTransfer.setDragImage(dragCard, 28, 28);
+        }
     };
     const handleDragOverCard = (roomId, event) => {
         if (!draggedRoomId || draggedRoomId === roomId) {
@@ -170,7 +168,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }) {
                             isDragging ? "is-dragging" : "",
                             dropBefore ? "is-drop-before" : "",
                             dropAfter ? "is-drop-after" : ""
-                        ].filter(Boolean).join(" "), style: cardStyle, draggable: true, onDragStart: (event) => handleDragStart(item.roomId, event), onDragEnd: clearDragState, onDragOver: (event) => handleDragOverCard(item.roomId, event), onDrop: (event) => handleDropOnCard(item.roomId, event), children: _jsxs("div", { className: "admin-layout-editor-card", children: [_jsxs("div", { className: "admin-layout-editor-card-header", children: [_jsxs("div", { className: "admin-layout-editor-card-handle", children: [_jsx("span", { className: "inline-flex", children: _jsx("i", { className: "fa-solid fa-grip-vertical" }) }), _jsx("span", { children: "\u79FB\u52D5" })] }), _jsxs("span", { className: "admin-layout-editor-card-span", children: ["\u5E45 ", formatReceptionWidthRatio(item.widthRatio)] })] }), _jsxs("div", { className: "admin-layout-editor-card-body", children: [_jsxs("div", { children: [_jsx("h4", { className: "admin-layout-editor-room-name", children: room.name }), _jsxs("p", { className: "admin-layout-editor-room-meta", children: ["\u5168 ", room.lanes, " \u30EC\u30FC\u30F3"] })] }), _jsxs("div", { className: "admin-layout-editor-field-grid", children: [_jsxs("label", { className: "admin-layout-editor-field", children: [_jsx("span", { children: "\u30AB\u30FC\u30C9\u5E45" }), _jsx("select", { value: String(item.widthRatio), onChange: (event) => handleWidthRatioChange(item.roomId, Number(event.target.value)), children: widthOptions.map((option) => (_jsx("option", { value: option.value, children: option.label }, option.label))) })] }), _jsxs("label", { className: "admin-layout-editor-field", children: [_jsx("span", { children: "\u30EC\u30FC\u30F3\u5217\u6570" }), _jsx("select", { value: item.tileColumns, onChange: (event) => handleTileColumnsChange(item.roomId, Number(event.target.value)), children: Array.from({ length: Math.min(room.lanes, 6) }, (_, index) => index + 1).map((columnCount) => (_jsxs("option", { value: columnCount, children: [columnCount, " \u5217"] }, columnCount))) })] })] }), _jsx("div", { className: "admin-layout-editor-preview-grid", children: Array.from({ length: previewTileCount }, (_, index) => (_jsxs("div", { className: "admin-layout-editor-preview-tile", children: ["L", index + 1] }, `${item.roomId}-${index + 1}`))) })] })] }) }, item.roomId));
+                        ].filter(Boolean).join(" "), style: cardStyle, onDragOver: (event) => handleDragOverCard(item.roomId, event), onDrop: (event) => handleDropOnCard(item.roomId, event), children: _jsxs("div", { className: "admin-layout-editor-card", children: [_jsxs("div", { className: "admin-layout-editor-card-header", children: [_jsxs("div", { className: "admin-layout-editor-card-handle", draggable: true, onDragStart: (event) => handleDragStart(item.roomId, event), onDragEnd: clearDragState, children: [_jsx("span", { className: "inline-flex", children: _jsx("i", { className: "fa-solid fa-grip-vertical" }) }), _jsx("span", { children: "\u79FB\u52D5" })] }), _jsxs("span", { className: "admin-layout-editor-card-span", children: ["\u5E45 ", formatReceptionWidthRatio(item.widthRatio)] })] }), _jsxs("div", { className: "admin-layout-editor-card-body", children: [_jsxs("div", { children: [_jsx("h4", { className: "admin-layout-editor-room-name", children: room.name }), _jsxs("p", { className: "admin-layout-editor-room-meta", children: ["\u5168 ", room.lanes, " \u30EC\u30FC\u30F3"] })] }), _jsxs("div", { className: "admin-layout-editor-field-grid", children: [_jsxs("label", { className: "admin-layout-editor-field", children: [_jsx("span", { children: "\u30AB\u30FC\u30C9\u5E45" }), _jsx("select", { value: String(item.widthRatio), onChange: (event) => handleWidthRatioChange(item.roomId, Number(event.target.value)), children: widthOptions.map((option) => (_jsx("option", { value: option.value, children: option.label }, option.label))) })] }), _jsxs("label", { className: "admin-layout-editor-field", children: [_jsx("span", { children: "\u30EC\u30FC\u30F3\u5217\u6570" }), _jsx("select", { value: item.tileColumns, onChange: (event) => handleTileColumnsChange(item.roomId, Number(event.target.value)), children: Array.from({ length: Math.min(room.lanes, 6) }, (_, index) => index + 1).map((columnCount) => (_jsxs("option", { value: columnCount, children: [columnCount, " \u5217"] }, columnCount))) })] })] }), _jsx("div", { className: "admin-layout-editor-preview-grid", children: Array.from({ length: previewTileCount }, (_, index) => (_jsxs("div", { className: "admin-layout-editor-preview-tile", children: ["L", index + 1] }, `${item.roomId}-${index + 1}`))) })] })] }) }, item.roomId));
                 }) }), _jsx("div", { className: [
                     "admin-layout-editor-end-drop",
                     dropIndicator?.roomId === "__end__" ? "is-active" : ""

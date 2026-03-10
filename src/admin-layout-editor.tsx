@@ -159,17 +159,14 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
     };
 
     const handleDragStart = (roomId: string, event: DragEvent<HTMLElement>) => {
-        const dragOrigin = event.target as HTMLElement | null;
-        if (!dragOrigin?.closest(".admin-layout-editor-card-handle")) {
-            event.preventDefault();
-            return;
-        }
-
         setDraggedRoomId(roomId);
         setDropIndicator(null);
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", roomId);
-        event.dataTransfer.setDragImage(event.currentTarget, 28, 28);
+        const dragCard = (event.currentTarget as HTMLElement).closest(".admin-layout-editor-item") as HTMLElement | null;
+        if (dragCard) {
+            event.dataTransfer.setDragImage(dragCard, 28, 28);
+        }
     };
 
     const handleDragOverCard = (roomId: string, event: DragEvent<HTMLElement>) => {
@@ -284,15 +281,17 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                                 dropAfter ? "is-drop-after" : ""
                             ].filter(Boolean).join(" ")}
                             style={cardStyle}
-                            draggable
-                            onDragStart={(event) => handleDragStart(item.roomId, event)}
-                            onDragEnd={clearDragState}
                             onDragOver={(event) => handleDragOverCard(item.roomId, event)}
                             onDrop={(event) => handleDropOnCard(item.roomId, event)}
                         >
                             <div className="admin-layout-editor-card">
                                 <div className="admin-layout-editor-card-header">
-                                    <div className="admin-layout-editor-card-handle">
+                                    <div
+                                        className="admin-layout-editor-card-handle"
+                                        draggable
+                                        onDragStart={(event) => handleDragStart(item.roomId, event)}
+                                        onDragEnd={clearDragState}
+                                    >
                                         <span className="inline-flex"><i className="fa-solid fa-grip-vertical"></i></span>
                                         <span>移動</span>
                                     </div>

@@ -104,7 +104,7 @@ export function getReceptionEditorCardHeightPx(totalLanes: number, tileColumns: 
 
 export function getReceptionDisplayCardHeightPx(totalLanes: number, tileColumns: number): number {
     const tileRows = getReceptionTileRows(totalLanes, tileColumns);
-    return 166 + (tileRows * 78);
+    return 188 + (tileRows * 78);
 }
 
 export function createDefaultReceptionLayout(rooms: RoomConfig[]): ReceptionLayoutConfig {
