@@ -112,13 +112,13 @@ export function configureDataSubscriptions(context: AppContext): void {
 
     listenToConfigChanges(context);
     listenToRoomStateChanges(context);
-    if (hasRole(context, ["admin", "staff", "reception"])) {
+    if (hasRole(context, ["root", "admin", "staff", "reception"])) {
         listenToLaneChanges(context);
     } else {
         context.state.currentLanesState = {};
     }
 
-    if (hasRole(context, ["admin"])) {
+    if (hasRole(context, ["root", "admin"])) {
         listenToAccessRequestsChanges(context);
         listenToAccessMembersChanges(context);
     } else {
@@ -328,7 +328,7 @@ function listenToAccessMembersChanges(context: AppContext): void {
                 email: data.email || "",
                 displayName: data.displayName || "",
                 grade: typeof data.grade === "string" ? data.grade : null,
-                role: data.role || "staff",
+                role: data.role === "root" ? "root" : data.role || "staff",
                 isActive: data.isActive !== false,
                 assignedRoomIds: Array.isArray(data.assignedRoomIds) ? data.assignedRoomIds : [],
                 authorizationSource: typeof data.authorizationSource === "string" ? data.authorizationSource : null,

@@ -402,12 +402,16 @@ export async function updateEventRegistry(context) {
 }
 export async function approveAccessRequest(context, uid, role) {
     const { db, paths, state } = context;
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         return;
     }
     const request = state.accessRequestsCache.find((item) => item.uid === uid);
     const memberRef = doc(db, paths.accessMembersCollectionPath, uid);
     const requestRef = doc(db, paths.accessRequestsCollectionPath, uid);
+    if (role === "root" && !hasRole(context, ["root"])) {
+        showToast({ title: "権限不足", message: "Root アカウントの設定は Root のみ実行できます。", tone: "warning" });
+        return;
+    }
     await setDoc(memberRef, {
         uid,
         email: request?.email || "",
@@ -415,11 +419,24 @@ export async function approveAccessRequest(context, uid, role) {
         role,
         isActive: true,
         assignedRoomIds: [],
-        authorizationSource: "manual",
+        authorizationSource: role === "root" ? "global" : "manual",
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp()
     }, { merge: true });
+    if (role === "root") {
+        await setDoc(doc(db, paths.globalAccessMembersCollectionPath, uid), {
+            uid,
+            email: request?.email || "",
+            displayName: request?.displayName || "",
+            role: "root",
+            isActive: true,
+            authorizationSource: "global",
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
+        }, { merge: true });
+    }
     await setDoc(requestRef, {
         status: "approved",
         note: null,
@@ -428,7 +445,7 @@ export async function approveAccessRequest(context, uid, role) {
 }
 export async function rejectAccessRequest(context, uid) {
     const { db, paths } = context;
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         return;
     }
     await setDoc(doc(db, paths.accessRequestsCollectionPath, uid), {
@@ -437,14 +454,88 @@ export async function rejectAccessRequest(context, uid) {
     }, { merge: true });
 }
 export async function updateAccessMember(context, uid, role, isActive) {
-    const { db, paths } = context;
-    if (!hasRole(context, ["admin"])) {
+    const { db, paths, state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return;
+    }
+    const currentMember = state.accessMembersCache.find((member) => member.uid === uid) || null;
+    const currentUserId = state.userId;
+    const isRootOperator = hasRole(context, ["root"]);
+    const effectiveRole = currentMember?.role || "staff";
+    if (uid === currentUserId && (!isActive || role !== effectiveRole)) {
+        showToast({
+            title: "変更不可",
+            message: "自分自身の無効化やロール変更はできません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (effectiveRole === "root") {
+        showToast({
+            title: "変更不可",
+            message: "Root アカウントはアプリから変更できません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (role === "root" && !isRootOperator) {
+        showToast({
+            title: "権限不足",
+            message: "Root アカウントの設定は Root のみ実行できます。",
+            tone: "warning"
+        });
         return;
     }
     await setDoc(doc(db, paths.accessMembersCollectionPath, uid), {
         role,
         isActive,
         assignedRoomIds: [],
+        authorizationSource: role === "root" ? "global" : currentMember?.authorizationSource || "manual",
         updatedAt: serverTimestamp()
     }, { merge: true });
+    if (role === "root") {
+        await setDoc(doc(db, paths.globalAccessMembersCollectionPath, uid), {
+            uid,
+            email: currentMember?.email || "",
+            displayName: currentMember?.displayName || "",
+            grade: currentMember?.grade || null,
+            role: "root",
+            isActive: true,
+            authorizationSource: "global",
+            updatedAt: serverTimestamp(),
+            createdAt: currentMember?.createdAt || serverTimestamp(),
+            lastLoginAt: currentMember?.lastLoginAt || serverTimestamp()
+        }, { merge: true });
+    }
+}
+export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
+    const { state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return 0;
+    }
+    if (role === "root" && !hasRole(context, ["root"])) {
+        showToast({
+            title: "権限不足",
+            message: "Root の一括付与は Root のみ実行できます。",
+            tone: "warning"
+        });
+        return 0;
+    }
+    const normalizedGrade = grade.trim();
+    const targets = state.accessMembersCache.filter((member) => {
+        if (member.uid === state.userId) {
+            return false;
+        }
+        if (member.role === "root") {
+            return false;
+        }
+        if (normalizedGrade !== "__all__" && String(member.grade || "") !== normalizedGrade) {
+            return false;
+        }
+        return true;
+    });
+    for (const member of targets) {
+        await updateAccessMember(context, member.uid, role, isActive);
+    }
+    return targets.length;
 }

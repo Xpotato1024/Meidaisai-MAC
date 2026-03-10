@@ -6,7 +6,7 @@ import { UI_ICON_SVGS } from "./icons.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import { showToast } from "./toast.js";
-import { approveAccessRequest, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
+import { approveAccessRequest, bulkUpdateAccessMembers, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
 }
@@ -83,9 +83,11 @@ function setMemberDirectoryImportStatus(context, message, tone) {
     adminDirectoryImportStatus.textContent = message;
     adminDirectoryImportStatus.className = `text-sm ${tone === "success"
         ? "text-emerald-600"
-        : tone === "error"
-            ? "text-rose-600 font-bold"
-            : "text-slate-500"}`;
+        : tone === "warning"
+            ? "text-amber-600 font-bold"
+            : tone === "error"
+                ? "text-rose-600 font-bold"
+                : "text-slate-500"}`;
 }
 async function exportFullBackup(context) {
     const { db, currentAppId, dom, paths, state } = context;
@@ -337,7 +339,7 @@ export function setupEventListeners(context) {
         state.activeTab = tabId;
         state.isNavMenuOpen = false;
         renderAllUI(context);
-        if (state.activeTab === "database" && hasRole(context, ["admin"])) {
+        if (state.activeTab === "database" && hasRole(context, ["root", "admin"])) {
             void fetchAndRenderEventList(context);
         }
     });
@@ -567,7 +569,15 @@ export function setupEventListeners(context) {
         setMemberDirectoryImportStatus(context, `名簿を取り込み中です: ${file.name}`, "info");
         void importMemberDirectoryFromFile(context, file)
             .then((result) => {
-            setMemberDirectoryImportStatus(context, `名簿を更新しました。${result.importedCount}件取込 / 既存メンバー同期 ${result.syncedMemberCount}件 / 自動承認 ${result.autoApprovedCount}件 / 名簿外停止 ${result.deactivatedCount}件`, "success");
+            const hasWarnings = result.protectedExistingCount > 0 || result.skippedExistingCount > 0;
+            setMemberDirectoryImportStatus(context, [
+                `名簿を更新しました。${result.importedCount}件取込`,
+                `既存メンバー同期 ${result.syncedMemberCount}件`,
+                `自動承認 ${result.autoApprovedCount}件`,
+                `名簿外停止 ${result.deactivatedCount}件`,
+                result.protectedExistingCount > 0 ? `保護メンバー維持 ${result.protectedExistingCount}件` : null,
+                result.skippedExistingCount > 0 ? `重複スキップ ${result.skippedExistingCount}件` : null
+            ].filter(Boolean).join(" / "), hasWarnings ? "warning" : "success");
         })
             .catch((error) => {
             console.error("Failed to import member directory:", error);
@@ -616,6 +626,47 @@ export function setupEventListeners(context) {
             const isActive = activeInput?.checked ?? true;
             void updateAccessMember(context, uid, role, isActive);
             return;
+        }
+        if (actionButton === "apply-member-bulk" && button) {
+            const gradeSelect = dom.tabMembers.querySelector('select[data-action="member-bulk-grade"]');
+            const roleSelect = dom.tabMembers.querySelector('select[data-action="member-bulk-role"]');
+            const activeInput = dom.tabMembers.querySelector('input[data-action="member-bulk-active"]');
+            const grade = gradeSelect?.value || "__all__";
+            const role = (roleSelect?.value || "staff");
+            const isActive = activeInput?.checked ?? true;
+            void bulkUpdateAccessMembers(context, grade, role, isActive).then((updatedCount) => {
+                if (updatedCount > 0) {
+                    showToast({
+                        title: "一括更新完了",
+                        message: `${updatedCount} 件のメンバー権限を更新しました。`,
+                        tone: "success"
+                    });
+                }
+            });
+            return;
+        }
+    });
+    dom.tabMembers.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
+            return;
+        }
+        const action = target.dataset.action;
+        if (action === "member-sort-mode") {
+            state.memberSortMode = target.value;
+            renderAllUI(context);
+            return;
+        }
+        if (action === "member-bulk-grade") {
+            state.memberBulkGrade = target.value;
+            return;
+        }
+        if (action === "member-bulk-role") {
+            state.memberBulkRole = target.value;
+            return;
+        }
+        if (action === "member-bulk-active" && target instanceof HTMLInputElement) {
+            state.memberBulkIsActive = target.checked;
         }
     });
     dom.tabAdmin.addEventListener("click", (event) => {

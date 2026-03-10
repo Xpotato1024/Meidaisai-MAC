@@ -1,7 +1,8 @@
-export type RoleId = "admin" | "reception" | "staff";
+export type RoleId = "root" | "admin" | "reception" | "staff";
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
 export type TabId = "reception" | "staff" | "admin" | "members" | "database";
 export type AuthorizationSource = "manual" | "roster" | "global";
+export type MemberSortMode = "grade-asc" | "grade-desc" | "role" | "name";
 
 export interface RoomConfig {
     id: string;
@@ -97,6 +98,8 @@ export interface MemberDirectoryImportResult {
     syncedMemberCount: number;
     autoApprovedCount: number;
     deactivatedCount: number;
+    protectedExistingCount: number;
+    skippedExistingCount: number;
 }
 
 export interface LaneData {
@@ -230,6 +233,10 @@ export interface AppState {
     isNavMenuOpen: boolean;
     isStatusBannerCollapsed: boolean;
     isSummaryCollapsed: boolean;
+    memberSortMode: MemberSortMode;
+    memberBulkGrade: string;
+    memberBulkRole: RoleId;
+    memberBulkIsActive: boolean;
     currentLanesState: Record<string, LaneData>;
     currentRoomState: Record<string, RoomStateData>;
     dynamicAppConfig: AppConfig;

@@ -56,6 +56,14 @@ service cloud.firestore {
         && selfGlobalMember().data.role == 'admin';
     }
 
+    function isGlobalRoot() {
+      return isActiveGlobalMember()
+        && (
+          selfGlobalMember().data.role == 'root'
+          || selfGlobalMember().data.role == 'admin'
+        );
+    }
+
     function isActiveMember(appId) {
       return signedIn()
         && exists(memberPath(appId, request.auth.uid))
@@ -66,8 +74,12 @@ service cloud.firestore {
       return isActiveMember(appId) && selfMember(appId).data.role == role;
     }
 
+    function isRoot(appId) {
+      return hasRole(appId, 'root') || isGlobalRoot();
+    }
+
     function isAdmin(appId) {
-      return hasRole(appId, 'admin') || isGlobalAdmin();
+      return isRoot(appId) || hasRole(appId, 'admin') || isGlobalAdmin();
     }
 
     function isReception(appId) {
@@ -83,7 +95,7 @@ service cloud.firestore {
     }
 
     function assignedToRoom(appId, roomId) {
-      return isStaff(appId) && selfMember(appId).data.assignedRoomIds.hasAny([roomId]);
+      return isStaff(appId);
     }
 
     function canManageRoom(appId, roomId) {
@@ -92,6 +104,46 @@ service cloud.firestore {
 
     function canOperateAssignedRoom(appId, roomId) {
       return isAdmin(appId) || assignedToRoom(appId, roomId);
+    }
+
+    function isTargetRootMember() {
+      return resource != null && resource.data.role == 'root';
+    }
+
+    function isCreatingRootMember() {
+      return request.resource.data.role == 'root';
+    }
+
+    function keepsOwnPrivilege(uid) {
+      return request.auth.uid != uid
+        || (
+          request.resource.data.role == resource.data.role
+          && request.resource.data.isActive == resource.data.isActive
+        );
+    }
+
+    function isSelfSafeProfileUpdate(appId, uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && isActiveMember(appId)
+        && changedKeys().hasOnly(['email', 'displayName', 'grade', 'lastLoginAt', 'updatedAt'])
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.isActive == resource.data.isActive
+        && request.resource.data.authorizationSource == resource.data.authorizationSource;
+    }
+
+    function canAdminCreateMember(appId, uid) {
+      return isAdmin(appId)
+        && request.resource.data.uid == uid
+        && (!isCreatingRootMember() || isRoot(appId));
+    }
+
+    function canAdminUpdateMember(appId, uid) {
+      return isAdmin(appId)
+        && request.resource.data.uid == uid
+        && keepsOwnPrivilege(uid)
+        && !isTargetRootMember()
+        && (!isCreatingRootMember() || isRoot(appId));
     }
 
     function changedKeys() {
@@ -114,9 +166,16 @@ service cloud.firestore {
     }
 
     match /sys_globalAccessMembers/{uid} {
-      allow get: if signedIn() && (request.auth.uid == uid || isGlobalAdmin());
-      allow list: if isGlobalAdmin();
-      allow create, update, delete: if isGlobalAdmin();
+      allow get: if signedIn() && (request.auth.uid == uid || isGlobalRoot());
+      allow list: if isGlobalRoot();
+      allow create, update: if isGlobalRoot()
+        && request.resource.data.uid == uid
+        && request.resource.data.isActive == true
+        && (
+          request.resource.data.role == 'root'
+          || request.resource.data.role == 'admin'
+        );
+      allow delete: if false;
     }
 
     match /artifacts/{appId}/public/data/config/{documentId} {
@@ -158,8 +217,9 @@ service cloud.firestore {
     match /artifacts/{appId}/private/data/accessMembers/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
-      allow create: if isAdmin(appId) || canProvisionSelfFromRoster(appId, uid);
-      allow update, delete: if isAdmin(appId);
+      allow create: if canAdminCreateMember(appId, uid) || canProvisionSelfFromRoster(appId, uid);
+      allow update: if canAdminUpdateMember(appId, uid) || isSelfSafeProfileUpdate(appId, uid);
+      allow delete: if isAdmin(appId) && !isTargetRootMember() && request.auth.uid != uid;
     }
 
     match /artifacts/{appId}/private/data/memberDirectory/{emailKey} {
