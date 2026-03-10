@@ -22,22 +22,51 @@
 </head>
 <body class="page-shell flex min-h-screen flex-col">
 
-    <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-10 pt-6 md:px-6 md:pt-8">
-        <header class="hero-panel hero-panel-compact px-6 py-5 text-white md:px-8 md:py-6">
-            <div class="relative z-[1] flex items-end justify-between gap-4">
-                <div>
-                    <span class="hero-kicker">
-                        Operations Dashboard
-                    </span>
-                    <h1 class="mt-3 text-3xl font-bold tracking-tight md:text-[2.65rem]">
-                        LINE <span class="text-blue-300">Ω</span>
-                    </h1>
+    <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-10 pt-4 md:px-6 md:pt-5">
+        <div class="sticky-header-shell">
+            <header class="hero-panel hero-panel-compact px-5 py-4 text-white md:px-6 md:py-4">
+                <div class="relative z-[1] flex items-center justify-between gap-4">
+                    <div class="hero-title-row">
+                        <div>
+                            <span class="hero-kicker">
+                                Operations Dashboard
+                            </span>
+                            <h1 class="mt-2 text-2xl font-bold tracking-tight md:text-[2.2rem]">
+                                LINE <span class="text-blue-300">Ω</span>
+                            </h1>
+                        </div>
+                    </div>
+                    <div id="header-tabs-shell" class="tabs-menu-shell tabs-menu-shell-hero hidden">
+                        <div class="tabs-menu-bar">
+                            <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
+                                <i class="fa-solid fa-bars"></i>
+                            </button>
+                            <span class="tabs-menu-labels">
+                                <span class="tabs-menu-kicker">Navigation</span>
+                                <span id="tabs-menu-label" class="tabs-menu-label">レーン担当</span>
+                            </span>
+                        </div>
+                        <nav class="tab-shell hidden" id="tabs">
+                            <button data-tab="reception" class="tab-button">
+                                受付
+                            </button>
+                            <button data-tab="staff" class="tab-button active">
+                                レーン担当
+                            </button>
+                            <button data-tab="admin" class="tab-button">
+                                管理設定
+                            </button>
+                            <button data-tab="members" class="tab-button">
+                                メンバー管理
+                            </button>
+                            <button data-tab="database" class="tab-button">
+                                DB管理
+                            </button>
+                        </nav>
+                    </div>
                 </div>
-                <div class="hero-corner-note hidden md:flex">
-                    Realtime Ops
-                </div>
-            </div>
-        </header>
+            </header>
+        </div>
 
         <div class="status-banner mt-5 overflow-hidden px-5 py-4 text-white md:px-6">
             <div class="status-banner-inner">
@@ -107,37 +136,6 @@
         </div>
 
         <div id="app-shell" class="hidden">
-            <div class="app-surface mt-6">
-                <div class="tabs-menu-shell">
-                    <div class="tabs-menu-bar">
-                        <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
-                            <i class="fa-solid fa-bars"></i>
-                        </button>
-                        <span class="tabs-menu-labels">
-                            <span class="tabs-menu-kicker">Navigation</span>
-                            <span id="tabs-menu-label" class="tabs-menu-label">レーン担当</span>
-                        </span>
-                    </div>
-                    <nav class="tab-shell hidden" id="tabs">
-                        <button data-tab="reception" class="tab-button">
-                            受付
-                        </button>
-                        <button data-tab="staff" class="tab-button active">
-                            レーン担当
-                        </button>
-                        <button data-tab="admin" class="tab-button">
-                            管理設定
-                        </button>
-                        <button data-tab="members" class="tab-button">
-                            メンバー管理
-                        </button>
-                        <button data-tab="database" class="tab-button">
-                            DB管理
-                        </button>
-                    </nav>
-                </div>
-            </div>
-
             <section id="summary-section" class="summary-panel mt-5">
                 <div class="summary-panel-header">
                     <div class="summary-panel-title-row">

@@ -97,7 +97,7 @@ export function configureDataSubscriptions(context: AppContext): void {
 
     listenToConfigChanges(context);
     listenToRoomStateChanges(context);
-    if (hasRole(context, ["admin", "staff"])) {
+    if (hasRole(context, ["admin", "staff", "reception"])) {
         listenToLaneChanges(context);
     } else {
         context.state.currentLanesState = {};

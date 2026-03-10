@@ -67,58 +67,38 @@ function getRoomSummaryState(waiting, availableCount) {
         label: "満室"
     };
 }
-function getReceptionRoomLaneVisuals(roomState, totalLanes) {
-    const visuals = [];
-    const buckets = [
-        {
-            count: Number(roomState.availableLanes || 0),
-            tileClass: "tile-available",
-            icon: STATUS_ICON_SVGS.available,
-            label: "空き"
-        },
-        {
-            count: Number(roomState.guidingLanes || 0),
-            tileClass: "tile-guiding",
-            icon: STATUS_ICON_SVGS.guiding,
-            label: "案内中"
-        },
-        {
-            count: Number(roomState.occupiedLanes || 0),
-            tileClass: "tile-occupied",
-            icon: STATUS_ICON_SVGS.occupied,
-            label: "使用中"
-        },
-        {
-            count: Number(roomState.preparingLanes || 0),
-            tileClass: "tile-preparing",
-            icon: STATUS_ICON_SVGS.preparing,
-            label: "準備中"
-        },
-        {
-            count: Number(roomState.pausedLanes || 0),
-            tileClass: "tile-paused",
-            icon: STATUS_ICON_SVGS.paused,
-            label: "休止中"
+function getReceptionRoomLaneVisuals(lanes, totalLanes) {
+    const visualsByLane = new Map();
+    lanes.forEach((lane) => {
+        const laneNumber = Number(lane.data.laneNum || 0);
+        if (!laneNumber || laneNumber > totalLanes) {
+            return;
         }
-    ];
-    buckets.forEach((bucket) => {
-        for (let index = 0; index < bucket.count; index += 1) {
-            visuals.push({
-                tileClass: bucket.tileClass,
-                icon: bucket.icon,
-                label: bucket.label
-            });
-        }
+        const effectiveState = getEffectiveLaneState(lane.data);
+        const stateVisual = effectiveState === "available"
+            ? { tileClass: "tile-available", icon: STATUS_ICON_SVGS.available, label: "空き" }
+            : effectiveState === "guiding"
+                ? { tileClass: "tile-guiding", icon: STATUS_ICON_SVGS.guiding, label: "案内中" }
+                : effectiveState === "occupied"
+                    ? { tileClass: "tile-occupied", icon: STATUS_ICON_SVGS.occupied, label: "使用中" }
+                    : effectiveState === "preparing"
+                        ? { tileClass: "tile-preparing", icon: STATUS_ICON_SVGS.preparing, label: "準備中" }
+                        : { tileClass: "tile-paused", icon: STATUS_ICON_SVGS.paused, label: "休止中" };
+        visualsByLane.set(laneNumber, {
+            laneNumber,
+            ...stateVisual
+        });
     });
-    const remaining = Math.max(totalLanes - visuals.length, 0);
-    for (let index = 0; index < remaining; index += 1) {
-        visuals.push({
+    const visuals = [];
+    for (let laneNumber = 1; laneNumber <= totalLanes; laneNumber += 1) {
+        visuals.push(visualsByLane.get(laneNumber) || {
+            laneNumber,
             tileClass: "tile-paused",
             icon: STATUS_ICON_SVGS.paused,
             label: "休止中"
         });
     }
-    return visuals.slice(0, totalLanes);
+    return visuals;
 }
 function buildReceptionMetricMarkup(label, count, variantClass, icon) {
     const emphasisClass = count > 0 ? "is-active" : "is-zero";
@@ -204,6 +184,7 @@ function renderAuthShell(context) {
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.add("hidden");
         dom.appShell.classList.remove("hidden");
+        dom.headerTabsShell.classList.remove("hidden");
     }
     else if (member && !member.isActive) {
         dom.authStatusText.textContent = "このアカウントは現在利用停止です。";
@@ -213,6 +194,7 @@ function renderAuthShell(context) {
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
         dom.appShell.classList.add("hidden");
+        dom.headerTabsShell.classList.add("hidden");
     }
     else if (state.authUser) {
         const status = request?.status || "pending";
@@ -228,6 +210,7 @@ function renderAuthShell(context) {
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
         dom.appShell.classList.add("hidden");
+        dom.headerTabsShell.classList.add("hidden");
     }
     else {
         dom.authStatusText.textContent = "Google アカウントでログインすると権限を確認します。";
@@ -237,6 +220,7 @@ function renderAuthShell(context) {
         dom.authLoginCard.classList.remove("hidden");
         dom.authPendingCard.classList.add("hidden");
         dom.appShell.classList.add("hidden");
+        dom.headerTabsShell.classList.add("hidden");
     }
 }
 function renderTabVisibility(context) {
@@ -488,7 +472,10 @@ function renderReceptionList(context) {
         const preparingLanes = Number(roomState.preparingLanes || 0);
         const pausedLanes = Number(roomState.pausedLanes || 0);
         const guidingLanes = Number(roomState.guidingLanes || 0);
-        const laneVisuals = getReceptionRoomLaneVisuals(roomState, room.lanes);
+        const roomLanes = getAllLanes(context)
+            .filter((lane) => lane.data.roomId === room.id)
+            .sort((left, right) => left.data.laneNum - right.data.laneNum);
+        const laneVisuals = getReceptionRoomLaneVisuals(roomLanes, room.lanes);
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
@@ -516,7 +503,7 @@ function renderReceptionList(context) {
                 <div class="room-dashboard-grid room-dashboard-grid-reception">
                     ${laneVisuals.map((lane, index) => `
                         <div class="lane-tile lane-tile-summary ${lane.tileClass}">
-                            <span class="lane-tile-number">レーン ${index + 1}</span>
+                            <span class="lane-tile-number">レーン ${lane.laneNumber}</span>
                             <span class="lane-tile-status">
                                 <span class="inline-flex">${lane.icon}</span>
                                 <span>${lane.label}</span>
