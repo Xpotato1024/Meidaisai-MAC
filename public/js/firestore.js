@@ -150,8 +150,15 @@ export function listenToRoomStateChanges(context) {
         querySnapshot.forEach((roomStateDoc) => {
             const totalLanes = context.state.dynamicAppConfig.rooms.find((room) => room.id === roomStateDoc.id)?.lanes || 0;
             state.currentRoomState[roomStateDoc.id] = normalizeRoomStateData(roomStateDoc.data(), totalLanes);
-            if (Number(state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id] || 0) !== 0) {
-                delete state.waitingGroupAwaitingSnapshotDeltas[roomStateDoc.id];
+            const localTarget = state.waitingGroupLocalTargets[roomStateDoc.id];
+            const liveWaitingGroups = Number(state.currentRoomState[roomStateDoc.id]?.waitingGroups || 0);
+            if (typeof localTarget === "number" && !state.waitingGroupSyncInFlight[roomStateDoc.id] && localTarget === liveWaitingGroups) {
+                delete state.waitingGroupLocalTargets[roomStateDoc.id];
+                delete state.waitingGroupInFlightTargets[roomStateDoc.id];
+            }
+            else if (typeof localTarget === "number"
+                && !state.waitingGroupSyncInFlight[roomStateDoc.id]
+                && typeof state.waitingGroupSyncTimers[roomStateDoc.id] !== "number") {
                 roomsReadyToResume.push(roomStateDoc.id);
             }
         });

@@ -46,12 +46,19 @@ function cleanupSelfAccessListeners(context) {
 function resetAuthorizedData(context) {
     const { state } = context;
     cleanupDataSubscriptions(context);
+    Object.values(state.waitingGroupSyncTimers).forEach((timerId) => {
+        window.clearTimeout(timerId);
+    });
     state.currentLanesState = {};
     state.currentRoomState = {};
     state.localAdminConfig = cloneConfig(APP_CONFIG);
     state.dynamicAppConfig = cloneConfig(APP_CONFIG);
     state.accessMembersCache = [];
     state.accessRequestsCache = [];
+    state.waitingGroupLocalTargets = {};
+    state.waitingGroupInFlightTargets = {};
+    state.waitingGroupSyncTimers = {};
+    state.waitingGroupSyncInFlight = {};
 }
 function normalizeGlobalMember(uid, data) {
     return {

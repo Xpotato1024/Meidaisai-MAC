@@ -147,10 +147,14 @@ function getReceptionRoomLaneVisuals(roomState: ReturnType<typeof normalizeRoomS
 }
 
 function getPendingWaitingGroupDelta(context: AppContext, roomId: string): number {
-    const { state } = context;
-    return Number(state.waitingGroupQueuedDeltas[roomId] || 0)
-        + Number(state.waitingGroupInFlightDeltas[roomId] || 0)
-        + Number(state.waitingGroupAwaitingSnapshotDeltas[roomId] || 0);
+    const localTarget = context.state.waitingGroupLocalTargets[roomId];
+    if (typeof localTarget === "number") {
+        const normalizedLocalTarget = Math.max(0, localTarget);
+        const currentWaitingGroups = Number(context.state.currentRoomState[roomId]?.waitingGroups || 0);
+        return normalizedLocalTarget - currentWaitingGroups;
+    }
+
+    return 0;
 }
 
 function getRoomStateSnapshot(context: AppContext, roomId: string, totalLanes: number) {
