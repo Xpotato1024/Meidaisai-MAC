@@ -488,20 +488,27 @@
     .room-dashboard-metrics {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.55rem;
+        gap: 0.4rem;
     }
 
     .room-dashboard-metric {
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
+        justify-content: center;
+        gap: 0.3rem;
         border-radius: 9999px;
         border: 1px solid rgba(226, 232, 240, 0.9);
         background: #f8fafc;
-        padding: 0.36rem 0.65rem;
-        font-size: 0.72rem;
+        min-width: 4.15rem;
+        padding: 0.28rem 0.52rem;
+        font-size: 0.68rem;
         font-weight: 700;
         color: #475569;
+    }
+
+    .room-dashboard-metric-count {
+        min-width: 1.1rem;
+        text-align: center;
     }
 
     .room-dashboard-metric-positive {
