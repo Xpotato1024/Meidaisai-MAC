@@ -37,7 +37,7 @@ function toGridLayout(rooms: RoomConfig[], layout: ReceptionLayoutConfig): Layou
             h: getReceptionEditorCardHeight(room?.lanes || 1, item.tileColumns),
             minW: 3,
             maxW: RECEPTION_LAYOUT_GRID_COLUMNS,
-            minH: 4
+            minH: 5
         };
     });
 }
@@ -138,7 +138,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                 className="admin-layout-editor-grid"
                 layout={gridLayout}
                 cols={RECEPTION_LAYOUT_GRID_COLUMNS}
-                rowHeight={22}
+                rowHeight={24}
                 margin={[12, 12]}
                 containerPadding={[0, 0]}
                 compactType="vertical"

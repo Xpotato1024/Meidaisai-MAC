@@ -17,7 +17,7 @@ function toGridLayout(rooms, layout) {
             h: getReceptionEditorCardHeight(room?.lanes || 1, item.tileColumns),
             minW: 3,
             maxW: RECEPTION_LAYOUT_GRID_COLUMNS,
-            minH: 4
+            minH: 5
         };
     });
 }
@@ -80,7 +80,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }) {
     if (rooms.length === 0) {
         return (_jsx("div", { className: "admin-layout-editor-empty", children: "\u90E8\u5C4B\u3092\u8FFD\u52A0\u3059\u308B\u3068\u3001\u3053\u3053\u3067\u53D7\u4ED8\u753B\u9762\u306E\u30EC\u30A4\u30A2\u30A6\u30C8\u3092\u7DE8\u96C6\u3067\u304D\u307E\u3059\u3002" }));
     }
-    return (_jsxs("div", { className: "admin-layout-editor", children: [_jsxs("div", { className: "admin-layout-editor-toolbar", children: [_jsxs("div", { children: [_jsx("p", { className: "admin-layout-editor-kicker", children: "Edit Mode" }), _jsx("p", { className: "admin-layout-editor-copy", children: "\u30C9\u30E9\u30C3\u30B0\u3067\u914D\u7F6E\u5909\u66F4\u3001\u53F3\u4E0B\u30CF\u30F3\u30C9\u30EB\u3067\u6A2A\u5E45\u5909\u66F4\u3002\u30EC\u30FC\u30F3\u5217\u6570\u306F\u5404\u30AB\u30FC\u30C9\u5185\u3067\u5909\u66F4\u3057\u307E\u3059\u3002" })] }), _jsx("button", { type: "button", className: "admin-layout-editor-reset", onClick: handleReset, children: "\u521D\u671F\u914D\u7F6E\u306B\u623B\u3059" })] }), _jsx(WidthAwareGridLayout, { className: "admin-layout-editor-grid", layout: gridLayout, cols: RECEPTION_LAYOUT_GRID_COLUMNS, rowHeight: 22, margin: [12, 12], containerPadding: [0, 0], compactType: "vertical", preventCollision: false, draggableHandle: ".admin-layout-editor-card-handle", onLayoutChange: handleGridLayoutChange, children: draftLayout.rooms.map((item) => {
+    return (_jsxs("div", { className: "admin-layout-editor", children: [_jsxs("div", { className: "admin-layout-editor-toolbar", children: [_jsxs("div", { children: [_jsx("p", { className: "admin-layout-editor-kicker", children: "Edit Mode" }), _jsx("p", { className: "admin-layout-editor-copy", children: "\u30C9\u30E9\u30C3\u30B0\u3067\u914D\u7F6E\u5909\u66F4\u3001\u53F3\u4E0B\u30CF\u30F3\u30C9\u30EB\u3067\u6A2A\u5E45\u5909\u66F4\u3002\u30EC\u30FC\u30F3\u5217\u6570\u306F\u5404\u30AB\u30FC\u30C9\u5185\u3067\u5909\u66F4\u3057\u307E\u3059\u3002" })] }), _jsx("button", { type: "button", className: "admin-layout-editor-reset", onClick: handleReset, children: "\u521D\u671F\u914D\u7F6E\u306B\u623B\u3059" })] }), _jsx(WidthAwareGridLayout, { className: "admin-layout-editor-grid", layout: gridLayout, cols: RECEPTION_LAYOUT_GRID_COLUMNS, rowHeight: 24, margin: [12, 12], containerPadding: [0, 0], compactType: "vertical", preventCollision: false, draggableHandle: ".admin-layout-editor-card-handle", onLayoutChange: handleGridLayoutChange, children: draftLayout.rooms.map((item) => {
                     const room = rooms.find((candidate) => candidate.id === item.roomId);
                     if (!room) {
                         return null;

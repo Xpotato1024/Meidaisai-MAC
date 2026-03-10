@@ -38,7 +38,8 @@ export function getDefaultReceptionTileColumns(totalLanes: number): number {
 }
 
 export function getReceptionEditorCardHeight(totalLanes: number, tileColumns: number): number {
-    return Math.max(4, Math.ceil(totalLanes / Math.max(tileColumns, 1)) + 3);
+    const tileRows = Math.ceil(totalLanes / Math.max(tileColumns, 1));
+    return Math.max(5, (tileRows * 2) + 3);
 }
 
 export function createDefaultReceptionLayout(rooms: RoomConfig[]): ReceptionLayoutConfig {
