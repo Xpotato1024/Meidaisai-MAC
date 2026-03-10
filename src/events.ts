@@ -766,28 +766,6 @@ export function setupEventListeners(context: AppContext): void {
             return;
         }
 
-        // ★追加: 部屋の並び替え処理 (上へ)
-        if (actionButton === "move-room-up" && button) {
-            const index = parseInt(button.dataset.index || "-1", 10);
-            if (index > 0) {
-                const rooms = state.localAdminConfig.rooms;
-                [rooms[index - 1], rooms[index]] = [rooms[index], rooms[index - 1]];
-                renderAdminSettings(context);
-            }
-            return;
-        }
-
-        // ★追加: 部屋の並び替え処理 (下へ)
-        if (actionButton === "move-room-down" && button) {
-            const index = parseInt(button.dataset.index || "-1", 10);
-            const rooms = state.localAdminConfig.rooms;
-            if (index >= 0 && index < rooms.length - 1) {
-                [rooms[index], rooms[index + 1]] = [rooms[index + 1], rooms[index]];
-                renderAdminSettings(context);
-            }
-            return;
-        }
-
         // --- 既存の処理 (削除系) ---
         const id = button?.dataset.id ?? null;
 

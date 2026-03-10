@@ -453,32 +453,10 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .room-dashboard-card-span-4,
-    .room-dashboard-card-span-6,
-    .room-dashboard-card-span-8,
-    .room-dashboard-card-span-12 {
-        grid-column: span 1;
-    }
-
     @media (min-width: 980px) {
         .dashboard-grid-reception-layout {
             grid-template-columns: repeat(12, minmax(0, 1fr));
-        }
-
-        .room-dashboard-card-span-4 {
-            grid-column: span 4;
-        }
-
-        .room-dashboard-card-span-6 {
-            grid-column: span 6;
-        }
-
-        .room-dashboard-card-span-8 {
-            grid-column: span 8;
-        }
-
-        .room-dashboard-card-span-12 {
-            grid-column: span 12;
+            grid-auto-flow: dense;
         }
     }
 
@@ -488,6 +466,13 @@
         border: 1px solid var(--border-strong);
         background: #ffffff;
         box-shadow: var(--shadow-soft);
+        grid-column: span 1;
+    }
+
+    @media (min-width: 980px) {
+        .room-dashboard-card {
+            grid-column: span var(--room-card-span, 4);
+        }
     }
 
     .room-dashboard-header {
@@ -526,31 +511,6 @@
     .room-dashboard-grid-reception {
         padding: 0;
         grid-template-columns: repeat(var(--lane-grid-columns-mobile, 2), minmax(0, 1fr));
-    }
-
-    .room-dashboard-grid-reception-cols-1 {
-        --lane-grid-columns-mobile: 1;
-        --lane-grid-columns-desktop: 1;
-    }
-
-    .room-dashboard-grid-reception-cols-2 {
-        --lane-grid-columns-mobile: 2;
-        --lane-grid-columns-desktop: 2;
-    }
-
-    .room-dashboard-grid-reception-cols-3 {
-        --lane-grid-columns-mobile: 2;
-        --lane-grid-columns-desktop: 3;
-    }
-
-    .room-dashboard-grid-reception-cols-4 {
-        --lane-grid-columns-mobile: 2;
-        --lane-grid-columns-desktop: 4;
-    }
-
-    .room-dashboard-grid-reception-cols-5 {
-        --lane-grid-columns-mobile: 2;
-        --lane-grid-columns-desktop: 5;
     }
 
     @media (min-width: 980px) {
@@ -664,6 +624,181 @@
         .room-dashboard-metric.is-active {
             animation: none;
         }
+    }
+
+    .admin-layout-editor-shell {
+        overflow: hidden;
+    }
+
+    .admin-layout-editor {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .admin-layout-editor-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.9rem;
+    }
+
+    .admin-layout-editor-kicker {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #64748b;
+    }
+
+    .admin-layout-editor-copy {
+        margin-top: 0.25rem;
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: #64748b;
+    }
+
+    .admin-layout-editor-reset {
+        border-radius: 9999px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: #ffffff;
+        padding: 0.55rem 0.95rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #0f172a;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+    }
+
+    .admin-layout-editor-empty {
+        border-radius: 14px;
+        border: 1px dashed rgba(148, 163, 184, 0.3);
+        background: rgba(255, 255, 255, 0.75);
+        padding: 1rem;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .admin-layout-editor-grid {
+        min-height: 12rem;
+    }
+
+    .admin-layout-editor-grid .react-grid-item {
+        transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+    }
+
+    .admin-layout-editor-grid .react-grid-placeholder {
+        border-radius: 18px;
+        background: rgba(37, 99, 235, 0.14);
+        border: 1px dashed rgba(37, 99, 235, 0.28);
+    }
+
+    .admin-layout-editor-grid .react-resizable-handle {
+        position: absolute;
+        right: 0.55rem;
+        bottom: 0.55rem;
+        width: 0.9rem;
+        height: 0.9rem;
+    }
+
+    .admin-layout-editor-grid .react-resizable-handle::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 0.72rem;
+        height: 0.72rem;
+        border-right: 2px solid rgba(100, 116, 139, 0.65);
+        border-bottom: 2px solid rgba(100, 116, 139, 0.65);
+        border-bottom-right-radius: 0.18rem;
+    }
+
+    .admin-layout-editor-card {
+        position: relative;
+        display: grid;
+        height: 100%;
+        gap: 0.75rem;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+        padding: 0.9rem 1rem 1rem;
+        box-shadow: 0 16px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .admin-layout-editor-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .admin-layout-editor-card-handle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 0.3rem 0.55rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #475569;
+        cursor: move;
+    }
+
+    .admin-layout-editor-card-span {
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .admin-layout-editor-card-body {
+        display: grid;
+        gap: 0.8rem;
+    }
+
+    .admin-layout-editor-room-name {
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+    }
+
+    .admin-layout-editor-room-meta {
+        margin-top: 0.18rem;
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .admin-layout-editor-field {
+        display: grid;
+        gap: 0.35rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .admin-layout-editor-field select {
+        min-height: 2.45rem;
+        padding-inline: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .admin-layout-editor-preview-grid {
+        display: grid;
+        gap: 0.45rem;
+    }
+
+    .admin-layout-editor-preview-tile {
+        display: inline-flex;
+        min-height: 2rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        background: #ffffff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #475569;
     }
 
     .reception-room-action {

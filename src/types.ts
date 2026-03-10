@@ -28,6 +28,19 @@ export interface NamedOption {
     name: string;
 }
 
+export interface ReceptionRoomLayout {
+    roomId: string;
+    x: number;
+    y: number;
+    w: number;
+    tileColumns: number;
+}
+
+export interface ReceptionLayoutConfig {
+    version: number;
+    rooms: ReceptionRoomLayout[];
+}
+
 export interface AppConfig {
     eventName: string;
     rooms: RoomConfig[];
@@ -35,6 +48,7 @@ export interface AppConfig {
     receptionStatuses: ReceptionStatusConfig[];
     options: NamedOption[];
     pauseReasons: NamedOption[];
+    receptionLayout?: ReceptionLayoutConfig;
 }
 
 export interface AccessMember {
@@ -179,6 +193,7 @@ export interface DomRefs {
     receptionModalTitle: HTMLElement;
     receptionModalContent: HTMLElement;
     adminRoomList: HTMLElement;
+    adminLayoutEditorRoot: HTMLElement;
     adminNewRoomInput: HTMLInputElement;
     adminNewRoomLanesInput: HTMLInputElement;
     adminAddRoomBtn: HTMLButtonElement;

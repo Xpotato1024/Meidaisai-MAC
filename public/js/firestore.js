@@ -2,6 +2,7 @@ import { collection, doc, documentId, getDocs, onSnapshot, query, where } from "
 import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
+import { normalizeReceptionLayoutConfig } from "./reception-layout.js";
 import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
 import { flushWaitingGroupSync } from "./writes.js";
@@ -40,13 +41,16 @@ function mergeNamedCollection(defaults, currentValue) {
     return [...mergedDefaults, ...extraItems];
 }
 function normalizeConfig(rawConfig) {
+    const rooms = Array.isArray(rawConfig.rooms) ? rawConfig.rooms : APP_CONFIG.rooms;
     return {
         ...APP_CONFIG,
         ...rawConfig,
+        rooms,
         laneStatuses: mergeNamedCollection(APP_CONFIG.laneStatuses, rawConfig.laneStatuses),
         receptionStatuses: mergeNamedCollection(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses),
         pauseReasons: mergeNamedCollection(APP_CONFIG.pauseReasons, rawConfig.pauseReasons),
-        options: Array.isArray(rawConfig.options) ? rawConfig.options : APP_CONFIG.options
+        options: Array.isArray(rawConfig.options) ? rawConfig.options : APP_CONFIG.options,
+        receptionLayout: normalizeReceptionLayoutConfig(rawConfig.receptionLayout, rooms)
     };
 }
 export function cleanupDataSubscriptions(context) {

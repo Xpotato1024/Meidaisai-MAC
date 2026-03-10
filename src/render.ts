@@ -6,7 +6,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { canAccessTab, canManageRoom, getAllowedRoomIds, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
+import { renderReceptionLayoutEditor } from "./admin-layout-editor.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
+import { getReceptionRoomLayout, normalizeReceptionLayoutConfig, sortRoomsByReceptionLayout } from "./reception-layout.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
@@ -159,35 +161,6 @@ function buildReceptionMetricMarkup(
             <span class="room-dashboard-metric-count">${count}</span>
         </span>
     `;
-}
-
-function getReceptionCardSpanClass(totalLanes: number): string {
-    if (totalLanes >= 12) {
-        return "room-dashboard-card-span-12";
-    }
-    if (totalLanes >= 8) {
-        return "room-dashboard-card-span-8";
-    }
-    if (totalLanes >= 5) {
-        return "room-dashboard-card-span-6";
-    }
-    return "room-dashboard-card-span-4";
-}
-
-function getReceptionLaneGridClass(totalLanes: number): string {
-    if (totalLanes >= 12) {
-        return "room-dashboard-grid-reception-cols-5";
-    }
-    if (totalLanes >= 8) {
-        return "room-dashboard-grid-reception-cols-4";
-    }
-    if (totalLanes >= 3) {
-        return "room-dashboard-grid-reception-cols-3";
-    }
-    if (totalLanes === 2) {
-        return "room-dashboard-grid-reception-cols-2";
-    }
-    return "room-dashboard-grid-reception-cols-1";
 }
 
 function getPendingWaitingGroupDelta(context: AppContext, roomId: string): number {
@@ -569,9 +542,19 @@ function renderReceptionList(context: AppContext): void {
 
     dom.receptionList.className = "dashboard-grid dashboard-grid-reception-layout";
 
-    getVisibleRooms(context).forEach((room) => {
+    const visibleRooms = sortRoomsByReceptionLayout(
+        getVisibleRooms(context),
+        normalizeReceptionLayoutConfig(config.receptionLayout, config.rooms)
+    );
+
+    visibleRooms.forEach((room) => {
         const roomElement = document.createElement("div");
-        roomElement.className = `room-dashboard-card ${getReceptionCardSpanClass(room.lanes)}`;
+        const roomLayout = getReceptionRoomLayout(config.receptionLayout, config.rooms, room.id);
+        roomElement.className = "room-dashboard-card";
+        roomElement.style.setProperty("--room-card-span", String(roomLayout.w));
+        roomElement.style.order = String((roomLayout.y * 100) + roomLayout.x);
+        roomElement.style.setProperty("--lane-grid-columns-mobile", String(Math.min(roomLayout.tileColumns, 2)));
+        roomElement.style.setProperty("--lane-grid-columns-desktop", String(roomLayout.tileColumns));
 
         const roomState = getRoomStateSnapshot(context, room.id, room.lanes);
         const waitingGroups = Number(roomState.waitingGroups || 0);
@@ -605,7 +588,7 @@ function renderReceptionList(context: AppContext): void {
                 </div>
             </div>
             <div class="room-dashboard-summary">
-                <div class="room-dashboard-grid room-dashboard-grid-reception ${getReceptionLaneGridClass(room.lanes)}">
+                <div class="room-dashboard-grid room-dashboard-grid-reception">
                     ${laneVisuals.map((lane, index) => `
                         <div class="lane-tile lane-tile-summary ${lane.tileClass}">
                             <span class="lane-tile-number">レーン ${index + 1}</span>
@@ -1069,27 +1052,11 @@ export function renderAdminSettings(context: AppContext): void {
         dom.adminRoomList.innerHTML = '<p class="text-gray-400 text-sm">部屋がありません。</p>';
     }
 
-    config.rooms.forEach((room, index) => {
-        const isFirst = index === 0;
-        const isLast = index === config.rooms.length - 1;
-
+    config.rooms.forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "flex items-center gap-2 p-2 bg-gray-50 rounded hover:bg-gray-100 transition";
 
         roomElement.innerHTML = `
-            <div class="flex flex-col space-y-1 mr-1 flex-shrink-0">
-                <button data-action="move-room-up" data-index="${index}" 
-                        class="w-6 h-5 flex items-center justify-center bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        ${isFirst ? "disabled" : ""}>
-                    <i class="fa-solid fa-chevron-up"></i>
-                </button>
-                <button data-action="move-room-down" data-index="${index}" 
-                        class="w-6 h-5 flex items-center justify-center bg-white border border-gray-300 rounded text-xs text-gray-600 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                        ${isLast ? "disabled" : ""}>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </div>
-
             <input type="text" data-action="edit-room-name" data-id="${room.id}" value="${room.name}" 
                    class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm focus:ring-indigo-500 focus:border-indigo-500"
                    placeholder="部屋名">
@@ -1139,6 +1106,15 @@ export function renderAdminSettings(context: AppContext): void {
             </button>
         `;
         dom.adminPauseReasonsList.appendChild(reasonElement);
+    });
+
+    renderReceptionLayoutEditor({
+        container: dom.adminLayoutEditorRoot,
+        rooms: config.rooms,
+        layout: config.receptionLayout,
+        onChange: (nextLayout) => {
+            state.localAdminConfig.receptionLayout = nextLayout;
+        }
     });
 }
 

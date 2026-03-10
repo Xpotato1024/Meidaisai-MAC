@@ -1,15 +1,18 @@
 import type { AppConfig } from "./types.js";
 import { STATUS_ICON_SVGS } from "./icons.js";
+import { createDefaultReceptionLayout } from "./reception-layout.js";
+
+const defaultRooms = [
+    { id: "room1", name: "A部屋", lanes: 4 },
+    { id: "room2", name: "B部屋", lanes: 3 },
+    { id: "room3", name: "C部屋", lanes: 2 }
+];
 
 // --- アプリケーション設定 ---
 export const APP_CONFIG: AppConfig = {
     eventName: "名称未設定イベント",
     // 部屋と各部屋のレーン数
-    rooms: [
-        { id: "room1", name: "A部屋", lanes: 4 },
-        { id: "room2", name: "B部屋", lanes: 3 },
-        { id: "room3", name: "C部屋", lanes: 2 }
-    ],
+    rooms: defaultRooms,
     // レーン担当者が設定するステータス
     laneStatuses: [
         { id: "available", name: "空き", colorClass: "status-available", icon: STATUS_ICON_SVGS.available },
@@ -33,6 +36,7 @@ export const APP_CONFIG: AppConfig = {
         { id: "reason1", name: "機材トラブル" },
         { id: "reason2", name: "清掃中" },
         { id: "reason3", name: "その他" }
-    ]
+    ],
+    receptionLayout: createDefaultReceptionLayout(defaultRooms)
 };
 // --- 設定ここまで ---
