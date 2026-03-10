@@ -4,6 +4,7 @@ import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { scheduleRender } from "./render.js";
 import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStateData } from "./room-state.js";
+import { showToast } from "./toast.js";
 import type { AppContext, LaneData, RoleId, RoomStateData } from "./types.js";
 
 const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
@@ -105,13 +106,13 @@ export async function updateLaneStatus(context: AppContext, docId: string, newSt
         return;
     }
     if (!canManageRoom(context, currentLane.roomId)) {
-        alert("この部屋のレーンは操作できません。");
+        showToast({ title: "操作不可", message: "この部屋のレーンは操作できません。", tone: "warning" });
         return;
     }
 
     const staffName = getActorDisplayName(context);
     if (!staffName) {
-        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
+        showToast({ title: "操作不可", message: "ログイン名を取得できませんでした。再ログインしてからやり直してください。", tone: "warning" });
         return;
     }
 
@@ -153,8 +154,9 @@ export async function updateReceptionStatus(
     newStatus: string,
     staffName: string | null = null,
     options: string[] = [],
-    notes: string | null = null
-): Promise<void> {
+    notes: string | null = null,
+    silent = false
+): Promise<boolean> {
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
@@ -165,17 +167,21 @@ export async function updateReceptionStatus(
     const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
 
     if (newStatus === "guiding" && !canGuide) {
-        alert("受付権限を持つメンバーのみ案内操作できます。");
-        return;
+        if (!silent) {
+            showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ案内操作できます。", tone: "warning" });
+        }
+        return false;
     }
 
     if (newStatus === "available" && !canConfirmArrival) {
-        alert("このレーンの到着確認を行う権限がありません。");
-        return;
+        if (!silent) {
+            showToast({ title: "権限不足", message: "このレーンの到着確認を行う権限がありません。", tone: "warning" });
+        }
+        return false;
     }
 
     if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
-        return;
+        return false;
     }
 
     try {
@@ -235,11 +241,13 @@ export async function updateReceptionStatus(
                 receptionStatus: newStatus
             };
         });
+        return true;
     } catch (error) {
         console.error("Failed to update reception status:", error);
-        if (error instanceof Error) {
-            alert(error.message);
+        if (!silent && error instanceof Error) {
+            showToast({ title: "案内操作失敗", message: error.message, tone: "error" });
         }
+        return false;
     }
 }
 
@@ -249,13 +257,13 @@ export async function updateLanePauseReason(context: AppContext, docId: string, 
         return;
     }
     if (!canManageRoom(context, currentLane.roomId)) {
-        alert("この部屋のレーンは操作できません。");
+        showToast({ title: "操作不可", message: "この部屋のレーンは操作できません。", tone: "warning" });
         return;
     }
 
     const staffName = getActorDisplayName(context);
     if (!staffName) {
-        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
+        showToast({ title: "操作不可", message: "ログイン名を取得できませんでした。再ログインしてからやり直してください。", tone: "warning" });
         return;
     }
 
@@ -359,7 +367,7 @@ export async function saveAdminSettings(context: AppContext): Promise<void> {
 
 export async function updateWaitingGroups(context: AppContext, roomId: string, delta: number): Promise<void> {
     if (!canManageRoom(context, roomId)) {
-        alert("この部屋の待機組数は更新できません。");
+        showToast({ title: "操作不可", message: "この部屋の待機組数は更新できません。", tone: "warning" });
         return;
     }
 
@@ -482,8 +490,7 @@ export async function updateEventRegistry(context: AppContext): Promise<void> {
 export async function approveAccessRequest(
     context: AppContext,
     uid: string,
-    role: RoleId,
-    assignedRoomIds: string[]
+    role: RoleId
 ): Promise<void> {
     const { db, paths, state } = context;
     if (!hasRole(context, ["admin"])) {
@@ -500,7 +507,7 @@ export async function approveAccessRequest(
         displayName: request?.displayName || "",
         role,
         isActive: true,
-        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        assignedRoomIds: [],
         authorizationSource: "manual",
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -530,8 +537,7 @@ export async function updateAccessMember(
     context: AppContext,
     uid: string,
     role: RoleId,
-    isActive: boolean,
-    assignedRoomIds: string[]
+    isActive: boolean
 ): Promise<void> {
     const { db, paths } = context;
     if (!hasRole(context, ["admin"])) {
@@ -541,7 +547,7 @@ export async function updateAccessMember(
     await setDoc(doc(db, paths.accessMembersCollectionPath, uid), {
         role,
         isActive,
-        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        assignedRoomIds: [],
         updatedAt: serverTimestamp()
     }, { merge: true });
 }

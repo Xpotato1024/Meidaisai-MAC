@@ -16,6 +16,7 @@ import {
     RECEPTION_LAYOUT_DISPLAY_GAP_PX
 } from "./reception-layout.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
+import { showToast } from "./toast.js";
 import { updateReceptionStatus } from "./writes.js";
 import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
 
@@ -47,16 +48,6 @@ function getRoleOptions(selectedRole: RoleId): string {
     return (["staff", "reception", "admin"] as RoleId[]).map((role) => {
         return `<option value="${role}" ${selectedRole === role ? "selected" : ""}>${ROLE_LABELS[role]}</option>`;
     }).join("");
-}
-
-function buildRoomAssignmentMarkup(context: AppContext, selectedRoomIds: string[], uid: string): string {
-    const selected = new Set(selectedRoomIds);
-    return context.state.dynamicAppConfig.rooms.map((room) => `
-        <label class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700">
-            <input type="checkbox" data-room-assignment data-uid="${uid}" value="${room.id}" ${selected.has(room.id) ? "checked" : ""}>
-            <span>${escapeHtml(room.name)}</span>
-        </label>
-    `).join("");
 }
 
 function getAuthorizationSourceBadge(member: AccessMember): string {
@@ -359,12 +350,6 @@ function renderAccessManagement(context: AppContext): void {
                             ${getRoleOptions("staff")}
                         </select>
                     </label>
-                    <div>
-                        <p class="mb-2 text-xs font-bold text-slate-600">担当部屋 (staff 用)</p>
-                        <div class="flex flex-wrap gap-2">
-                            ${buildRoomAssignmentMarkup(context, [], request.uid)}
-                        </div>
-                    </div>
                     <div class="flex flex-wrap gap-2">
                         <button data-action="approve-access-request" data-uid="${request.uid}" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
                             承認
@@ -407,12 +392,6 @@ function renderAccessManagement(context: AppContext): void {
                         ${getRoleOptions(member.role)}
                     </select>
                 </label>
-                <div>
-                    <p class="mb-2 text-xs font-bold text-slate-600">担当部屋 (staff 用)</p>
-                    <div class="flex flex-wrap gap-2">
-                        ${buildRoomAssignmentMarkup(context, member.assignedRoomIds, member.uid)}
-                    </div>
-                </div>
                 <button data-action="save-access-member" data-uid="${member.uid}" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">
                     権限を保存
                 </button>
@@ -435,7 +414,7 @@ function renderRoomSummaryBar(context: AppContext): void {
 
     const visibleRooms = getVisibleRooms(context);
     if (visibleRooms.length === 0) {
-        summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理者に担当部屋の割り当てを依頼してください。</div>';
+        summaryBar.innerHTML = '<div class="app-surface px-5 py-4 text-sm text-slate-500">表示できる部屋がありません。管理設定で部屋を登録してください。</div>';
         return;
     }
 
@@ -631,14 +610,14 @@ function renderReceptionList(context: AppContext): void {
  */
 export async function openReceptionRoomModal(context: AppContext, roomId: string): Promise<void> {
     if (!hasRole(context, ["admin", "reception"])) {
-        alert("受付権限を持つメンバーのみ操作できます。");
+        showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ操作できます。", tone: "warning" });
         return;
     }
 
     const { db, dom, paths, state } = context;
     const room = state.dynamicAppConfig.rooms.find((item) => item.id === roomId);
     if (!room) {
-        alert("部屋情報が見つかりません。");
+        showToast({ title: "部屋未検出", message: "部屋情報が見つかりません。", tone: "error" });
         return;
     }
 
@@ -651,16 +630,9 @@ export async function openReceptionRoomModal(context: AppContext, roomId: string
         }))
         .sort((left, right) => left.data.laneNum - right.data.laneNum);
 
-    let selectedLaneId = roomLanes.find((lane) => getEffectiveLaneState(lane.data) === "available")?.docId || "";
+    let selectedLaneIds = new Set<string>();
     let selectedOptions: string[] = [];
     let receptionNotes = "";
-
-    const hydrateDraftFromLane = () => {
-        const selectedLane = roomLanes.find((lane) => lane.docId === selectedLaneId);
-        selectedOptions = selectedLane?.data.selectedOptions ? [...selectedLane.data.selectedOptions] : [];
-        receptionNotes = selectedLane?.data.receptionNotes || "";
-    };
-    hydrateDraftFromLane();
 
     dom.receptionModalTitle.textContent = `${room.name} のレーン選択`;
 
@@ -704,7 +676,7 @@ export async function openReceptionRoomModal(context: AppContext, roomId: string
                                             ? STATUS_ICON_SVGS.preparing
                                             : STATUS_ICON_SVGS.paused;
                             const isSelectable = effectiveState === "available";
-                            const isSelected = selectedLaneId === lane.docId;
+                            const isSelected = selectedLaneIds.has(lane.docId);
 
                             return `
                                 <button
@@ -753,18 +725,31 @@ export async function openReceptionRoomModal(context: AppContext, roomId: string
                     value="${escapeHtml(receptionNotes)}">
             </div>
 
+            <div class="reception-modal-selection-meta">
+                <span class="reception-modal-selection-count">
+                    選択中 ${selectedLaneIds.size} レーン
+                </span>
+            </div>
+
             <button
                 id="reception-modal-start-btn"
                 class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                ${selectedLaneId ? "" : "disabled"}>
-                <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする
+                ${selectedLaneIds.size > 0 ? "" : "disabled"}>
+                <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>選択レーンを案内中にする
             </button>
         `;
 
         dom.receptionModalContent.querySelectorAll<HTMLButtonElement>("[data-reception-select-lane]").forEach((button) => {
             button.onclick = () => {
-                selectedLaneId = button.dataset.receptionSelectLane || "";
-                hydrateDraftFromLane();
+                const laneId = button.dataset.receptionSelectLane || "";
+                if (!laneId) {
+                    return;
+                }
+                if (selectedLaneIds.has(laneId)) {
+                    selectedLaneIds.delete(laneId);
+                } else {
+                    selectedLaneIds.add(laneId);
+                }
                 renderModalContent();
             };
         });
@@ -786,13 +771,32 @@ export async function openReceptionRoomModal(context: AppContext, roomId: string
         const startButton = dom.receptionModalContent.querySelector<HTMLButtonElement>("#reception-modal-start-btn");
         if (startButton) {
             startButton.onclick = async () => {
-                if (!selectedLaneId) {
+                const targetLaneIds = Array.from(selectedLaneIds);
+                if (targetLaneIds.length === 0) {
                     return;
                 }
                 startButton.disabled = true;
                 startButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 処理中...';
-                await updateReceptionStatus(context, selectedLaneId, "guiding", null, selectedOptions, receptionNotes.trim() || null);
-                closeModal();
+                const results = await Promise.all(
+                    targetLaneIds.map((laneId) =>
+                        updateReceptionStatus(context, laneId, "guiding", null, selectedOptions, receptionNotes.trim() || null, true)
+                    )
+                );
+                const failedCount = results.filter((result) => !result).length;
+                if (failedCount > 0) {
+                    showToast({
+                        title: "一部失敗",
+                        message: `${targetLaneIds.length}レーン中 ${failedCount}レーンの案内開始に失敗しました。最新状態を確認して再度実行してください。`,
+                        tone: "warning"
+                    });
+                } else {
+                    showToast({
+                        title: "案内開始",
+                        message: `${targetLaneIds.length}レーンを案内中にしました。`,
+                        tone: "success"
+                    });
+                    closeModal();
+                }
             };
         }
     };
@@ -836,7 +840,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
 
     if (!selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = getVisibleRooms(context).length === 0
-            ? '<div class="app-surface px-6 py-10 text-center text-slate-500">担当部屋が割り当てられていません。管理者に連絡してください。</div>'
+            ? '<div class="app-surface px-6 py-10 text-center text-slate-500">操作できる部屋がありません。管理設定で部屋を確認してください。</div>'
             : '<div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから担当する部屋を選択してください。</div>';
         return;
     }

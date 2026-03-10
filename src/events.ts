@@ -11,6 +11,7 @@ import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
+import { showToast } from "./toast.js";
 import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
     approveAccessRequest,
@@ -105,11 +106,6 @@ function validateAppId(currentAppId: string, id: string): string | null {
     return null;
 }
 
-function collectAssignedRoomIds(root: ParentNode, uid: string): string[] {
-    return Array.from(root.querySelectorAll<HTMLInputElement>(`input[data-room-assignment][data-uid="${uid}"]:checked`))
-        .map((checkbox) => checkbox.value);
-}
-
 function setMemberDirectoryImportStatus(context: AppContext, message: string, tone: "info" | "success" | "error"): void {
     const { adminDirectoryImportStatus } = context.dom;
     adminDirectoryImportStatus.textContent = message;
@@ -180,7 +176,7 @@ async function exportFullBackup(context: AppContext): Promise<void> {
         downloadAnchorNode.remove();
     } catch (error) {
         console.error("Export failed:", error);
-        alert("エクスポート中にエラーが発生しました。コンソールを確認してください。");
+        showToast({ title: "エクスポート失敗", message: "エクスポート中にエラーが発生しました。コンソールを確認してください。", tone: "error" });
     } finally {
         dom.dbExportBtn.disabled = false;
         dom.dbExportBtn.textContent = originalText;
@@ -206,7 +202,7 @@ async function importBackup(context: AppContext, file: File): Promise<void> {
             // Configの検証
             const configToCheck = isFullBackup ? json.config : json;
             if (!configToCheck.rooms || !Array.isArray(configToCheck.rooms)) {
-                alert("無効なファイルです。(roomsデータが見つかりません)");
+                showToast({ title: "インポート不可", message: "無効なファイルです。(rooms データが見つかりません)", tone: "warning" });
                 return;
             }
 
@@ -269,12 +265,12 @@ async function importBackup(context: AppContext, file: File): Promise<void> {
                 await saveAdminSettings(context);
             }
 
-            alert("復元が完了しました！画面をリロードします。");
+            showToast({ title: "復元完了", message: "復元が完了しました。画面をリロードします。", tone: "success" });
             window.location.reload();
         } catch (error) {
             console.error("Import error:", error);
             const message = error instanceof Error ? error.message : String(error);
-            alert("ファイルの読み込みに失敗しました: " + message);
+            showToast({ title: "インポート失敗", message: `ファイルの読み込みに失敗しました: ${message}`, tone: "error" });
         } finally {
             dom.dbImportFile.value = "";
         }
@@ -344,7 +340,7 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
         console.log(`Cloning ${opCount} documents from ${currentAppId} to ${newId}...`);
         await batch.commit();
 
-        alert(`複製が完了しました！\n新しいID: ${newId} に移動します。`);
+        showToast({ title: "複製完了", message: `新しいID ${newId} へ移動します。`, tone: "success" });
 
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.set("app_id", newId);
@@ -352,7 +348,7 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
     } catch (error) {
         console.error("Copy failed:", error);
         const message = error instanceof Error ? error.message : String(error);
-        alert("複製中にエラーが発生しました。\n" + message);
+        showToast({ title: "複製失敗", message: `複製中にエラーが発生しました: ${message}`, tone: "error" });
         dom.btnCopySwitch.disabled = false;
         dom.btnCopySwitch.innerHTML = originalHtml;
     }
@@ -416,7 +412,7 @@ export function setupEventListeners(context: AppContext): void {
 
         if (!canAccessTab(context, tabId as TabId)) {
             event.preventDefault();
-            alert("この画面を開く権限がありません。");
+            showToast({ title: "権限不足", message: "この画面を開く権限がありません。", tone: "warning" });
             return;
         }
 
@@ -488,7 +484,7 @@ export function setupEventListeners(context: AppContext): void {
         const newId = dom.inputNewAppId.value.trim();
         const error = validateAppId(currentAppId, newId);
         if (error) {
-            alert(error);
+            showToast({ title: "入力エラー", message: error, tone: "warning" });
             return;
         }
 
@@ -504,7 +500,7 @@ export function setupEventListeners(context: AppContext): void {
         const newId = dom.inputNewAppId.value.trim();
         const error = validateAppId(currentAppId, newId);
         if (error) {
-            alert(error);
+            showToast({ title: "入力エラー", message: error, tone: "warning" });
             return;
         }
 
@@ -606,7 +602,7 @@ export function setupEventListeners(context: AppContext): void {
             if (action === "confirm-arrival") {
                 const staffName = getActorDisplayName(context);
                 if (!staffName) {
-                    alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
+                    showToast({ title: "操作不可", message: "ログイン名を取得できませんでした。再ログインしてからやり直してください。", tone: "warning" });
                     return;
                 }
 
@@ -736,8 +732,7 @@ export function setupEventListeners(context: AppContext): void {
             const requestCard = button.closest('[data-request-card]');
             const roleSelect = requestCard?.querySelector<HTMLSelectElement>(`select[data-role-input][data-uid="${uid}"]`);
             const role = (roleSelect?.value || "staff") as RoleId;
-            const assignedRoomIds = requestCard ? collectAssignedRoomIds(requestCard, uid) : [];
-            void approveAccessRequest(context, uid, role, assignedRoomIds);
+            void approveAccessRequest(context, uid, role);
             return;
         }
 
@@ -761,8 +756,7 @@ export function setupEventListeners(context: AppContext): void {
             const activeInput = memberCard?.querySelector<HTMLInputElement>(`input[data-active-input][data-uid="${uid}"]`);
             const role = (roleSelect?.value || "staff") as RoleId;
             const isActive = activeInput?.checked ?? true;
-            const assignedRoomIds = memberCard ? collectAssignedRoomIds(memberCard, uid) : [];
-            void updateAccessMember(context, uid, role, isActive, assignedRoomIds);
+            void updateAccessMember(context, uid, role, isActive);
             return;
         }
     });

@@ -8,6 +8,7 @@ import { setupEventListeners } from "./events.js";
 import { cleanupDataSubscriptions, configureDataSubscriptions } from "./firestore.js";
 import { normalizeEmail } from "./member-directory.js";
 import { renderAllUI } from "./render.js";
+import { showToast } from "./toast.js";
 function normalizeMember(uid, data) {
     return {
         uid,
@@ -178,7 +179,11 @@ function bindAuthButtons(context) {
         }
         catch (error) {
             console.error("Google sign-in failed:", error);
-            alert("Google ログインに失敗しました。設定とブラウザのポップアップ制限を確認してください。");
+            showToast({
+                title: "ログイン失敗",
+                message: "Google ログインに失敗しました。設定とブラウザのポップアップ制限を確認してください。",
+                tone: "error"
+            });
         }
     };
     dom.authSignOutBtn.onclick = async () => {

@@ -91,6 +91,79 @@
         z-index: 1;
     }
 
+    .toast-root {
+        position: fixed;
+        top: 5.8rem;
+        right: 1rem;
+        z-index: 80;
+        display: flex;
+        width: min(22rem, calc(100vw - 2rem));
+        flex-direction: column;
+        gap: 0.7rem;
+        pointer-events: none;
+    }
+
+    .toast-card {
+        pointer-events: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.92);
+        padding: 0.85rem 0.95rem;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
+        color: #e2e8f0;
+        opacity: 0;
+        transform: translateY(-6px);
+        transition: opacity 180ms ease, transform 180ms ease;
+        backdrop-filter: blur(12px);
+    }
+
+    .toast-card.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .toast-card-info {
+        border-color: rgba(59, 130, 246, 0.28);
+    }
+
+    .toast-card-success {
+        border-color: rgba(16, 185, 129, 0.32);
+    }
+
+    .toast-card-warning {
+        border-color: rgba(245, 158, 11, 0.32);
+    }
+
+    .toast-card-error {
+        border-color: rgba(244, 63, 94, 0.36);
+    }
+
+    .toast-title {
+        margin-bottom: 0.24rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #bfdbfe;
+    }
+
+    .toast-card-success .toast-title {
+        color: #86efac;
+    }
+
+    .toast-card-warning .toast-title {
+        color: #fcd34d;
+    }
+
+    .toast-card-error .toast-title {
+        color: #fda4af;
+    }
+
+    .toast-message {
+        font-size: 0.88rem;
+        line-height: 1.55;
+    }
+
     .sticky-header-shell {
         position: sticky;
         top: 0.75rem;
@@ -100,7 +173,7 @@
 
     .hero-panel {
         position: relative;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background:
@@ -132,6 +205,8 @@
     .hero-kicker {
         display: inline-flex;
         align-items: center;
+        width: fit-content;
+        max-width: max-content;
         border: 1px solid rgba(255, 255, 255, 0.24);
         padding: 0.24rem 0.64rem;
         font-size: 10px;
@@ -395,6 +470,19 @@
         color: #0f172a;
     }
 
+    .tabs-menu-shell-hero .tabs-menu-toggle {
+        border-color: rgba(148, 163, 184, 0.18);
+        background: rgba(15, 23, 42, 0.22);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+        color: #e2e8f0;
+        backdrop-filter: blur(8px);
+    }
+
+    .tabs-menu-shell-hero .tabs-menu-toggle:hover {
+        background: rgba(15, 23, 42, 0.32);
+        border-color: rgba(191, 219, 254, 0.24);
+    }
+
     .tabs-menu-labels {
         display: flex;
         min-width: 0;
@@ -436,6 +524,50 @@
         right: 0;
         width: min(16rem, calc(100vw - 2rem));
         z-index: 50;
+    }
+
+    @media (max-width: 767px) {
+        .toast-root {
+            top: 5.2rem;
+            right: 0.75rem;
+            width: min(20rem, calc(100vw - 1.5rem));
+        }
+
+        .hero-panel {
+            border-radius: 12px;
+        }
+
+        .hero-kicker {
+            padding: 0.22rem 0.48rem;
+            font-size: 9px;
+            letter-spacing: 0.18em;
+        }
+
+        .tabs-menu-shell-hero {
+            min-width: 0;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-bar {
+            gap: 0.55rem;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-labels {
+            gap: 0.06rem;
+            padding-top: 0;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-label {
+            font-size: 0.82rem;
+            line-height: 1.1;
+        }
+
+        .tabs-menu-shell-hero .tab-shell {
+            right: 0;
+            left: auto;
+            width: min(14rem, calc(100vw - 1.5rem));
+            max-height: calc(100vh - 6rem);
+            overflow-y: auto;
+        }
     }
 
     .tab-shell.hidden {
@@ -956,8 +1088,12 @@
     }
 
     .reception-modal-lane-card.is-selected {
-        border-color: rgba(37, 99, 235, 0.24);
-        box-shadow: 0 14px 24px rgba(37, 99, 235, 0.12);
+        border-color: rgba(37, 99, 235, 0.62);
+        background: linear-gradient(180deg, #eff6ff, #dbeafe);
+        box-shadow:
+            inset 0 0 0 2px rgba(37, 99, 235, 0.55),
+            0 16px 28px rgba(37, 99, 235, 0.18);
+        transform: translateY(-1px);
     }
 
     .reception-modal-lane-card:disabled {
@@ -1003,6 +1139,25 @@
         font-size: 0.76rem;
         font-weight: 700;
         color: #475569;
+    }
+
+    .reception-modal-selection-meta {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: -0.15rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .reception-modal-selection-count {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        background: #eff6ff;
+        padding: 0.4rem 0.72rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #1d4ed8;
     }
 
     .reception-modal-options {

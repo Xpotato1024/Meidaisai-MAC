@@ -21,6 +21,7 @@
     </script>
 </head>
 <body class="page-shell flex min-h-screen flex-col">
+    <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
 
     <div class="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 pb-10 pt-4 md:px-6 md:pt-5">
         <div class="sticky-header-shell">
@@ -169,7 +170,7 @@
                     <div class="mb-5">
                         <p class="pill-eyebrow">Staff Dashboard</p>
                         <h2 class="section-heading mt-3">レーン状況 更新ダッシュボード</h2>
-                        <p class="section-copy mt-2 text-sm">担当部屋を選び、待機数と各レーンの状態をその場で更新します。</p>
+                        <p class="section-copy mt-2 text-sm">部屋を選び、待機数と各レーンの状態をその場で更新します。</p>
                     </div>
 
                     <div class="hidden" aria-hidden="true">
@@ -284,7 +285,7 @@
                     <div class="app-surface-strong space-y-6 p-5 md:p-6">
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">名簿インポート</h3>
-                            <p class="mt-1 text-sm text-slate-500">Google スプレッドシートから出力した CSV の `名前`, `Gmail`, `学年` を取り込みます。role と担当部屋はこのタブで付与してください。</p>
+                            <p class="mt-1 text-sm text-slate-500">Google スプレッドシートから出力した CSV の `名前`, `Gmail`, `学年` を取り込みます。role はこのタブで付与してください。</p>
                             <div class="mt-4 rounded-[1.4rem] border border-emerald-200 bg-emerald-50/90 p-4 shadow-sm shadow-emerald-100/50">
                                 <input type="file" id="admin-directory-import-file" class="hidden" accept=".csv,text/csv">
                                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -304,7 +305,7 @@
 
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">メンバー権限管理</h3>
-                            <p class="mt-1 text-sm text-slate-500">Google ログイン済みメンバーの承認、role 付与、担当部屋設定を行います。名簿外の特別アカウントはここで手動承認します。</p>
+                            <p class="mt-1 text-sm text-slate-500">Google ログイン済みメンバーの承認、role 付与、有効化設定を行います。名簿外の特別アカウントはここで手動承認します。</p>
 
                             <div class="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-2">
                                 <div class="rounded-[1.4rem] border border-amber-200 bg-amber-50/85 p-4 shadow-sm">

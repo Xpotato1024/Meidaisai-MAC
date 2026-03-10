@@ -3,6 +3,7 @@ import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { scheduleRender } from "./render.js";
 import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStateData } from "./room-state.js";
+import { showToast } from "./toast.js";
 const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
 const runTransaction = FirebaseFirestore.runTransaction;
 function getRoomLaneCount(context, roomId) {
@@ -85,12 +86,12 @@ export async function updateLaneStatus(context, docId, newStatus) {
         return;
     }
     if (!canManageRoom(context, currentLane.roomId)) {
-        alert("この部屋のレーンは操作できません。");
+        showToast({ title: "操作不可", message: "この部屋のレーンは操作できません。", tone: "warning" });
         return;
     }
     const staffName = getActorDisplayName(context);
     if (!staffName) {
-        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
+        showToast({ title: "操作不可", message: "ログイン名を取得できませんでした。再ログインしてからやり直してください。", tone: "warning" });
         return;
     }
     if (currentLane.status === newStatus && currentLane.staffName === staffName) {
@@ -120,7 +121,7 @@ export async function updateLaneStatus(context, docId, newStatus) {
         console.error("Failed to update lane status:", error);
     }
 }
-export async function updateReceptionStatus(context, docId, newStatus, staffName = null, options = [], notes = null) {
+export async function updateReceptionStatus(context, docId, newStatus, staffName = null, options = [], notes = null, silent = false) {
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
@@ -129,15 +130,19 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
     const canGuide = hasRole(context, ["admin", "reception"]);
     const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
     if (newStatus === "guiding" && !canGuide) {
-        alert("受付権限を持つメンバーのみ案内操作できます。");
-        return;
+        if (!silent) {
+            showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ案内操作できます。", tone: "warning" });
+        }
+        return false;
     }
     if (newStatus === "available" && !canConfirmArrival) {
-        alert("このレーンの到着確認を行う権限がありません。");
-        return;
+        if (!silent) {
+            showToast({ title: "権限不足", message: "このレーンの到着確認を行う権限がありません。", tone: "warning" });
+        }
+        return false;
     }
     if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
-        return;
+        return false;
     }
     try {
         await mutateLaneWithRoomState(context, docId, (liveLane) => {
@@ -187,12 +192,14 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
                 receptionStatus: newStatus
             };
         });
+        return true;
     }
     catch (error) {
         console.error("Failed to update reception status:", error);
-        if (error instanceof Error) {
-            alert(error.message);
+        if (!silent && error instanceof Error) {
+            showToast({ title: "案内操作失敗", message: error.message, tone: "error" });
         }
+        return false;
     }
 }
 export async function updateLanePauseReason(context, docId, reasonId) {
@@ -201,12 +208,12 @@ export async function updateLanePauseReason(context, docId, reasonId) {
         return;
     }
     if (!canManageRoom(context, currentLane.roomId)) {
-        alert("この部屋のレーンは操作できません。");
+        showToast({ title: "操作不可", message: "この部屋のレーンは操作できません。", tone: "warning" });
         return;
     }
     const staffName = getActorDisplayName(context);
     if (!staffName) {
-        alert("ログイン名を取得できませんでした。再ログインしてからやり直してください。");
+        showToast({ title: "操作不可", message: "ログイン名を取得できませんでした。再ログインしてからやり直してください。", tone: "warning" });
         return;
     }
     if ((currentLane.pauseReasonId || "") === (reasonId || "") && currentLane.staffName === staffName) {
@@ -296,7 +303,7 @@ export async function saveAdminSettings(context) {
 }
 export async function updateWaitingGroups(context, roomId, delta) {
     if (!canManageRoom(context, roomId)) {
-        alert("この部屋の待機組数は更新できません。");
+        showToast({ title: "操作不可", message: "この部屋の待機組数は更新できません。", tone: "warning" });
         return;
     }
     if (delta === 0) {
@@ -394,7 +401,7 @@ export async function updateEventRegistry(context) {
         console.error("Failed to update registry:", error);
     }
 }
-export async function approveAccessRequest(context, uid, role, assignedRoomIds) {
+export async function approveAccessRequest(context, uid, role) {
     const { db, paths, state } = context;
     if (!hasRole(context, ["admin"])) {
         return;
@@ -408,7 +415,7 @@ export async function approveAccessRequest(context, uid, role, assignedRoomIds) 
         displayName: request?.displayName || "",
         role,
         isActive: true,
-        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        assignedRoomIds: [],
         authorizationSource: "manual",
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -430,7 +437,7 @@ export async function rejectAccessRequest(context, uid) {
         updatedAt: serverTimestamp()
     }, { merge: true });
 }
-export async function updateAccessMember(context, uid, role, isActive, assignedRoomIds) {
+export async function updateAccessMember(context, uid, role, isActive) {
     const { db, paths } = context;
     if (!hasRole(context, ["admin"])) {
         return;
@@ -438,7 +445,7 @@ export async function updateAccessMember(context, uid, role, isActive, assignedR
     await setDoc(doc(db, paths.accessMembersCollectionPath, uid), {
         role,
         isActive,
-        assignedRoomIds: role === "staff" ? assignedRoomIds : [],
+        assignedRoomIds: [],
         updatedAt: serverTimestamp()
     }, { merge: true });
 }
