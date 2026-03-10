@@ -258,23 +258,23 @@ function renderAccessManagement(context) {
     }
     else {
         dom.adminAccessRequestList.innerHTML = pendingRequests.map((request) => `
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm" data-request-card data-uid="${request.uid}">
+            <div class="member-request-card" data-request-card data-uid="${request.uid}">
                 <div class="mb-3">
-                    <p class="text-sm font-bold text-slate-800">${escapeHtml(request.displayName || "名称未設定")}</p>
-                    <p class="text-xs text-slate-500">${escapeHtml(request.email || request.uid)}</p>
+                    <p class="member-card-name">${escapeHtml(request.displayName || "名称未設定")}</p>
+                    <p class="member-card-email">${escapeHtml(request.email || request.uid)}</p>
                 </div>
                 <div class="grid gap-3">
-                    <label class="text-xs font-bold text-slate-600">
+                    <label class="member-card-label">
                         付与ロール
-                        <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
+                        <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
                             ${getRoleOptions("staff")}
                         </select>
                     </label>
                     <div class="flex flex-wrap gap-2">
-                        <button data-action="approve-access-request" data-uid="${request.uid}" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
+                        <button data-action="approve-access-request" data-uid="${request.uid}" class="ui-button ui-button-success member-card-action">
                             承認
                         </button>
-                        <button data-action="reject-access-request" data-uid="${request.uid}" class="rounded-md bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">
+                        <button data-action="reject-access-request" data-uid="${request.uid}" class="ui-button member-card-action member-card-action-danger">
                             却下
                         </button>
                     </div>
@@ -287,30 +287,30 @@ function renderAccessManagement(context) {
         return;
     }
     dom.adminMemberList.innerHTML = state.accessMembersCache.map((member) => `
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-member-card data-uid="${member.uid}">
+        <div class="member-access-card" data-member-card data-uid="${member.uid}">
             <div class="mb-3 flex items-start justify-between gap-3">
                 <div>
-                    <p class="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-800">
+                    <p class="member-card-name flex flex-wrap items-center gap-2">
                         ${escapeHtml(member.displayName || "名称未設定")}
                         ${state.userId === member.uid ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
                         ${getAuthorizationSourceBadge(member)}
                         ${member.grade ? `<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">${escapeHtml(member.grade)}</span>` : ""}
                     </p>
-                    <p class="text-xs text-slate-500">${escapeHtml(member.email || member.uid)}</p>
+                    <p class="member-card-email">${escapeHtml(member.email || member.uid)}</p>
                 </div>
-                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                <label class="member-card-label inline-flex items-center gap-2">
                     <input type="checkbox" data-active-input data-uid="${member.uid}" ${member.isActive ? "checked" : ""}>
                     有効
                 </label>
             </div>
             <div class="grid gap-3">
-                <label class="text-xs font-bold text-slate-600">
+                <label class="member-card-label">
                     ロール
-                    <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
+                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
                         ${getRoleOptions(member.role)}
                     </select>
                 </label>
-                <button data-action="save-access-member" data-uid="${member.uid}" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">
+                <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action">
                     権限を保存
                 </button>
             </div>

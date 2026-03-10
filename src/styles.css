@@ -1950,6 +1950,59 @@ html[data-theme="dark"] {
         color: var(--neutral);
     }
 
+    .member-request-card,
+    .member-access-card {
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        padding: 1rem;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .member-request-card {
+        background: linear-gradient(180deg, #fffaf0, #fff7ed);
+        border-color: rgba(245, 158, 11, 0.18);
+    }
+
+    .member-access-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+        border-color: rgba(226, 232, 240, 0.9);
+    }
+
+    .member-card-name {
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .member-card-email {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .member-card-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .member-card-select {
+        min-height: 2.5rem;
+    }
+
+    .member-card-action {
+        min-height: 2.5rem;
+        border-radius: 10px;
+        padding-inline: 0.95rem;
+        font-size: 0.8rem;
+    }
+
+    .member-card-action-danger {
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+        color: #be123c;
+        box-shadow: 0 10px 18px rgba(244, 63, 94, 0.08);
+    }
+
     .summary-strip-compact {
         flex-wrap: nowrap;
         overflow-x: auto;
@@ -2222,6 +2275,12 @@ html[data-theme="dark"] {
         box-shadow: 0 16px 32px rgba(249, 115, 22, 0.1);
     }
 
+    .admin-form-row {
+        border: 1px solid rgba(226, 232, 240, 0.85);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(241, 245, 249, 0.92));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
     .db-current-appid-badge {
         border: 1px solid rgba(251, 146, 60, 0.28);
     }
@@ -2413,6 +2472,36 @@ html[data-theme="dark"] .db-event-selected-label {
     color: var(--page-copy);
 }
 
+html[data-theme="dark"] .summary-collapse-toggle,
+html[data-theme="dark"] .summary-chip,
+html[data-theme="dark"] .summary-chip-mini,
+html[data-theme="dark"] .footer-badge {
+    border-color: var(--border-strong);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
+    color: var(--page-ink);
+}
+
+html[data-theme="dark"] .summary-chip-alert .summary-chip-state,
+html[data-theme="dark"] .summary-chip-mini-alert {
+    background: linear-gradient(180deg, rgba(127, 29, 29, 0.24), rgba(15, 23, 42, 0.92));
+    color: #fda4af;
+    border-color: rgba(251, 113, 133, 0.24);
+}
+
+html[data-theme="dark"] .summary-chip-positive .summary-chip-state,
+html[data-theme="dark"] .summary-chip-mini-positive {
+    background: linear-gradient(180deg, rgba(6, 78, 59, 0.22), rgba(15, 23, 42, 0.92));
+    color: #86efac;
+    border-color: rgba(52, 211, 153, 0.22);
+}
+
+html[data-theme="dark"] .summary-chip-neutral .summary-chip-state,
+html[data-theme="dark"] .summary-chip-mini-neutral {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.92));
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.24);
+}
+
 html[data-theme="dark"] .ui-button-secondary,
 html[data-theme="dark"] .ui-button-subtle,
 html[data-theme="dark"] .ui-button-tonal,
@@ -2447,6 +2536,37 @@ html[data-theme="dark"] .theme-toggle-button {
     color: #fde68a;
 }
 
+html[data-theme="dark"] .room-dashboard-metric {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .room-dashboard-metric-available {
+    color: #86efac;
+    border-color: rgba(52, 211, 153, 0.24);
+}
+
+html[data-theme="dark"] .room-dashboard-metric-guiding {
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, 0.24);
+}
+
+html[data-theme="dark"] .room-dashboard-metric-occupied {
+    color: #fda4af;
+    border-color: rgba(251, 113, 133, 0.24);
+}
+
+html[data-theme="dark"] .room-dashboard-metric-preparing {
+    color: #fcd34d;
+    border-color: rgba(251, 191, 36, 0.24);
+}
+
+html[data-theme="dark"] .room-dashboard-metric-paused {
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.24);
+}
+
 html[data-theme="dark"] .admin-inline-save-button {
     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
     color: #eff6ff;
@@ -2460,6 +2580,31 @@ html[data-theme="dark"] .admin-inline-save-button.is-saved {
 }
 
 html[data-theme="dark"] .admin-delete-button {
+    background: linear-gradient(180deg, rgba(127, 29, 29, 0.96), rgba(190, 24, 93, 0.9));
+    color: #ffe4e6;
+    border-color: rgba(251, 113, 133, 0.22);
+}
+
+html[data-theme="dark"] .member-request-card {
+    border-color: rgba(245, 158, 11, 0.22);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.24), rgba(15, 23, 42, 0.94));
+}
+
+html[data-theme="dark"] .member-access-card {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+}
+
+html[data-theme="dark"] .member-card-name,
+html[data-theme="dark"] .member-card-label,
+html[data-theme="dark"] .member-card-select {
+    color: var(--page-ink);
+}
+
+html[data-theme="dark"] .member-card-email {
+    color: var(--page-copy);
+}
+
+html[data-theme="dark"] .member-card-action-danger {
     background: linear-gradient(180deg, rgba(127, 29, 29, 0.96), rgba(190, 24, 93, 0.9));
     color: #ffe4e6;
     border-color: rgba(251, 113, 133, 0.22);
@@ -2547,6 +2692,13 @@ html[data-theme="dark"] #admin-lane-list {
     background: rgba(15, 23, 42, 0.76);
 }
 
+html[data-theme="dark"] .admin-form-row,
+html[data-theme="dark"] .admin-layout-editor-shell {
+    border-color: var(--border-strong);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+    box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
+}
+
 html[data-theme="dark"] .lane-card-header,
 html[data-theme="dark"] .room-dashboard-header,
 html[data-theme="dark"] .footer-panel {
@@ -2596,6 +2748,17 @@ html[data-theme="dark"] .reception-room-action-ready {
     border-color: rgba(96, 165, 250, 0.26);
     background: linear-gradient(180deg, rgba(30, 64, 175, 0.28), rgba(15, 23, 42, 0.92));
     color: #bfdbfe;
+}
+
+html[data-theme="dark"] .status-action-idle {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
+    border-color: rgba(148, 163, 184, 0.18);
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .footer-copy a,
+html[data-theme="dark"] .footer-links a {
+    color: #93c5fd;
 }
 
 @media (min-width: 768px) {
