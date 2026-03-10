@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, startTransition } from "react";
+import { useEffect, useMemo, useRef, useState, startTransition } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import GridLayout, { WidthProvider, type Layout } from "react-grid-layout";
 
@@ -68,10 +68,40 @@ function mergeLayoutPositions(
     };
 }
 
+function getPointerPosition(event: MouseEvent | TouchEvent | undefined): { x: number; y: number } | null {
+    if (!event) {
+        return null;
+    }
+
+    if ("touches" in event && event.touches.length > 0) {
+        return {
+            x: event.touches[0].clientX,
+            y: event.touches[0].clientY
+        };
+    }
+
+    if ("changedTouches" in event && event.changedTouches.length > 0) {
+        return {
+            x: event.changedTouches[0].clientX,
+            y: event.changedTouches[0].clientY
+        };
+    }
+
+    if ("clientX" in event && "clientY" in event) {
+        return {
+            x: event.clientX,
+            y: event.clientY
+        };
+    }
+
+    return null;
+}
+
 function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEditorProps) {
     const normalizedLayout = useMemo(() => normalizeReceptionLayoutConfig(layout, rooms), [layout, rooms]);
     const layoutSignature = useMemo(() => JSON.stringify(normalizedLayout), [normalizedLayout]);
     const [draftLayout, setDraftLayout] = useState<ReceptionLayoutConfig>(normalizedLayout);
+    const dragStartPointerRef = useRef<{ x: number; y: number } | null>(null);
 
     useEffect(() => {
         setDraftLayout(normalizedLayout);
@@ -143,10 +173,32 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                 containerPadding={[0, 0]}
                 compactType={null}
                 preventCollision={false}
-                draggableHandle=".admin-layout-editor-card-header"
+                draggableHandle=".admin-layout-editor-card-handle"
                 draggableCancel=".admin-layout-editor-field,.admin-layout-editor-field *,select,option,.react-resizable-handle"
                 isBounded
-                onDragStop={(nextGridLayout) => {
+                onDragStart={(_layout, _oldItem, _newItem, _placeholder, event) => {
+                    dragStartPointerRef.current = getPointerPosition(event);
+                }}
+                onDragStop={(nextGridLayout, oldItem, newItem, _placeholder, event) => {
+                    const dragStartPointer = dragStartPointerRef.current;
+                    const dragEndPointer = getPointerPosition(event);
+                    dragStartPointerRef.current = null;
+
+                    if (dragStartPointer && dragEndPointer) {
+                        const dragDistance = Math.hypot(
+                            dragEndPointer.x - dragStartPointer.x,
+                            dragEndPointer.y - dragStartPointer.y
+                        );
+
+                        if (dragDistance < 8) {
+                            return;
+                        }
+                    }
+
+                    if (oldItem.x === newItem.x && oldItem.y === newItem.y) {
+                        return;
+                    }
+
                     applyGridLayout(nextGridLayout);
                 }}
                 onResizeStop={(nextGridLayout) => {

@@ -730,12 +730,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
-        cursor: grab;
         user-select: none;
-    }
-
-    .admin-layout-editor-card-header:active {
-        cursor: grabbing;
     }
 
     .admin-layout-editor-card-handle {
@@ -749,6 +744,12 @@
         font-size: 0.7rem;
         font-weight: 700;
         color: #475569;
+        cursor: grab;
+        user-select: none;
+    }
+
+    .admin-layout-editor-card-handle:active {
+        cursor: grabbing;
     }
 
     .admin-layout-editor-card-span {
