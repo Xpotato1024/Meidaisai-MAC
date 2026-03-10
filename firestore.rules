@@ -135,7 +135,7 @@ service cloud.firestore {
     function canAdminCreateMember(appId, uid) {
       return isAdmin(appId)
         && request.resource.data.uid == uid
-        && (!isCreatingRootMember() || isRoot(appId));
+        && !isCreatingRootMember();
     }
 
     function canAdminUpdateMember(appId, uid) {
@@ -143,7 +143,7 @@ service cloud.firestore {
         && request.resource.data.uid == uid
         && keepsOwnPrivilege(uid)
         && !isTargetRootMember()
-        && (!isCreatingRootMember() || isRoot(appId));
+        && !isCreatingRootMember();
     }
 
     function changedKeys() {

@@ -408,8 +408,8 @@ export async function approveAccessRequest(context, uid, role) {
     const request = state.accessRequestsCache.find((item) => item.uid === uid);
     const memberRef = doc(db, paths.accessMembersCollectionPath, uid);
     const requestRef = doc(db, paths.accessRequestsCollectionPath, uid);
-    if (role === "root" && !hasRole(context, ["root"])) {
-        showToast({ title: "権限不足", message: "Root アカウントの設定は Root のみ実行できます。", tone: "warning" });
+    if (role === "root") {
+        showToast({ title: "変更不可", message: "Root への昇格はアプリから実行できません。", tone: "warning" });
         return;
     }
     await setDoc(memberRef, {
@@ -419,24 +419,11 @@ export async function approveAccessRequest(context, uid, role) {
         role,
         isActive: true,
         assignedRoomIds: [],
-        authorizationSource: role === "root" ? "global" : "manual",
+        authorizationSource: "manual",
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp()
     }, { merge: true });
-    if (role === "root") {
-        await setDoc(doc(db, paths.globalAccessMembersCollectionPath, uid), {
-            uid,
-            email: request?.email || "",
-            displayName: request?.displayName || "",
-            role: "root",
-            isActive: true,
-            authorizationSource: "global",
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            lastLoginAt: serverTimestamp()
-        }, { merge: true });
-    }
     await setDoc(requestRef, {
         status: "approved",
         note: null,
@@ -460,7 +447,6 @@ export async function updateAccessMember(context, uid, role, isActive) {
     }
     const currentMember = state.accessMembersCache.find((member) => member.uid === uid) || null;
     const currentUserId = state.userId;
-    const isRootOperator = hasRole(context, ["root"]);
     const effectiveRole = currentMember?.role || "staff";
     if (uid === currentUserId && (!isActive || role !== effectiveRole)) {
         showToast({
@@ -478,10 +464,10 @@ export async function updateAccessMember(context, uid, role, isActive) {
         });
         return;
     }
-    if (role === "root" && !isRootOperator) {
+    if (role === "root") {
         showToast({
-            title: "権限不足",
-            message: "Root アカウントの設定は Root のみ実行できます。",
+            title: "変更不可",
+            message: "Root への昇格はアプリから実行できません。",
             tone: "warning"
         });
         return;
@@ -490,33 +476,19 @@ export async function updateAccessMember(context, uid, role, isActive) {
         role,
         isActive,
         assignedRoomIds: [],
-        authorizationSource: role === "root" ? "global" : currentMember?.authorizationSource || "manual",
+        authorizationSource: currentMember?.authorizationSource || "manual",
         updatedAt: serverTimestamp()
     }, { merge: true });
-    if (role === "root") {
-        await setDoc(doc(db, paths.globalAccessMembersCollectionPath, uid), {
-            uid,
-            email: currentMember?.email || "",
-            displayName: currentMember?.displayName || "",
-            grade: currentMember?.grade || null,
-            role: "root",
-            isActive: true,
-            authorizationSource: "global",
-            updatedAt: serverTimestamp(),
-            createdAt: currentMember?.createdAt || serverTimestamp(),
-            lastLoginAt: currentMember?.lastLoginAt || serverTimestamp()
-        }, { merge: true });
-    }
 }
 export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
     const { state } = context;
     if (!hasRole(context, ["root", "admin"])) {
         return 0;
     }
-    if (role === "root" && !hasRole(context, ["root"])) {
+    if (role === "root") {
         showToast({
-            title: "権限不足",
-            message: "Root の一括付与は Root のみ実行できます。",
+            title: "変更不可",
+            message: "Root の一括付与はアプリから実行できません。",
             tone: "warning"
         });
         return 0;

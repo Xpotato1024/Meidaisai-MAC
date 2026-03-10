@@ -28,9 +28,10 @@ function escapeHtml(value) {
         .replaceAll("'", "&#39;");
 }
 function getRoleOptions(context, selectedRole) {
-    const availableRoles = hasRole(context, ["root"])
-        ? ["staff", "reception", "admin", "root"]
-        : ["staff", "reception", "admin"];
+    const availableRoles = ["staff", "reception", "admin"];
+    if (selectedRole === "root") {
+        availableRoles.push("root");
+    }
     return availableRoles.map((role) => {
         return `<option value="${role}" ${selectedRole === role ? "selected" : ""}>${ROLE_LABELS[role]}</option>`;
     }).join("");
@@ -432,9 +433,11 @@ function renderAccessManagement(context) {
             <div class="grid gap-3">
                 <label class="member-card-label">
                     ロール
-                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}" ${isLocked ? "disabled" : ""}>
-                        ${getRoleOptions(context, member.role)}
-                    </select>
+                    ${isRootMember
+            ? `<div class="member-card-static-role mt-1">${ROLE_LABELS.root}</div>`
+            : `<select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}" ${isLocked ? "disabled" : ""}>
+                            ${getRoleOptions(context, member.role)}
+                        </select>`}
                 </label>
                 ${helperText ? `<p class="text-xs font-bold text-slate-500">${escapeHtml(helperText)}</p>` : ""}
                 <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action" ${isLocked ? "disabled" : ""}>
