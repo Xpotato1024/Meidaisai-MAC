@@ -11,6 +11,7 @@ import {
 import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
+import { UI_ICON_SVGS } from "./icons.js";
 import { normalizeReceptionLayoutConfig } from "./reception-layout.js";
 import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
@@ -59,13 +60,27 @@ function mergeNamedCollection<T extends { id: string }>(defaults: T[], currentVa
 
 function normalizeConfig(rawConfig: Record<string, unknown>): AppConfig {
     const rooms = Array.isArray(rawConfig.rooms) ? rawConfig.rooms as AppConfig["rooms"] : APP_CONFIG.rooms;
+    const laneStatuses = mergeNamedCollection<LaneStatusConfig>(APP_CONFIG.laneStatuses, rawConfig.laneStatuses)
+        .map((status) => {
+            const fallback = APP_CONFIG.laneStatuses.find((item) => item.id === status.id);
+            return fallback
+                ? { ...status, icon: fallback.icon, colorClass: fallback.colorClass }
+                : status;
+        });
+    const receptionStatuses = mergeNamedCollection<ReceptionStatusConfig>(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses)
+        .map((status) => {
+            const fallback = APP_CONFIG.receptionStatuses.find((item) => item.id === status.id);
+            return fallback
+                ? { ...status, icon: fallback.icon, colorClass: fallback.colorClass }
+                : status;
+        });
 
     return {
         ...APP_CONFIG,
         ...rawConfig,
         rooms,
-        laneStatuses: mergeNamedCollection<LaneStatusConfig>(APP_CONFIG.laneStatuses, rawConfig.laneStatuses),
-        receptionStatuses: mergeNamedCollection<ReceptionStatusConfig>(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses),
+        laneStatuses,
+        receptionStatuses,
         pauseReasons: mergeNamedCollection<NamedOption>(APP_CONFIG.pauseReasons, rawConfig.pauseReasons),
         options: Array.isArray(rawConfig.options) ? rawConfig.options as NamedOption[] : APP_CONFIG.options,
         receptionLayout: normalizeReceptionLayoutConfig(rawConfig.receptionLayout as AppConfig["receptionLayout"], rooms)
@@ -330,7 +345,7 @@ function listenToAccessMembersChanges(context: AppContext): void {
 
 export async function fetchRegistryItems(context: AppContext): Promise<void> {
     const { db, dom, paths, state } = context;
-    dom.dbEventList.innerHTML = '<p class="p-4 text-center text-gray-400 text-sm"><i class="fa-solid fa-spinner fa-spin"></i> 読み込み中...</p>';
+    dom.dbEventList.innerHTML = `<p class="p-4 text-center text-gray-400 text-sm"><span class="inline-flex align-middle text-slate-500">${UI_ICON_SVGS.spinner}</span><span class="ml-2 align-middle">読み込み中...</span></p>`;
 
     try {
         const snapshotQuery = query(collection(db, paths.registryCollectionPath));

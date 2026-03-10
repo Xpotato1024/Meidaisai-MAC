@@ -9,6 +9,7 @@ import {
 import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
+import { UI_ICON_SVGS } from "./icons.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import { showToast } from "./toast.js";
@@ -287,7 +288,7 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
 
     const originalHtml = dom.btnCopySwitch.innerHTML;
     dom.btnCopySwitch.disabled = true;
-    dom.btnCopySwitch.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 複製中...';
+    dom.btnCopySwitch.innerHTML = `<span class="mr-2 inline-flex">${UI_ICON_SVGS.spinner}</span>複製中...`;
 
     try {
         // --- データの読み出し (Copy Source) ---

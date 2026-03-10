@@ -65,6 +65,10 @@
         transform: translateY(-1px);
     }
 
+    button:disabled:hover {
+        transform: none;
+    }
+
     input[type="text"],
     input[type="number"],
     select {
@@ -162,6 +166,98 @@
     .toast-message {
         font-size: 0.88rem;
         line-height: 1.55;
+    }
+
+    .ui-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        min-height: 2.85rem;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        padding: 0.8rem 1rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .ui-button-block {
+        width: 100%;
+    }
+
+    .ui-button-icon {
+        min-width: 2.85rem;
+        width: 2.85rem;
+        padding-inline: 0;
+    }
+
+    .ui-button-large {
+        min-height: 3.15rem;
+        padding-inline: 1.2rem;
+    }
+
+    .ui-button-primary {
+        border-color: rgba(37, 99, 235, 0.26);
+        background: linear-gradient(135deg, #1e293b 0%, #1d4ed8 100%);
+        color: #f8fafc;
+        box-shadow: 0 16px 34px rgba(29, 78, 216, 0.2);
+    }
+
+    .ui-button-primary:hover {
+        box-shadow: 0 20px 38px rgba(29, 78, 216, 0.24);
+    }
+
+    .ui-button-secondary {
+        border-color: rgba(148, 163, 184, 0.24);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.96));
+        color: #0f172a;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .ui-button-secondary:hover {
+        border-color: rgba(59, 130, 246, 0.24);
+        color: #1d4ed8;
+    }
+
+    .ui-button-success {
+        border-color: rgba(16, 185, 129, 0.24);
+        background: linear-gradient(135deg, #0f766e 0%, #059669 100%);
+        color: #f0fdf4;
+        box-shadow: 0 16px 34px rgba(5, 150, 105, 0.18);
+    }
+
+    .ui-button-warm {
+        border-color: rgba(249, 115, 22, 0.26);
+        background: linear-gradient(135deg, #c2410c 0%, #f97316 100%);
+        color: #fff7ed;
+        box-shadow: 0 16px 34px rgba(249, 115, 22, 0.18);
+    }
+
+    .ui-button-warm-secondary {
+        border-color: rgba(251, 146, 60, 0.28);
+        background: rgba(255, 255, 255, 0.92);
+        color: #c2410c;
+        box-shadow: 0 10px 24px rgba(249, 115, 22, 0.08);
+    }
+
+    .ui-button-subtle {
+        border-color: rgba(148, 163, 184, 0.2);
+        background: rgba(15, 23, 42, 0.04);
+        color: #475569;
+    }
+
+    .ui-button-hero {
+        border-color: rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.96);
+        color: #0f172a;
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    }
+
+    .ui-button svg {
+        flex: none;
     }
 
     .sticky-header-shell {
@@ -463,18 +559,18 @@
         min-width: 2.8rem;
         min-height: 2.8rem;
         border-radius: 12px;
-        border: 1px solid rgba(226, 232, 240, 0.92);
-        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 245, 249, 0.94));
         padding: 0;
-        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
-        color: #0f172a;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        color: #1e293b;
     }
 
     .tabs-menu-shell-hero .tabs-menu-toggle {
-        border-color: rgba(148, 163, 184, 0.18);
-        background: rgba(15, 23, 42, 0.22);
-        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
-        color: #e2e8f0;
+        border-color: rgba(96, 165, 250, 0.18);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(30, 41, 59, 0.82));
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.24);
+        color: #dbeafe;
         backdrop-filter: blur(8px);
     }
 
@@ -1088,11 +1184,12 @@
     }
 
     .reception-modal-lane-card.is-selected {
-        border-color: rgba(37, 99, 235, 0.62);
+        border-color: rgba(37, 99, 235, 0.74);
         background: linear-gradient(180deg, #eff6ff, #dbeafe);
         box-shadow:
-            inset 0 0 0 2px rgba(37, 99, 235, 0.55),
-            0 16px 28px rgba(37, 99, 235, 0.18);
+            inset 0 0 0 2px rgba(37, 99, 235, 0.72),
+            inset 0 0 0 5px rgba(191, 219, 254, 0.9),
+            0 18px 32px rgba(37, 99, 235, 0.18);
         transform: translateY(-1px);
     }
 
@@ -1351,15 +1448,18 @@
         display: flex;
         flex-direction: column;
         gap: 0.85rem;
-        border-radius: 14px;
-        border: 1px solid var(--border-strong);
-        background: linear-gradient(180deg, #ffffff, #fbfdff);
-        padding: 0.95rem 1rem;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        border-radius: 13px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)),
+            linear-gradient(135deg, rgba(30, 64, 175, 0.04), rgba(15, 23, 42, 0));
+        padding: 1rem 1rem 0.95rem;
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
     }
 
     .lane-card-header {
-        padding-bottom: 0.15rem;
+        padding-bottom: 0.45rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
     }
 
     .lane-card-title-row {
@@ -1386,7 +1486,7 @@
     .lane-card-aux {
         margin-top: 0.32rem;
         font-size: 0.74rem;
-        font-weight: 600;
+        font-weight: 700;
         color: #1d4ed8;
     }
 
@@ -1439,15 +1539,15 @@
     }
 
     .info-strip-options {
-        background: #f8fbff;
-        color: #1d4ed8;
-        border-color: rgba(59, 130, 246, 0.14);
+        background: linear-gradient(180deg, #f8fbff, #eff6ff);
+        color: #1e40af;
+        border-color: rgba(59, 130, 246, 0.18);
     }
 
     .info-strip-notes {
-        background: #fffaf0;
-        color: #b45309;
-        border-color: rgba(245, 158, 11, 0.18);
+        background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+        color: #334155;
+        border-color: rgba(148, 163, 184, 0.18);
     }
 
     .lane-card-actions {
@@ -1456,11 +1556,13 @@
     }
 
     .wait-control-card {
-        border-radius: 14px;
-        border: 1px solid var(--border-strong);
-        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        border-radius: 13px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95)),
+            linear-gradient(135deg, rgba(29, 78, 216, 0.05), rgba(15, 23, 42, 0));
         padding: 0.72rem 0.8rem;
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 16px 30px rgba(15, 23, 42, 0.07);
     }
 
     .wait-control-shell {
@@ -1474,9 +1576,9 @@
     }
 
     .wait-control-panel {
-        border-radius: 12px;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        background: #ffffff;
+        border-radius: 11px;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
         padding: 0.64rem 0.7rem;
     }
 
@@ -1529,12 +1631,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 10px;
+        border-radius: 11px;
         min-width: 2.55rem;
         min-height: 2.55rem;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        background: #ffffff;
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
     }
 
     .wait-adjust-button-dec {
@@ -1551,11 +1653,12 @@
 
     .wait-counter-card {
         min-width: 4.15rem;
-        border-radius: 10px;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        background: #f8fafc;
+        border-radius: 11px;
+        border: 1px solid rgba(191, 219, 254, 0.55);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.96));
         padding: 0.46rem 0.68rem;
         text-align: center;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
     }
 
     .wait-control-panel-counter {
@@ -1576,22 +1679,22 @@
         align-items: center;
         justify-content: center;
         gap: 0.45rem;
-        border-radius: 12px;
+        border-radius: 11px;
         padding: 0.78rem 0.9rem;
         font-size: 0.82rem;
         font-weight: 700;
-        border: 1px solid transparent;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
     }
 
     .status-action-idle {
-        background: #f8fafc;
+        background: linear-gradient(180deg, #ffffff, #f8fafc);
         border-color: rgba(226, 232, 240, 0.9);
         color: #475569;
     }
 
     .status-action-active {
-        color: #ffffff;
-        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+        box-shadow: 0 16px 26px rgba(15, 23, 42, 0.1);
     }
 
     .status-action-grid {
@@ -1605,19 +1708,27 @@
     }
 
     .status-available {
-        background: linear-gradient(180deg, #10b981, #059669);
+        border-color: rgba(5, 150, 105, 0.24);
+        background: linear-gradient(180deg, #ecfdf5, #d1fae5);
+        color: #047857;
     }
 
     .status-occupied {
-        background: linear-gradient(180deg, #fb7185, #e11d48);
+        border-color: rgba(225, 29, 72, 0.24);
+        background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+        color: #be123c;
     }
 
     .status-preparing {
-        background: linear-gradient(180deg, #f59e0b, #d97706);
+        border-color: rgba(217, 119, 6, 0.24);
+        background: linear-gradient(180deg, #fffbeb, #fef3c7);
+        color: #b45309;
     }
 
     .status-paused {
-        background: linear-gradient(180deg, #64748b, #475569);
+        border-color: rgba(71, 85, 105, 0.24);
+        background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+        color: #334155;
     }
 
     .reception-available {
@@ -1813,15 +1924,65 @@
         height: 2rem;
         flex: none;
         border-radius: 10px;
-        border: 1px solid rgba(248, 113, 113, 0.22);
-        background: linear-gradient(180deg, #f87171, #ef4444);
-        color: #ffffff;
-        box-shadow: 0 8px 16px rgba(239, 68, 68, 0.14);
+        border: 1px solid rgba(244, 63, 94, 0.2);
+        background: linear-gradient(180deg, #fff1f2, #ffe4e6);
+        color: #e11d48;
+        box-shadow: 0 10px 18px rgba(244, 63, 94, 0.1);
     }
 
     .admin-delete-button:hover {
-        border-color: rgba(220, 38, 38, 0.28);
-        background: linear-gradient(180deg, #ef4444, #dc2626);
+        border-color: rgba(244, 63, 94, 0.28);
+        background: linear-gradient(180deg, #ffe4e6, #fecdd3);
+    }
+
+    .admin-inline-row {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.55rem;
+        border-radius: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.85);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+    }
+
+    .admin-inline-row-tight {
+        gap: 0.45rem;
+        padding: 0.45rem 0.5rem;
+        box-shadow: none;
+    }
+
+    .admin-inline-meta {
+        gap: 0.25rem;
+    }
+
+    .admin-inline-input {
+        min-height: 2.35rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 10px;
+    }
+
+    .admin-inline-save-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-height: 2.2rem;
+        border-radius: 10px;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
+        padding: 0.55rem 0.8rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #f8fafc;
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.16);
+    }
+
+    .admin-inline-save-button.is-saved {
+        border-color: rgba(16, 185, 129, 0.22);
+        background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+        color: #ecfdf5;
+        box-shadow: 0 10px 22px rgba(16, 185, 129, 0.18);
     }
 
     .modal-scrim {
@@ -1920,6 +2081,19 @@
     .status-svg-xl {
         width: 1.25rem;
         height: 1.25rem;
+    }
+
+    .icon-spin {
+        animation: icon-spin 0.9s linear infinite;
+    }
+}
+
+@keyframes icon-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
     }
 }
 
