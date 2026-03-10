@@ -237,6 +237,7 @@ export interface AppState {
     memberBulkGrade: string;
     memberBulkRole: RoleId;
     memberBulkIsActive: boolean;
+    memberBulkSelectedUids: string[];
     currentLanesState: Record<string, LaneData>;
     currentRoomState: Record<string, RoomStateData>;
     dynamicAppConfig: AppConfig;

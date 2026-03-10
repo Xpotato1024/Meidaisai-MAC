@@ -609,21 +609,54 @@ export async function bulkUpdateAccessMembers(
     }
 
     const normalizedGrade = grade.trim();
+    const selectedMemberSet = new Set(state.memberBulkSelectedUids);
+    let skippedProtectedCount = 0;
+    let skippedSelfCount = 0;
+
     const targets = state.accessMembersCache.filter((member) => {
+        if (normalizedGrade === "__selected__" && !selectedMemberSet.has(member.uid)) {
+            return false;
+        }
+        if (normalizedGrade !== "__all__" && normalizedGrade !== "__selected__" && String(member.grade || "") !== normalizedGrade) {
+            return false;
+        }
         if (member.uid === state.userId) {
+            skippedSelfCount += 1;
             return false;
         }
-        if (member.role === "root") {
-            return false;
-        }
-        if (normalizedGrade !== "__all__" && String(member.grade || "") !== normalizedGrade) {
+        if (member.role === "root" || member.authorizationSource === "global") {
+            skippedProtectedCount += 1;
             return false;
         }
         return true;
     });
 
+    if (normalizedGrade === "__selected__" && selectedMemberSet.size === 0) {
+        showToast({
+            title: "対象未選択",
+            message: "一括変更するメンバーをチェックしてください。",
+            tone: "warning"
+        });
+        return 0;
+    }
+
     for (const member of targets) {
         await updateAccessMember(context, member.uid, role, isActive);
+    }
+
+    if (skippedProtectedCount > 0 || skippedSelfCount > 0) {
+        const warnings: string[] = [];
+        if (skippedProtectedCount > 0) {
+            warnings.push(`保護対象 ${skippedProtectedCount}件`);
+        }
+        if (skippedSelfCount > 0) {
+            warnings.push(`自分 ${skippedSelfCount}件`);
+        }
+        showToast({
+            title: "一部スキップ",
+            message: `${warnings.join(" / ")} は権限変更しませんでした。`,
+            tone: "warning"
+        });
     }
 
     return targets.length;

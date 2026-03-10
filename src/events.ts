@@ -791,6 +791,24 @@ export function setupEventListeners(context: AppContext): void {
             });
             return;
         }
+
+        if (actionButton === "apply-member-bulk-selected" && button) {
+            const roleSelect = dom.tabMembers.querySelector<HTMLSelectElement>('select[data-action="member-bulk-role"]');
+            const activeInput = dom.tabMembers.querySelector<HTMLInputElement>('input[data-action="member-bulk-active"]');
+            const role = (roleSelect?.value || "staff") as RoleId;
+            const isActive = activeInput?.checked ?? true;
+
+            void bulkUpdateAccessMembers(context, "__selected__", role, isActive).then((updatedCount) => {
+                if (updatedCount > 0) {
+                    showToast({
+                        title: "一括更新完了",
+                        message: `${updatedCount} 件の選択メンバー権限を更新しました。`,
+                        tone: "success"
+                    });
+                }
+            });
+            return;
+        }
     });
 
     dom.tabMembers.addEventListener("change", (event) => {
@@ -818,6 +836,21 @@ export function setupEventListeners(context: AppContext): void {
 
         if (action === "member-bulk-active" && target instanceof HTMLInputElement) {
             state.memberBulkIsActive = target.checked;
+        }
+
+        if (target instanceof HTMLInputElement && target.dataset.selectMember) {
+            const uid = target.dataset.uid;
+            if (!uid) {
+                return;
+            }
+
+            const nextSelection = new Set(state.memberBulkSelectedUids);
+            if (target.checked) {
+                nextSelection.add(uid);
+            } else {
+                nextSelection.delete(uid);
+            }
+            state.memberBulkSelectedUids = Array.from(nextSelection);
         }
     });
 

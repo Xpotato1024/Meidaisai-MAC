@@ -94,6 +94,7 @@ function createInitialState() {
         memberBulkGrade: "__all__",
         memberBulkRole: "staff",
         memberBulkIsActive: true,
+        memberBulkSelectedUids: [],
         currentLanesState: {},
         currentRoomState: {},
         dynamicAppConfig: cloneConfig(APP_CONFIG),

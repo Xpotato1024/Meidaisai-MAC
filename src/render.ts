@@ -421,7 +421,23 @@ function renderAccessManagement(context: AppContext): void {
         `).join("");
     }
 
-    const sortedMembers = [...state.accessMembersCache].sort((left, right) => {
+    const mergedMembersMap = new Map(state.accessMembersCache.map((member) => [member.uid, member]));
+    if (state.globalAccessMember?.isActive) {
+        const globalMember = state.globalAccessMember;
+        const existing = mergedMembersMap.get(globalMember.uid);
+        mergedMembersMap.set(globalMember.uid, {
+            ...(existing || {}),
+            ...globalMember,
+            role: "root",
+            authorizationSource: "global",
+            isActive: true
+        });
+    }
+
+    const mergedMembers = Array.from(mergedMembersMap.values());
+    const selectedMemberSet = new Set(state.memberBulkSelectedUids);
+
+    const sortedMembers = [...mergedMembers].sort((left, right) => {
         if (state.memberSortMode === "name") {
             return left.displayName.localeCompare(right.displayName, "ja");
         }
@@ -448,7 +464,7 @@ function renderAccessManagement(context: AppContext): void {
     });
 
     const gradeOptions = Array.from(new Set(
-        state.accessMembersCache
+        mergedMembers
             .map((member) => String(member.grade || "").trim())
             .filter(Boolean)
     )).sort((left, right) => getGradeSortKey(left) - getGradeSortKey(right));
@@ -467,7 +483,7 @@ function renderAccessManagement(context: AppContext): void {
                 </label>
                 <div class="member-card-label flex items-end text-slate-500">現在: ${getMemberSortLabel(state.memberSortMode)}</div>
             </div>
-            <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_12rem_10rem_auto]">
+            <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_12rem_10rem_auto_auto]">
                 <label class="member-card-label">
                     一括対象の学年
                     <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-action="member-bulk-grade">
@@ -486,7 +502,10 @@ function renderAccessManagement(context: AppContext): void {
                     有効にする
                 </label>
                 <button data-action="apply-member-bulk" class="ui-button ui-button-primary member-card-action xl:self-end">
-                    一括反映
+                    学年で一括反映
+                </button>
+                <button data-action="apply-member-bulk-selected" class="ui-button ui-button-secondary member-card-action xl:self-end">
+                    選択メンバーに反映
                 </button>
             </div>
         </div>
@@ -512,6 +531,9 @@ function renderAccessManagement(context: AppContext): void {
             <div class="mb-3 flex items-start justify-between gap-3">
                 <div>
                     <p class="member-card-name flex flex-wrap items-center gap-2">
+                        <label class="member-select-check ${isRootMember ? "is-disabled" : ""}">
+                            <input type="checkbox" data-select-member data-uid="${member.uid}" ${selectedMemberSet.has(member.uid) ? "checked" : ""} ${isRootMember ? "disabled" : ""}>
+                        </label>
                         ${escapeHtml(member.displayName || "名称未設定")}
                         ${isSelf ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
                         ${getAuthorizationSourceBadge(member)}
