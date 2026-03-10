@@ -6,7 +6,7 @@ import { UI_ICON_SVGS } from "./icons.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import { showToast } from "./toast.js";
-import { approveAccessRequest, bulkUpdateAccessMembers, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
+import { approveAccessRequest, bulkUpdateAccessMembers, deleteAccessMember, rejectAccessRequest, saveAdminSettings, updateAccessMember, updateLaneCustomName, updateLanePauseReason, updateLaneStatus, updateReceptionStatus, updateWaitingGroups } from "./writes.js";
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
 }
@@ -625,6 +625,17 @@ export function setupEventListeners(context) {
             const role = (roleSelect?.value || "staff");
             const isActive = activeInput?.checked ?? true;
             void updateAccessMember(context, uid, role, isActive);
+            return;
+        }
+        if (actionButton === "delete-access-member" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+            if (!confirm("このメンバー権限を削除しますか？")) {
+                return;
+            }
+            void deleteAccessMember(context, uid);
             return;
         }
         if (actionButton === "apply-member-bulk" && button) {

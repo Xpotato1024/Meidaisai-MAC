@@ -20,7 +20,7 @@ export function canAccessTab(context, tabId) {
         return hasRole(context, ["root", "admin", "reception"]);
     }
     if (tabId === "staff") {
-        return hasRole(context, ["root", "admin", "staff"]);
+        return hasRole(context, ["root", "admin", "reception", "staff"]);
     }
     return false;
 }
@@ -39,7 +39,7 @@ export function canManageRoom(context, roomId) {
     if (!roomId) {
         return false;
     }
-    return hasRole(context, ["root", "admin", "staff"]) && getAllowedRoomIds(context).includes(roomId);
+    return hasRole(context, ["root", "admin", "reception", "staff"]) && getAllowedRoomIds(context).includes(roomId);
 }
 export function getVisibleRooms(context) {
     const allowedRoomIds = new Set(getAllowedRoomIds(context));

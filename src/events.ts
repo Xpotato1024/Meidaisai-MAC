@@ -17,6 +17,7 @@ import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
     approveAccessRequest,
     bulkUpdateAccessMembers,
+    deleteAccessMember,
     rejectAccessRequest,
     saveAdminSettings,
     updateAccessMember,
@@ -769,6 +770,18 @@ export function setupEventListeners(context: AppContext): void {
             const role = (roleSelect?.value || "staff") as RoleId;
             const isActive = activeInput?.checked ?? true;
             void updateAccessMember(context, uid, role, isActive);
+            return;
+        }
+
+        if (actionButton === "delete-access-member" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+            if (!confirm("このメンバー権限を削除しますか？")) {
+                return;
+            }
+            void deleteAccessMember(context, uid);
             return;
         }
 

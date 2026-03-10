@@ -99,11 +99,11 @@ service cloud.firestore {
     }
 
     function canManageRoom(appId, roomId) {
-      return isAdmin(appId) || assignedToRoom(appId, roomId);
+      return isAdmin(appId) || isReception(appId) || assignedToRoom(appId, roomId);
     }
 
     function canOperateAssignedRoom(appId, roomId) {
-      return isAdmin(appId) || assignedToRoom(appId, roomId);
+      return isAdmin(appId) || isReception(appId) || assignedToRoom(appId, roomId);
     }
 
     function isTargetRootMember() {

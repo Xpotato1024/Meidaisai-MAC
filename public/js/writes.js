@@ -7,6 +7,18 @@ import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStat
 import { showToast } from "./toast.js";
 const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
 const runTransaction = FirebaseFirestore.runTransaction;
+function getRoleRank(role) {
+    if (role === "root") {
+        return 0;
+    }
+    if (role === "admin") {
+        return 1;
+    }
+    if (role === "reception") {
+        return 2;
+    }
+    return 3;
+}
 function getRoomLaneCount(context, roomId) {
     return context.state.dynamicAppConfig.rooms.find((room) => room.id === roomId)?.lanes
         || Number(context.state.currentRoomState[roomId]?.totalLanes || 0);
@@ -480,6 +492,30 @@ export async function updateAccessMember(context, uid, role, isActive) {
         updatedAt: serverTimestamp()
     }, { merge: true });
 }
+export async function deleteAccessMember(context, uid) {
+    const { db, paths, state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return;
+    }
+    const currentMember = state.accessMembersCache.find((member) => member.uid === uid) || null;
+    if (uid === state.userId) {
+        showToast({
+            title: "変更不可",
+            message: "自分自身を削除することはできません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (currentMember?.role === "root" || currentMember?.authorizationSource === "global") {
+        showToast({
+            title: "変更不可",
+            message: "Root アカウントは削除できません。",
+            tone: "warning"
+        });
+        return;
+    }
+    await FirebaseFirestore.deleteDoc(doc(db, paths.accessMembersCollectionPath, uid));
+}
 export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
     const { state } = context;
     if (!hasRole(context, ["root", "admin"])) {
@@ -497,6 +533,7 @@ export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
     const selectedMemberSet = new Set(state.memberBulkSelectedUids);
     let skippedProtectedCount = 0;
     let skippedSelfCount = 0;
+    let skippedDowngradeCount = 0;
     const targets = state.accessMembersCache.filter((member) => {
         if (normalizedGrade === "__selected__" && !selectedMemberSet.has(member.uid)) {
             return false;
@@ -512,6 +549,10 @@ export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
             skippedProtectedCount += 1;
             return false;
         }
+        if (getRoleRank(role) > getRoleRank(member.role)) {
+            skippedDowngradeCount += 1;
+            return false;
+        }
         return true;
     });
     if (normalizedGrade === "__selected__" && selectedMemberSet.size === 0) {
@@ -525,13 +566,16 @@ export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
     for (const member of targets) {
         await updateAccessMember(context, member.uid, role, isActive);
     }
-    if (skippedProtectedCount > 0 || skippedSelfCount > 0) {
+    if (skippedProtectedCount > 0 || skippedSelfCount > 0 || skippedDowngradeCount > 0) {
         const warnings = [];
         if (skippedProtectedCount > 0) {
             warnings.push(`保護対象 ${skippedProtectedCount}件`);
         }
         if (skippedSelfCount > 0) {
             warnings.push(`自分 ${skippedSelfCount}件`);
+        }
+        if (skippedDowngradeCount > 0) {
+            warnings.push(`権限降格防止 ${skippedDowngradeCount}件`);
         }
         showToast({
             title: "一部スキップ",

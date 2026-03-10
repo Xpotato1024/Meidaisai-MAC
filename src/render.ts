@@ -557,9 +557,14 @@ function renderAccessManagement(context: AppContext): void {
                     }
                 </label>
                 ${helperText ? `<p class="text-xs font-bold text-slate-500">${escapeHtml(helperText)}</p>` : ""}
-                <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action" ${isLocked ? "disabled" : ""}>
-                    権限を保存
-                </button>
+                <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action" ${isLocked ? "disabled" : ""}>
+                        権限を保存
+                    </button>
+                    <button data-action="delete-access-member" data-uid="${member.uid}" class="ui-button member-card-action member-card-action-danger" ${isLocked ? "disabled" : ""}>
+                        削除
+                    </button>
+                </div>
             </div>
         </div>
     `;
