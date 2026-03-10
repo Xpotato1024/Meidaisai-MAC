@@ -163,6 +163,9 @@ export interface DomRefs {
     themeToggleIcon: HTMLElement;
     authLoginCard: HTMLElement;
     authPendingCard: HTMLElement;
+    authManualRequestForm: HTMLElement;
+    authManualDisplayNameInput: HTMLInputElement;
+    authManualRequestSubmitBtn: HTMLButtonElement;
     tabsMenuToggle: HTMLButtonElement;
     tabsMenuLabel: HTMLElement;
     authStatusText: HTMLElement;

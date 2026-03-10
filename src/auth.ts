@@ -176,11 +176,6 @@ function resolveFallbackDisplayName(user: any, directoryProfile: ResolvedDirecto
         return rosterName;
     }
 
-    const authName = String(user.displayName || "").trim();
-    if (authName) {
-        return authName;
-    }
-
     const email = String(directoryProfile?.email || user.email || "").trim();
     const [localPart] = email.split("@");
     return localPart || email || "未設定";
@@ -216,13 +211,18 @@ function resetAuthorizedData(context: AppContext): void {
 async function ensureAccessRequest(
     context: AppContext,
     user: any,
-    directoryProfile: ResolvedDirectoryProfile | null
+    directoryProfile: ResolvedDirectoryProfile | null,
+    manualDisplayName: string
 ): Promise<void> {
     const { db, paths } = context;
     const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
-    const displayName = resolveFallbackDisplayName(user, directoryProfile);
-    const email = String(directoryProfile?.email || user.email || "");
     const requestSnapshot = await getDoc(requestRef);
+    const displayName = String(manualDisplayName || requestSnapshot.data()?.displayName || "").trim();
+    const email = String(directoryProfile?.email || user.email || "");
+
+    if (!displayName) {
+        throw new Error("表示名を入力してください。");
+    }
 
     if (requestSnapshot.exists()) {
         await setDoc(requestRef, {
@@ -303,7 +303,7 @@ async function bootstrapSelfAccess(context: AppContext, user: any): Promise<void
         const existing = memberSnapshot.data() as Record<string, unknown>;
         await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), {
             email: String(existing.email || directoryProfile?.email || user.email || ""),
-            displayName: resolveFallbackDisplayName(user, directoryProfile),
+            displayName: String(existing.displayName || directoryProfile?.displayName || "").trim() || resolveFallbackDisplayName(user, directoryProfile),
             grade: directoryProfile?.grade || null,
             lastLoginAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -316,7 +316,53 @@ async function bootstrapSelfAccess(context: AppContext, user: any): Promise<void
         return;
     }
 
-    await ensureAccessRequest(context, user, directoryProfile);
+    const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
+    const requestSnapshot = await getDoc(requestRef);
+    if (requestSnapshot.exists()) {
+        await setDoc(requestRef, {
+            lastSeenAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
+}
+
+export async function submitManualAccessRequest(context: AppContext): Promise<void> {
+    const user = context.state.authUser;
+    if (!user) {
+        showToast({
+            title: "ログイン未完了",
+            message: "先に Google ログインしてください。",
+            tone: "warning"
+        });
+        return;
+    }
+
+    const manualDisplayName = context.dom.authManualDisplayNameInput.value.trim();
+    if (!manualDisplayName) {
+        showToast({
+            title: "入力不足",
+            message: "承認リクエスト用の表示名を入力してください。",
+            tone: "warning"
+        });
+        return;
+    }
+
+    const directoryProfile = await resolveDirectoryProfile(context, user.email);
+    if (directoryProfile) {
+        showToast({
+            title: "名簿登録済み",
+            message: "このアカウントは名簿登録済みです。再読み込み後に自動承認状態を確認してください。",
+            tone: "info"
+        });
+        return;
+    }
+
+    await ensureAccessRequest(context, user, null, manualDisplayName);
+    showToast({
+        title: "送信完了",
+        message: "承認リクエストを送信しました。",
+        tone: "success"
+    });
 }
 
 function bindAuthButtons(context: AppContext): void {
@@ -343,6 +389,20 @@ function bindAuthButtons(context: AppContext): void {
             await signOut(auth);
         } catch (error) {
             console.error("Sign-out failed:", error);
+        }
+    };
+
+    dom.authManualRequestSubmitBtn.onclick = async () => {
+        try {
+            await submitManualAccessRequest(context);
+        } catch (error) {
+            console.error("Manual access request failed:", error);
+            const message = error instanceof Error ? error.message : String(error);
+            showToast({
+                title: "送信失敗",
+                message,
+                tone: "error"
+            });
         }
     };
 }

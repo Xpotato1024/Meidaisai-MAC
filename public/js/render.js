@@ -212,9 +212,14 @@ function renderAuthShell(context) {
     const { dom, state } = context;
     const member = state.accessMember;
     const request = state.selfAccessRequest;
-    dom.authUserName.textContent = state.accessMember?.displayName || state.selfAccessRequest?.displayName || state.authUser?.displayName || "未ログイン";
+    const needsManualRequestName = Boolean(state.authUser && !member && (!request || request.status === "pending"));
+    dom.authUserName.textContent = state.accessMember?.displayName
+        || state.selfAccessRequest?.displayName
+        || state.authUser?.email?.split("@")[0]
+        || "未ログイン";
     dom.authUserEmail.textContent = state.authUser?.email || "アクセス権が必要です";
     dom.authStatusText.classList.remove("hidden");
+    dom.authManualRequestForm.classList.add("hidden");
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
     dom.globalEventDisplay.classList.toggle("is-collapsed", state.isStatusBannerCollapsed);
@@ -244,13 +249,20 @@ function renderAuthShell(context) {
         const status = request?.status || "pending";
         const pendingMessage = status === "rejected"
             ? "このアカウントの利用は停止または却下されています。管理者へ連絡してください。"
-            : "ログインは完了しました。名簿登録済みなら自動承認、名簿外アカウントは管理者承認後に利用できます。";
+            : "ログインは完了しました。名簿外アカウントは、下の表示名を入力して承認リクエストを送信してください。";
         dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
         dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
         dom.authRoleBadge.className = `inline-flex items-center rounded-lg px-3 py-1 text-xs font-bold border ${status === "rejected"
             ? "bg-rose-400/15 text-rose-100 border-rose-300/30"
             : "bg-amber-300/15 text-amber-100 border-amber-200/30"}`;
         dom.authPendingMessage.textContent = pendingMessage;
+        if (status !== "rejected" && needsManualRequestName) {
+            dom.authManualRequestForm.classList.remove("hidden");
+            if (!dom.authManualDisplayNameInput.value.trim()) {
+                dom.authManualDisplayNameInput.value = String(request?.displayName || "").trim();
+            }
+            dom.authManualRequestSubmitBtn.textContent = request ? "表示名を更新する" : "承認リクエストを送信";
+        }
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
         dom.appShell.classList.add("hidden");
