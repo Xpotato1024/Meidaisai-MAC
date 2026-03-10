@@ -1744,13 +1744,13 @@ html[data-theme="dark"] {
     .wait-adjust-button-dec {
         color: #be123c;
         border-color: rgba(225, 29, 72, 0.14);
-        background: #fff1f2;
+        background: linear-gradient(180deg, #fff1f2, #ffe4e6);
     }
 
     .wait-adjust-button-inc {
         color: #047857;
         border-color: rgba(5, 150, 105, 0.14);
-        background: #ecfdf5;
+        background: linear-gradient(180deg, #ecfdf5, #d1fae5);
     }
 
     .wait-counter-card {
@@ -1797,6 +1797,8 @@ html[data-theme="dark"] {
 
     .status-action-active {
         box-shadow: 0 16px 26px rgba(15, 23, 42, 0.1);
+        border-width: 1px;
+        transform: translateY(-1px);
     }
 
     .status-action-grid {
@@ -1830,6 +1832,21 @@ html[data-theme="dark"] {
     .status-paused {
         border-color: rgba(71, 85, 105, 0.24);
         background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+        color: #334155;
+    }
+
+    .lane-pause-panel {
+        border-radius: 12px;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+        padding: 1rem;
+    }
+
+    .lane-pause-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.82rem;
+        font-weight: 700;
         color: #334155;
     }
 
@@ -1918,7 +1935,7 @@ html[data-theme="dark"] {
         gap: 0.35rem 0.55rem;
         font-size: 0.7rem;
         font-weight: 700;
-        color: #64748b;
+        color: #475569;
     }
 
     .summary-chip-metric {
@@ -1930,22 +1947,26 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 0.38rem;
         border-radius: 9999px;
+        border: 1px solid transparent;
         padding: 0.3rem 0.6rem;
         font-size: 0.74rem;
         font-weight: 700;
     }
 
     .summary-chip-alert .summary-chip-state {
+        border-color: rgba(225, 29, 72, 0.16);
         background: #fff1f2;
         color: var(--danger);
     }
 
     .summary-chip-positive .summary-chip-state {
+        border-color: rgba(5, 150, 105, 0.16);
         background: #ecfdf5;
         color: var(--success);
     }
 
     .summary-chip-neutral .summary-chip-state {
+        border-color: rgba(71, 85, 105, 0.16);
         background: #f1f5f9;
         color: var(--neutral);
     }
@@ -2455,6 +2476,9 @@ html[data-theme="dark"] .lane-tile-status,
 html[data-theme="dark"] .lane-card-subtext,
 html[data-theme="dark"] .lane-card-aux,
 html[data-theme="dark"] .wait-control-panel-title,
+html[data-theme="dark"] .wait-control-panel-copy,
+html[data-theme="dark"] .wait-control-room-label,
+html[data-theme="dark"] .summary-chip-metrics,
 html[data-theme="dark"] .summary-chip-mini-state,
 html[data-theme="dark"] .footer-copy,
 html[data-theme="dark"] .footer-legal,
@@ -2529,11 +2553,23 @@ html[data-theme="dark"] .reception-room-action-ready {
 html[data-theme="dark"] .reception-room-action-muted,
 html[data-theme="dark"] .wait-zero {
     background: #1e293b;
-    color: #94a3b8;
+    color: #cbd5e1;
 }
 
 html[data-theme="dark"] .theme-toggle-button {
     color: #fde68a;
+}
+
+html[data-theme="dark"] .wait-adjust-button-dec {
+    border-color: rgba(251, 113, 133, 0.28);
+    background: linear-gradient(180deg, rgba(127, 29, 29, 0.9), rgba(190, 24, 93, 0.88));
+    color: #fecdd3;
+}
+
+html[data-theme="dark"] .wait-adjust-button-inc {
+    border-color: rgba(52, 211, 153, 0.28);
+    background: linear-gradient(180deg, rgba(6, 78, 59, 0.9), rgba(5, 150, 105, 0.88));
+    color: #bbf7d0;
 }
 
 html[data-theme="dark"] .room-dashboard-metric {
@@ -2565,6 +2601,13 @@ html[data-theme="dark"] .room-dashboard-metric-preparing {
 html[data-theme="dark"] .room-dashboard-metric-paused {
     color: #cbd5e1;
     border-color: rgba(148, 163, 184, 0.24);
+}
+
+html[data-theme="dark"] .status-action-active {
+    box-shadow:
+        inset 0 0 0 1px currentColor,
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 16px 26px rgba(2, 6, 23, 0.32);
 }
 
 html[data-theme="dark"] .admin-inline-save-button {
@@ -2637,6 +2680,15 @@ html[data-theme="dark"] .db-event-switch-button {
     color: var(--page-ink);
 }
 
+html[data-theme="dark"] .lane-pause-panel {
+    border-color: rgba(51, 65, 85, 0.92);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(17, 24, 39, 0.92));
+}
+
+html[data-theme="dark"] .lane-pause-label {
+    color: #cbd5e1;
+}
+
 html[data-theme="dark"] .reception-modal-option-row:hover,
 html[data-theme="dark"] .db-event-row:hover {
     background: rgba(30, 41, 59, 0.72);
@@ -2658,6 +2710,12 @@ html[data-theme="dark"] .db-event-current-badge {
 html[data-theme="dark"] .db-switch-panel {
     border-color: rgba(251, 146, 60, 0.18);
     box-shadow: 0 18px 34px rgba(249, 115, 22, 0.08);
+}
+
+html[data-theme="dark"] .ui-button-warm-secondary {
+    border-color: rgba(251, 146, 60, 0.22);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.18), rgba(15, 23, 42, 0.92));
+    color: #fdba74;
 }
 
 html[data-theme="dark"] .members-panel-import {
@@ -2753,7 +2811,7 @@ html[data-theme="dark"] .reception-room-action-ready {
 html[data-theme="dark"] .status-action-idle {
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
     border-color: rgba(148, 163, 184, 0.18);
-    color: #cbd5e1;
+    color: #e2e8f0;
 }
 
 html[data-theme="dark"] .footer-copy a,

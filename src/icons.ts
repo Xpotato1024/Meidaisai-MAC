@@ -18,32 +18,32 @@ function buildUtilityIcon(markup: string, extraClass = ""): string {
 export const STATUS_ICON_SVGS = {
     available: buildStatusIcon(
         "#059669",
-        "#ecfdf5",
+        "#bbf7d0",
         '<path d="M8.1 12.3 10.55 14.75 15.9 9.4" stroke="__ACCENT__" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />'
     ),
     occupied: buildStatusIcon(
         "#e11d48",
-        "#fff1f2",
+        "#fecdd3",
         '<path d="m9.1 9.1 5.8 5.8m0-5.8-5.8 5.8" stroke="__ACCENT__" stroke-width="2.1" stroke-linecap="round" />'
     ),
     preparing: buildStatusIcon(
         "#d97706",
-        "#fffbeb",
+        "#fde68a",
         '<path d="M12 7v3m0 4v3m5-5h-3m-4 0H7m8.05-3.05-2.1 2.1m-1.9 1.9-2.1 2.1m0-6.1 2.1 2.1m1.9 1.9 2.1 2.1" stroke="__ACCENT__" stroke-width="1.8" stroke-linecap="round" />'
     ),
     paused: buildStatusIcon(
         "#475569",
-        "#f1f5f9",
+        "#cbd5e1",
         '<path d="M10 8.35v7.3m4-7.3v7.3" stroke="__ACCENT__" stroke-width="2.1" stroke-linecap="round" />'
     ),
     receptionAvailable: buildStatusIcon(
         "#2563eb",
-        "#eff6ff",
+        "#bfdbfe",
         '<path d="M8 12.2h8m0 0-3.1-3.1M16 12.2l-3.1 3.1" stroke="__ACCENT__" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
     ),
     guiding: buildStatusIcon(
         "#1d4ed8",
-        "#eff6ff",
+        "#bfdbfe",
         '<path d="M7.2 12h6.9m0 0-2.5-2.5m2.5 2.5-2.5 2.5M16.8 8.2v7.6" stroke="__ACCENT__" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round" />'
     )
 };

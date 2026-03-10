@@ -859,8 +859,8 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         ` : "";
         const pauseReasonsOptionsHtml = (config.pauseReasons || []).map((reason) => `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${escapeHtml(reason.name)}</option>`).join("");
         const pauseReasonSelect = `
-            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-xl border border-slate-200/80 bg-slate-50/80 p-4" : "hidden"}">
-                <label for="pause-reason-select-${docId}" class="mb-2 block text-sm font-bold text-slate-700">休止理由</label>
+            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "lane-pause-panel" : "hidden"}">
+                <label for="pause-reason-select-${docId}" class="lane-pause-label">休止理由</label>
                 <select id="pause-reason-select-${docId}" data-action="set-pause-reason" data-docid="${docId}" 
                         class="block w-full px-4 py-3 text-sm">
                     <option value="">--- 理由を選択 ---</option>
