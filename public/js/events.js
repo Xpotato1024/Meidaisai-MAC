@@ -8,6 +8,13 @@ import { approveAccessRequest, rejectAccessRequest, saveAdminSettings, updateAcc
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
 }
+function getClosestButtonTarget(target) {
+    if (!(target instanceof Element)) {
+        return null;
+    }
+    const button = target.closest("button");
+    return button instanceof HTMLButtonElement ? button : null;
+}
 /**
  * 一覧の描画 (検索フィルタ対応)
  */
@@ -310,12 +317,11 @@ export function setupEventListeners(context) {
         renderAllUI(context);
     });
     dom.tabs.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
+        const button = getClosestButtonTarget(event.target);
+        if (!button) {
             return;
         }
-        const button = target.closest("button[data-tab]");
-        if (!button) {
+        if (!button.matches("button[data-tab]")) {
             return;
         }
         if (button.classList.contains("active")) {
@@ -350,12 +356,11 @@ export function setupEventListeners(context) {
     });
     // --- DB管理画面: イベント切替 (イベント移譲) ---
     dom.dbEventList.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
+        const button = getClosestButtonTarget(event.target);
+        if (!button) {
             return;
         }
-        const button = target.closest('button[data-action="switch-app-id"]');
-        if (!button) {
+        if (button.dataset.action !== "switch-app-id") {
             return;
         }
         const targetId = button.dataset.id;
@@ -408,11 +413,7 @@ export function setupEventListeners(context) {
         void copyAndSwitchAppId(context, newId);
     });
     dom.receptionList.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-            return;
-        }
-        const button = target.closest("button");
+        const button = getClosestButtonTarget(event.target);
         if (!button) {
             return;
         }
@@ -469,11 +470,7 @@ export function setupEventListeners(context) {
         renderStaffLaneDashboard(context, target.value);
     });
     dom.staffLaneDashboard.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-            return;
-        }
-        const button = target.closest("button");
+        const button = getClosestButtonTarget(event.target);
         if (!button) {
             return;
         }
@@ -588,11 +585,7 @@ export function setupEventListeners(context) {
     // 管理設定タブ全体のイベントリスナー (イベント移譲)
     // ----------------------------------------------------
     dom.tabAdmin.addEventListener("click", (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) {
-            return;
-        }
-        const button = target.closest("button");
+        const button = getClosestButtonTarget(event.target);
         const actionButton = button?.dataset.action ?? null;
         if (actionButton === "approve-access-request" && button) {
             const uid = button.dataset.uid;
