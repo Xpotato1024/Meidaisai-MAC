@@ -7,6 +7,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        (() => {
+            try {
+                const stored = localStorage.getItem("lineomega-theme");
+                const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                const theme = stored === "dark" || stored === "light" ? stored : (prefersDark ? "dark" : "light");
+                document.documentElement.dataset.theme = theme;
+            } catch (_) {
+                document.documentElement.dataset.theme = "light";
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="./styles.css">
     <script type="importmap">
         {
@@ -38,6 +50,13 @@
                     </div>
                     <div id="header-tabs-shell" class="tabs-menu-shell tabs-menu-shell-hero hidden">
                         <div class="tabs-menu-bar">
+                            <button id="theme-toggle-btn" class="tabs-menu-toggle theme-toggle-button" type="button" aria-label="ダークモード切替" aria-pressed="false">
+                                <span id="theme-toggle-icon" class="inline-flex">
+                                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-xl" aria-hidden="true">
+                                        <path d="M14.8 4.8a6.7 6.7 0 1 0 4.4 11.7A7.4 7.4 0 0 1 14.8 4.8Z" fill="currentColor"></path>
+                                    </svg>
+                                </span>
+                            </button>
                             <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
                                 <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-xl" aria-hidden="true">
                                     <path d="M6.5 8.2h11M6.5 12h11M6.5 15.8h11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>

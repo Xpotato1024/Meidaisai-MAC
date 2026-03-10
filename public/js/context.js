@@ -15,6 +15,8 @@ function createDomRefs() {
     return {
         appShell: requireElement("app-shell"),
         headerTabsShell: requireElement("header-tabs-shell"),
+        themeToggleBtn: requireElement("theme-toggle-btn"),
+        themeToggleIcon: requireElement("theme-toggle-icon"),
         authLoginCard: requireElement("auth-login-card"),
         authPendingCard: requireElement("auth-pending-card"),
         tabsMenuToggle: requireElement("tabs-menu-toggle"),
