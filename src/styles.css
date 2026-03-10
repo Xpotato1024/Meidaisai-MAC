@@ -492,18 +492,34 @@
     }
 
     .room-dashboard-metric {
+        --metric-border: rgba(226, 232, 240, 0.9);
+        --metric-bg: #f8fafc;
+        --metric-text: #475569;
+        --metric-shadow: rgba(15, 23, 42, 0.08);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.3rem;
         border-radius: 9999px;
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        background: #f8fafc;
+        border: 1px solid var(--metric-border);
+        background: var(--metric-bg);
         min-width: 4.15rem;
         padding: 0.28rem 0.52rem;
         font-size: 0.68rem;
         font-weight: 700;
-        color: #475569;
+        color: var(--metric-text);
+        transition: opacity 160ms ease, box-shadow 160ms ease, transform 160ms ease, filter 160ms ease;
+    }
+
+    .room-dashboard-metric.is-zero {
+        opacity: 0.64;
+        filter: saturate(0.78);
+    }
+
+    .room-dashboard-metric.is-active {
+        opacity: 1;
+        box-shadow: 0 10px 20px var(--metric-shadow);
+        transform: translateY(-1px);
     }
 
     .room-dashboard-metric-count {
@@ -512,33 +528,38 @@
     }
 
     .room-dashboard-metric-available {
-        border-color: rgba(5, 150, 105, 0.18);
-        background: #ecfdf5;
-        color: #047857;
+        --metric-border: rgba(5, 150, 105, 0.18);
+        --metric-bg: #ecfdf5;
+        --metric-text: #047857;
+        --metric-shadow: rgba(5, 150, 105, 0.18);
     }
 
     .room-dashboard-metric-guiding {
-        border-color: rgba(37, 99, 235, 0.16);
-        background: #eff6ff;
-        color: #1d4ed8;
+        --metric-border: rgba(37, 99, 235, 0.16);
+        --metric-bg: #eff6ff;
+        --metric-text: #1d4ed8;
+        --metric-shadow: rgba(37, 99, 235, 0.16);
     }
 
     .room-dashboard-metric-occupied {
-        border-color: rgba(225, 29, 72, 0.18);
-        background: #fff1f2;
-        color: #be123c;
+        --metric-border: rgba(225, 29, 72, 0.18);
+        --metric-bg: #fff1f2;
+        --metric-text: #be123c;
+        --metric-shadow: rgba(225, 29, 72, 0.18);
     }
 
     .room-dashboard-metric-preparing {
-        border-color: rgba(217, 119, 6, 0.2);
-        background: #fffbeb;
-        color: #b45309;
+        --metric-border: rgba(217, 119, 6, 0.2);
+        --metric-bg: #fffbeb;
+        --metric-text: #b45309;
+        --metric-shadow: rgba(217, 119, 6, 0.18);
     }
 
     .room-dashboard-metric-paused {
-        border-color: rgba(71, 85, 105, 0.2);
-        background: #f1f5f9;
-        color: #475569;
+        --metric-border: rgba(71, 85, 105, 0.2);
+        --metric-bg: #f1f5f9;
+        --metric-text: #475569;
+        --metric-shadow: rgba(71, 85, 105, 0.14);
     }
 
     .reception-room-action {
