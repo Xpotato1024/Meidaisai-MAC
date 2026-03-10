@@ -472,28 +472,30 @@ function renderReceptionList(context) {
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
-                <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">Room</p>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                        <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                <div class="room-dashboard-header-topline">
+                    <span class="room-dashboard-meta-label">Room</span>
+                    <div class="room-dashboard-metrics room-dashboard-metrics-header">
+                        ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
+                        ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
+                        ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
+                        ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
+                        ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
                     </div>
+                    <span class="room-dashboard-meta-label room-dashboard-meta-label-end">待機</span>
                 </div>
-                <div class="flex flex-col items-end">
-                    <span class="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">待機</span>
+                <div class="room-dashboard-header-main">
+                    <div>
+                        <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                        </div>
+                    </div>
                     <div class="${waitBadgeClass} wait-badge-large">
                         ${waitingGroups > 0 ? `${waitingGroups}組` : "0組"}
                     </div>
                 </div>
             </div>
             <div class="room-dashboard-summary">
-                <div class="room-dashboard-metrics">
-                    ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
-                    ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
-                    ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
-                    ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
-                    ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
-                </div>
                 <div class="room-dashboard-grid room-dashboard-grid-reception">
                     ${laneVisuals.map((lane, index) => `
                         <div class="lane-tile lane-tile-summary ${lane.tileClass}">
