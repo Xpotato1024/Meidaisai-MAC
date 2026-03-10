@@ -1,6 +1,6 @@
 export type RoleId = "admin" | "reception" | "staff";
 export type AccessRequestStatus = "pending" | "approved" | "rejected";
-export type TabId = "reception" | "staff" | "admin" | "database";
+export type TabId = "reception" | "staff" | "admin" | "members" | "database";
 export type AuthorizationSource = "manual" | "roster" | "global";
 
 export interface RoomConfig {
@@ -209,6 +209,7 @@ export interface DomRefs {
     adminAddPauseReasonBtn: HTMLButtonElement;
     adminLaneList: HTMLElement;
     tabAdmin: HTMLElement;
+    tabMembers: HTMLElement;
     roomSummaryBar: HTMLElement;
     lblCurrentAppId: HTMLElement;
     inputNewAppId: HTMLInputElement;

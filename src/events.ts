@@ -723,7 +723,7 @@ export function setupEventListeners(context: AppContext): void {
     // ----------------------------------------------------
     // 管理設定タブ全体のイベントリスナー (イベント移譲)
     // ----------------------------------------------------
-    dom.tabAdmin.addEventListener("click", (event) => {
+    dom.tabMembers.addEventListener("click", (event) => {
         const button = getClosestButtonTarget(event.target);
         const actionButton = button?.dataset.action ?? null;
 
@@ -765,8 +765,12 @@ export function setupEventListeners(context: AppContext): void {
             void updateAccessMember(context, uid, role, isActive, assignedRoomIds);
             return;
         }
+    });
 
-        // --- 既存の処理 (削除系) ---
+    dom.tabAdmin.addEventListener("click", (event) => {
+        const button = getClosestButtonTarget(event.target);
+        const actionButton = button?.dataset.action ?? null;
+
         const id = button?.dataset.id ?? null;
 
         if (actionButton === "delete-room" && id) {

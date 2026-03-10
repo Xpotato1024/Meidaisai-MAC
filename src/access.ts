@@ -17,7 +17,7 @@ export function hasRole(context: AppContext, roles: RoleId[]): boolean {
 }
 
 export function canAccessTab(context: AppContext, tabId: TabId): boolean {
-    if (tabId === "admin" || tabId === "database") {
+    if (tabId === "admin" || tabId === "members" || tabId === "database") {
         return hasRole(context, ["admin"]);
     }
     if (tabId === "reception") {
@@ -30,7 +30,7 @@ export function canAccessTab(context: AppContext, tabId: TabId): boolean {
 }
 
 export function getDefaultTab(context: AppContext): TabId {
-    const candidates: TabId[] = ["staff", "reception", "admin", "database"];
+    const candidates: TabId[] = ["staff", "reception", "admin", "members", "database"];
     return candidates.find((tabId) => canAccessTab(context, tabId)) || "staff";
 }
 

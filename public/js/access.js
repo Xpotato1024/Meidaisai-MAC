@@ -12,7 +12,7 @@ export function hasRole(context, roles) {
     return Boolean(member && member.isActive && roles.includes(member.role));
 }
 export function canAccessTab(context, tabId) {
-    if (tabId === "admin" || tabId === "database") {
+    if (tabId === "admin" || tabId === "members" || tabId === "database") {
         return hasRole(context, ["admin"]);
     }
     if (tabId === "reception") {
@@ -24,7 +24,7 @@ export function canAccessTab(context, tabId) {
     return false;
 }
 export function getDefaultTab(context) {
-    const candidates = ["staff", "reception", "admin", "database"];
+    const candidates = ["staff", "reception", "admin", "members", "database"];
     return candidates.find((tabId) => canAccessTab(context, tabId)) || "staff";
 }
 export function getAllowedRoomIds(context) {

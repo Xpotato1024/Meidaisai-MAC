@@ -23,6 +23,7 @@ const TAB_LABELS: Record<TabId, string> = {
     reception: "受付",
     staff: "レーン担当",
     admin: "管理設定",
+    members: "メンバー管理",
     database: "DB管理"
 };
 

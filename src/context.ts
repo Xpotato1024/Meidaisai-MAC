@@ -72,6 +72,7 @@ function createDomRefs(): DomRefs {
         adminAddPauseReasonBtn: requireElement("admin-add-pause-reason-btn"),
         adminLaneList: requireElement("admin-lane-list"),
         tabAdmin: requireElement("tab-admin"),
+        tabMembers: requireElement("tab-members"),
         roomSummaryBar: requireElement("room-summary-bar"),
         lblCurrentAppId: requireElement("lbl-current-appid"),
         inputNewAppId: requireElement("input-new-app-id"),
