@@ -458,6 +458,7 @@ function renderReceptionList(context) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
+    dom.receptionList.className = "dashboard-grid dashboard-grid-reception-masonry";
     getVisibleRooms(context).forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "room-dashboard-card";

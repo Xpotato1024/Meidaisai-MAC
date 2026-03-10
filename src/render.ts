@@ -538,6 +538,8 @@ function renderReceptionList(context: AppContext): void {
         return;
     }
 
+    dom.receptionList.className = "dashboard-grid dashboard-grid-reception-masonry";
+
     getVisibleRooms(context).forEach((room) => {
         const roomElement = document.createElement("div");
         roomElement.className = "room-dashboard-card";
