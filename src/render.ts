@@ -886,7 +886,7 @@ export function renderStaffLaneDashboard(context: AppContext, selectedRoomId: st
         const roomPicker = document.createElement("div");
         roomPicker.className = "wait-control-room";
         roomPicker.innerHTML = `
-            <div class="wait-control-panel-title">担当する部屋</div>
+            <div class="wait-control-panel-title">操作する部屋</div>
         `;
         dom.staffRoomSelect.className = "wait-control-select";
         roomPicker.appendChild(dom.staffRoomSelect);
