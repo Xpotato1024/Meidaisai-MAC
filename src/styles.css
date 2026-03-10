@@ -100,7 +100,7 @@
 
     .hero-panel {
         position: relative;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background:
@@ -132,6 +132,8 @@
     .hero-kicker {
         display: inline-flex;
         align-items: center;
+        width: fit-content;
+        max-width: max-content;
         border: 1px solid rgba(255, 255, 255, 0.24);
         padding: 0.24rem 0.64rem;
         font-size: 10px;
@@ -436,6 +438,44 @@
         right: 0;
         width: min(16rem, calc(100vw - 2rem));
         z-index: 50;
+    }
+
+    @media (max-width: 767px) {
+        .hero-panel {
+            border-radius: 12px;
+        }
+
+        .hero-kicker {
+            padding: 0.22rem 0.48rem;
+            font-size: 9px;
+            letter-spacing: 0.18em;
+        }
+
+        .tabs-menu-shell-hero {
+            min-width: 0;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-bar {
+            gap: 0.55rem;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-labels {
+            gap: 0.06rem;
+            padding-top: 0;
+        }
+
+        .tabs-menu-shell-hero .tabs-menu-label {
+            font-size: 0.82rem;
+            line-height: 1.1;
+        }
+
+        .tabs-menu-shell-hero .tab-shell {
+            right: 0;
+            left: auto;
+            width: min(14rem, calc(100vw - 1.5rem));
+            max-height: calc(100vh - 6rem);
+            overflow-y: auto;
+        }
     }
 
     .tab-shell.hidden {
