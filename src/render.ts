@@ -146,6 +146,21 @@ function getReceptionRoomLaneVisuals(roomState: ReturnType<typeof normalizeRoomS
     return visuals.slice(0, totalLanes);
 }
 
+function buildReceptionMetricMarkup(
+    label: string,
+    count: number,
+    variantClass: string,
+    icon: string
+): string {
+    const emphasisClass = count > 0 ? "is-active" : "is-zero";
+    return `
+        <span class="room-dashboard-metric ${variantClass} ${emphasisClass}" title="${label} ${count}" aria-label="${label} ${count}">
+            <span class="inline-flex">${icon}</span>
+            <span class="room-dashboard-metric-count">${count}</span>
+        </span>
+    `;
+}
+
 function getPendingWaitingGroupDelta(context: AppContext, roomId: string): number {
     const localTarget = context.state.waitingGroupLocalTargets[roomId];
     if (typeof localTarget === "number") {
@@ -554,26 +569,11 @@ function renderReceptionList(context: AppContext): void {
             </div>
             <div class="room-dashboard-summary">
                 <div class="room-dashboard-metrics">
-                    <span class="room-dashboard-metric room-dashboard-metric-available" title="空き ${availableLanes}" aria-label="空き ${availableLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
-                        <span class="room-dashboard-metric-count">${availableLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric room-dashboard-metric-guiding" title="案内中 ${guidingLanes}" aria-label="案内中 ${guidingLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.guiding}</span>
-                        <span class="room-dashboard-metric-count">${guidingLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric room-dashboard-metric-occupied" title="使用中 ${occupiedLanes}" aria-label="使用中 ${occupiedLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.occupied}</span>
-                        <span class="room-dashboard-metric-count">${occupiedLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric room-dashboard-metric-preparing" title="準備中 ${preparingLanes}" aria-label="準備中 ${preparingLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.preparing}</span>
-                        <span class="room-dashboard-metric-count">${preparingLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric room-dashboard-metric-paused" title="休止中 ${pausedLanes}" aria-label="休止中 ${pausedLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.paused}</span>
-                        <span class="room-dashboard-metric-count">${pausedLanes}</span>
-                    </span>
+                    ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
+                    ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
+                    ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
+                    ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
+                    ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
                 </div>
                 <div class="room-dashboard-grid room-dashboard-grid-reception">
                     ${laneVisuals.map((lane, index) => `
