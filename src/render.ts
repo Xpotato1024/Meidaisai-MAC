@@ -1164,7 +1164,7 @@ export function renderAdminLaneNames(context: AppContext): void {
 
             const roomGroupElement = document.createElement("div");
             roomGroupElement.className = "mb-3";
-            roomGroupElement.innerHTML = `<h4 class="font-medium text-gray-800 mb-2">${room.name}</h4>`;
+            roomGroupElement.innerHTML = `<h4 class="admin-lane-room-title mb-2">${room.name}</h4>`;
 
             const lanesList = document.createElement("div");
             lanesList.className = "space-y-2 pl-2";
@@ -1179,7 +1179,7 @@ export function renderAdminLaneNames(context: AppContext): void {
                             class="admin-inline-input flex-grow sm:text-sm" 
                             placeholder="カスタム名 (例: 小学生レーン)">
                     <button data-action="save-custom-name" data-docid="${lane.docId}" 
-                            class="admin-inline-save-button">
+                            class="ui-button ui-button-primary admin-inline-save-button">
                         <span class="inline-flex">${UI_ICON_SVGS.save}</span>保存
                     </button>
                 `;

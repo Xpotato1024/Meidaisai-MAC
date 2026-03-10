@@ -2058,6 +2058,12 @@ html[data-theme="dark"] {
         gap: 0.25rem;
     }
 
+    .admin-lane-room-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #334155;
+    }
+
     .admin-inline-input {
         min-height: 2.35rem;
         padding: 0.55rem 0.75rem;
@@ -2071,13 +2077,9 @@ html[data-theme="dark"] {
         gap: 0.4rem;
         min-height: 2.2rem;
         border-radius: 10px;
-        border: 1px solid rgba(37, 99, 235, 0.2);
-        background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
         padding: 0.55rem 0.8rem;
         font-size: 0.76rem;
         font-weight: 700;
-        color: #f8fafc;
-        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.16);
     }
 
     .admin-inline-save-button.is-saved {
@@ -2097,6 +2099,135 @@ html[data-theme="dark"] {
         border: 1px solid var(--border-strong);
         background: #ffffff;
         box-shadow: 0 22px 48px rgba(15, 23, 42, 0.18);
+    }
+
+    .db-event-table {
+        border-color: rgba(148, 163, 184, 0.18);
+        background: rgba(255, 255, 255, 0.88);
+    }
+
+    .db-event-table-header {
+        border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.94));
+    }
+
+    .db-event-list {
+        background: rgba(255, 255, 255, 0.88);
+    }
+
+    .db-event-empty {
+        padding: 1rem;
+        text-align: center;
+        font-size: 0.875rem;
+        color: #94a3b8;
+    }
+
+    .db-event-row {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+        background: transparent;
+        transition: background-color 160ms ease, border-color 160ms ease;
+    }
+
+    .db-event-row:hover {
+        background: rgba(248, 250, 252, 0.9);
+    }
+
+    .db-event-row.is-current {
+        background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(219, 234, 254, 0.92));
+    }
+
+    .db-event-cell {
+        min-width: 0;
+        padding-right: 0.5rem;
+    }
+
+    .db-event-cell-app,
+    .db-event-cell-summary,
+    .db-event-cell-actions {
+        width: 33.333%;
+    }
+
+    .db-event-cell-actions {
+        text-align: right;
+    }
+
+    .db-event-appid {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .db-event-summary {
+        font-size: 0.75rem;
+        color: #475569;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .db-event-meta,
+    .db-event-date,
+    .db-event-selected-label {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .db-event-date {
+        margin-bottom: 0.28rem;
+    }
+
+    .db-event-switch-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 1.9rem;
+        border-radius: 9px;
+        border: 1px solid rgba(37, 99, 235, 0.24);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.96));
+        padding: 0.28rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #2563eb;
+    }
+
+    .db-event-current-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        padding: 0.2rem 0.5rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #ecfdf5;
+    }
+
+    .auth-pending-surface {
+        border-color: rgba(245, 158, 11, 0.2);
+        background: linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(255, 247, 237, 0.94));
+    }
+
+    .members-panel {
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .db-switch-panel {
+        box-shadow: 0 16px 32px rgba(249, 115, 22, 0.1);
+    }
+
+    .db-current-appid-badge {
+        border: 1px solid rgba(251, 146, 60, 0.28);
+    }
+
+    .db-backup-card {
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
     }
 
     .footer-panel {
@@ -2223,7 +2354,13 @@ html[data-theme="dark"] .admin-layout-editor-end-drop,
 html[data-theme="dark"] .app-surface,
 html[data-theme="dark"] .app-surface-strong,
 html[data-theme="dark"] .summary-panel,
-html[data-theme="dark"] .wait-control-card {
+html[data-theme="dark"] .wait-control-card,
+html[data-theme="dark"] .lane-card,
+html[data-theme="dark"] .db-event-table,
+html[data-theme="dark"] .db-event-list,
+html[data-theme="dark"] .db-backup-card,
+html[data-theme="dark"] .members-panel,
+html[data-theme="dark"] .auth-pending-surface {
     border-color: var(--border-strong);
     background: var(--surface-strong);
     color: var(--page-ink);
@@ -2241,7 +2378,16 @@ html[data-theme="dark"] .footer-title,
 html[data-theme="dark"] .tab-button.active,
 html[data-theme="dark"] .reception-modal-lane-name,
 html[data-theme="dark"] .lane-tile-number,
-html[data-theme="dark"] .admin-layout-editor-room-name {
+html[data-theme="dark"] .admin-layout-editor-room-name,
+html[data-theme="dark"] .admin-lane-room-title,
+html[data-theme="dark"] .db-event-appid,
+html[data-theme="dark"] #tab-database h3,
+html[data-theme="dark"] #tab-database h4,
+html[data-theme="dark"] #tab-admin h3,
+html[data-theme="dark"] #tab-members h3,
+html[data-theme="dark"] #reception-modal-title,
+html[data-theme="dark"] #auth-login-card h2,
+html[data-theme="dark"] #auth-pending-card h2 {
     color: var(--page-ink);
 }
 
@@ -2259,7 +2405,11 @@ html[data-theme="dark"] .admin-layout-editor-room-meta,
 html[data-theme="dark"] .admin-layout-editor-field,
 html[data-theme="dark"] .admin-layout-editor-card-span,
 html[data-theme="dark"] .reception-modal-section-title,
-html[data-theme="dark"] .reception-modal-option-row {
+html[data-theme="dark"] .reception-modal-option-row,
+html[data-theme="dark"] .db-event-summary,
+html[data-theme="dark"] .db-event-meta,
+html[data-theme="dark"] .db-event-date,
+html[data-theme="dark"] .db-event-selected-label {
     color: var(--page-copy);
 }
 
@@ -2303,10 +2453,149 @@ html[data-theme="dark"] .admin-inline-save-button {
     border-color: rgba(96, 165, 250, 0.28);
 }
 
+html[data-theme="dark"] .admin-inline-save-button.is-saved {
+    background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+    color: #ecfdf5;
+    border-color: rgba(52, 211, 153, 0.26);
+}
+
 html[data-theme="dark"] .admin-delete-button {
     background: linear-gradient(180deg, rgba(127, 29, 29, 0.96), rgba(190, 24, 93, 0.9));
     color: #ffe4e6;
     border-color: rgba(251, 113, 133, 0.22);
+}
+
+html[data-theme="dark"] .room-dashboard-header,
+html[data-theme="dark"] .db-event-table-header,
+html[data-theme="dark"] .lane-card,
+html[data-theme="dark"] .wait-control-card,
+html[data-theme="dark"] .db-switch-panel {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.94));
+}
+
+html[data-theme="dark"] .admin-layout-editor-preview-tile,
+html[data-theme="dark"] .admin-layout-editor-card-handle,
+html[data-theme="dark"] .reception-modal-options,
+html[data-theme="dark"] .reception-modal-selection-count,
+html[data-theme="dark"] .lane-current-status,
+html[data-theme="dark"] .info-strip-options,
+html[data-theme="dark"] .info-strip-notes,
+html[data-theme="dark"] .wait-control-panel,
+html[data-theme="dark"] .wait-adjust-button,
+html[data-theme="dark"] .wait-counter-card,
+html[data-theme="dark"] .lane-tile-note,
+html[data-theme="dark"] .lane-tile-badge,
+html[data-theme="dark"] .db-current-appid-badge,
+html[data-theme="dark"] .db-event-switch-button {
+    border-color: var(--border-strong);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.9));
+    color: var(--page-ink);
+}
+
+html[data-theme="dark"] .reception-modal-option-row:hover,
+html[data-theme="dark"] .db-event-row:hover {
+    background: rgba(30, 41, 59, 0.72);
+}
+
+html[data-theme="dark"] .db-event-row {
+    border-bottom-color: rgba(51, 65, 85, 0.9);
+}
+
+html[data-theme="dark"] .db-event-row.is-current {
+    background: linear-gradient(180deg, rgba(30, 64, 175, 0.28), rgba(15, 23, 42, 0.88));
+}
+
+html[data-theme="dark"] .db-event-current-badge {
+    background: linear-gradient(135deg, #047857, #10b981);
+    color: #ecfdf5;
+}
+
+html[data-theme="dark"] .db-switch-panel {
+    border-color: rgba(251, 146, 60, 0.18);
+    box-shadow: 0 18px 34px rgba(249, 115, 22, 0.08);
+}
+
+html[data-theme="dark"] .members-panel-import {
+    border-color: rgba(16, 185, 129, 0.2);
+    background: linear-gradient(180deg, rgba(6, 78, 59, 0.22), rgba(15, 23, 42, 0.94));
+}
+
+html[data-theme="dark"] .members-panel-pending {
+    border-color: rgba(245, 158, 11, 0.22);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.24), rgba(15, 23, 42, 0.94));
+}
+
+html[data-theme="dark"] .members-panel-active {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+}
+
+html[data-theme="dark"] .auth-pending-surface {
+    border-color: rgba(245, 158, 11, 0.18);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.22), rgba(15, 23, 42, 0.94));
+}
+
+html[data-theme="dark"] .db-backup-card-export {
+    border-color: rgba(96, 165, 250, 0.16);
+    background: linear-gradient(180deg, rgba(30, 64, 175, 0.22), rgba(15, 23, 42, 0.94));
+}
+
+html[data-theme="dark"] .db-backup-card-import {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
+}
+
+html[data-theme="dark"] #admin-lane-list {
+    background: rgba(15, 23, 42, 0.76);
+}
+
+html[data-theme="dark"] .lane-card-header,
+html[data-theme="dark"] .room-dashboard-header,
+html[data-theme="dark"] .footer-panel {
+    border-bottom-color: rgba(51, 65, 85, 0.9);
+    border-top-color: rgba(51, 65, 85, 0.9);
+}
+
+html[data-theme="dark"] .lane-current-status-available,
+html[data-theme="dark"] .status-available,
+html[data-theme="dark"] .tile-available,
+html[data-theme="dark"] .reception-modal-lane-card-available {
+    border-color: rgba(52, 211, 153, 0.24);
+    background: linear-gradient(180deg, rgba(6, 78, 59, 0.22), rgba(15, 23, 42, 0.92));
+    color: #86efac;
+}
+
+html[data-theme="dark"] .lane-current-status-occupied,
+html[data-theme="dark"] .status-occupied,
+html[data-theme="dark"] .tile-occupied,
+html[data-theme="dark"] .reception-modal-lane-card-occupied {
+    border-color: rgba(251, 113, 133, 0.24);
+    background: linear-gradient(180deg, rgba(127, 29, 29, 0.24), rgba(15, 23, 42, 0.92));
+    color: #fda4af;
+}
+
+html[data-theme="dark"] .lane-current-status-preparing,
+html[data-theme="dark"] .status-preparing,
+html[data-theme="dark"] .tile-preparing,
+html[data-theme="dark"] .reception-modal-lane-card-preparing {
+    border-color: rgba(251, 191, 36, 0.24);
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.22), rgba(15, 23, 42, 0.92));
+    color: #fcd34d;
+}
+
+html[data-theme="dark"] .lane-current-status-paused,
+html[data-theme="dark"] .status-paused,
+html[data-theme="dark"] .tile-paused,
+html[data-theme="dark"] .reception-modal-lane-card-paused {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.96), rgba(15, 23, 42, 0.92));
+    color: #cbd5e1;
+}
+
+html[data-theme="dark"] .tile-guiding,
+html[data-theme="dark"] .reception-modal-lane-card-guiding,
+html[data-theme="dark"] .reception-room-action-ready {
+    border-color: rgba(96, 165, 250, 0.26);
+    background: linear-gradient(180deg, rgba(30, 64, 175, 0.28), rgba(15, 23, 42, 0.92));
+    color: #bfdbfe;
 }
 
 @media (min-width: 768px) {
