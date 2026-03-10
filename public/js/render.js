@@ -2,7 +2,7 @@ import { collection, getDocs, query, where } from "https://www.gstatic.com/fireb
 import { canAccessTab, canManageRoom, getDefaultTab, getVisibleRooms, hasApprovedAccess, hasRole, ROLE_LABELS } from "./access.js";
 import { renderReceptionLayoutEditor } from "./admin-layout-editor.js";
 import { STATUS_ICON_SVGS, UI_ICON_SVGS } from "./icons.js";
-import { getReceptionRoomLayout, normalizeReceptionLayoutConfig, sortRoomsByReceptionLayout } from "./reception-layout.js";
+import { getReceptionCardGridSpan, getReceptionRoomLayout, normalizeReceptionLayoutConfig, sortRoomsByReceptionLayout } from "./reception-layout.js";
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { updateReceptionStatus } from "./writes.js";
 const TAB_LABELS = {
@@ -466,8 +466,7 @@ function renderReceptionList(context) {
         const roomElement = document.createElement("div");
         const roomLayout = getReceptionRoomLayout(config.receptionLayout, config.rooms, room.id);
         roomElement.className = "room-dashboard-card";
-        roomElement.style.setProperty("--room-card-span", String(roomLayout.w));
-        roomElement.style.order = String((roomLayout.y * 100) + roomLayout.x);
+        roomElement.style.setProperty("--room-card-span", String(getReceptionCardGridSpan(roomLayout.widthRatio)));
         roomElement.style.setProperty("--lane-grid-columns-mobile", String(Math.min(roomLayout.tileColumns, 2)));
         roomElement.style.setProperty("--lane-grid-columns-desktop", String(roomLayout.tileColumns));
         const roomState = getRoomStateSnapshot(context, room.id, room.lanes);

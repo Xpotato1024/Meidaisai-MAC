@@ -30,10 +30,12 @@ export interface NamedOption {
 
 export interface ReceptionRoomLayout {
     roomId: string;
-    x: number;
-    y: number;
-    w: number;
+    order: number;
+    widthRatio: number;
     tileColumns: number;
+    x?: number;
+    y?: number;
+    w?: number;
 }
 
 export interface ReceptionLayoutConfig {
