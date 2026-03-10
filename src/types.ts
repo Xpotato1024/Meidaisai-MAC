@@ -218,9 +218,9 @@ export interface AppState {
     selfAccessRequest: AccessRequest | null;
     accessMembersCache: AccessMember[];
     accessRequestsCache: AccessRequest[];
-    waitingGroupQueuedDeltas: Record<string, number>;
-    waitingGroupInFlightDeltas: Record<string, number>;
-    waitingGroupAwaitingSnapshotDeltas: Record<string, number>;
+    waitingGroupLocalTargets: Record<string, number>;
+    waitingGroupInFlightTargets: Record<string, number>;
+    waitingGroupSyncTimers: Record<string, number>;
     waitingGroupSyncInFlight: Record<string, boolean>;
     isDbMigrating: boolean;
     registryCache: RegistryItem[];

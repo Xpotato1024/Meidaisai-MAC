@@ -9,22 +9,23 @@ function getRoomLaneCount(context, roomId) {
     return context.state.dynamicAppConfig.rooms.find((room) => room.id === roomId)?.lanes
         || Number(context.state.currentRoomState[roomId]?.totalLanes || 0);
 }
-function getWaitingGroupDelta(record, roomId) {
-    return Number(record[roomId] || 0);
+function getWaitingGroupValue(record, roomId) {
+    return typeof record[roomId] === "number" ? Number(record[roomId]) : undefined;
 }
-function setWaitingGroupDelta(record, roomId, value) {
-    if (value === 0) {
+function setWaitingGroupValue(record, roomId, value) {
+    if (typeof value !== "number" || Number.isNaN(value)) {
         delete record[roomId];
         return;
     }
-    record[roomId] = value;
+    record[roomId] = Math.max(0, Math.floor(value));
 }
 function getDisplayedWaitingGroups(context, roomId) {
+    const localTarget = getWaitingGroupValue(context.state.waitingGroupLocalTargets, roomId);
+    if (typeof localTarget === "number") {
+        return Math.max(0, localTarget);
+    }
     const baseWaitingGroups = Number(context.state.currentRoomState[roomId]?.waitingGroups || 0);
-    const pendingDelta = getWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId)
-        + getWaitingGroupDelta(context.state.waitingGroupInFlightDeltas, roomId)
-        + getWaitingGroupDelta(context.state.waitingGroupAwaitingSnapshotDeltas, roomId);
-    return Math.max(0, baseWaitingGroups + pendingDelta);
+    return Math.max(0, baseWaitingGroups);
 }
 function normalizeLaneData(rawData) {
     return {
@@ -303,65 +304,73 @@ export async function updateWaitingGroups(context, roomId, delta) {
     }
     const currentWaitingGroups = getDisplayedWaitingGroups(context, roomId);
     const nextWaitingGroups = Math.max(0, currentWaitingGroups + delta);
-    const boundedDelta = nextWaitingGroups - currentWaitingGroups;
-    if (boundedDelta === 0) {
+    if (nextWaitingGroups === currentWaitingGroups) {
         return;
     }
-    setWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId, getWaitingGroupDelta(context.state.waitingGroupQueuedDeltas, roomId) + boundedDelta);
+    setWaitingGroupValue(context.state.waitingGroupLocalTargets, roomId, nextWaitingGroups);
     scheduleRender(context);
-    void flushWaitingGroupSync(context, roomId);
+    scheduleWaitingGroupSync(context, roomId);
+}
+export function scheduleWaitingGroupSync(context, roomId, delayMs = 120) {
+    const existingTimer = getWaitingGroupValue(context.state.waitingGroupSyncTimers, roomId);
+    if (typeof existingTimer === "number") {
+        window.clearTimeout(existingTimer);
+    }
+    const timerId = window.setTimeout(() => {
+        delete context.state.waitingGroupSyncTimers[roomId];
+        void flushWaitingGroupSync(context, roomId);
+    }, delayMs);
+    context.state.waitingGroupSyncTimers[roomId] = timerId;
 }
 export async function flushWaitingGroupSync(context, roomId) {
     const { db, paths, state } = context;
     if (state.waitingGroupSyncInFlight[roomId]) {
         return;
     }
-    if (getWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId) !== 0) {
+    const targetWaitingGroups = getWaitingGroupValue(state.waitingGroupLocalTargets, roomId);
+    if (typeof targetWaitingGroups !== "number") {
         return;
     }
-    const queuedDelta = getWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId);
-    if (queuedDelta === 0) {
+    const liveWaitingGroups = Number(state.currentRoomState[roomId]?.waitingGroups || 0);
+    if (targetWaitingGroups === liveWaitingGroups) {
+        delete state.waitingGroupLocalTargets[roomId];
+        delete state.waitingGroupInFlightTargets[roomId];
+        scheduleRender(context);
         return;
     }
-    setWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId, 0);
-    setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, queuedDelta);
     state.waitingGroupSyncInFlight[roomId] = true;
-    scheduleRender(context);
+    setWaitingGroupValue(state.waitingGroupInFlightTargets, roomId, targetWaitingGroups);
     try {
         const roomLaneCount = getRoomLaneCount(context, roomId);
         const docRef = doc(db, paths.roomStateCollectionPath, roomId);
-        const didMutate = await runTransaction(db, async (transaction) => {
+        await runTransaction(db, async (transaction) => {
             const roomStateSnap = await transaction.get(docRef);
             const currentRoomState = roomStateSnap.exists()
                 ? normalizeRoomStateData(roomStateSnap.data(), roomLaneCount)
                 : createEmptyRoomState(roomLaneCount);
-            const nextWaitingGroups = Math.max(0, Number(currentRoomState.waitingGroups || 0) + queuedDelta);
-            if (nextWaitingGroups === Number(currentRoomState.waitingGroups || 0)) {
+            if (targetWaitingGroups === Number(currentRoomState.waitingGroups || 0)) {
                 return false;
             }
             transaction.set(docRef, {
                 ...currentRoomState,
-                waitingGroups: nextWaitingGroups,
+                waitingGroups: targetWaitingGroups,
                 totalLanes: roomLaneCount,
                 updatedAt: serverTimestamp()
             }, { merge: true });
             return true;
         });
-        setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, 0);
-        setWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId, didMutate ? queuedDelta : 0);
-        scheduleRender(context);
     }
     catch (error) {
-        setWaitingGroupDelta(state.waitingGroupInFlightDeltas, roomId, 0);
-        scheduleRender(context);
         console.error("Failed to update waiting groups:", error);
     }
     finally {
         delete state.waitingGroupSyncInFlight[roomId];
-        if (getWaitingGroupDelta(state.waitingGroupQueuedDeltas, roomId) !== 0
-            && getWaitingGroupDelta(state.waitingGroupAwaitingSnapshotDeltas, roomId) === 0) {
-            void flushWaitingGroupSync(context, roomId);
+        const latestTarget = getWaitingGroupValue(state.waitingGroupLocalTargets, roomId);
+        if (typeof latestTarget === "number" && latestTarget !== getWaitingGroupValue(state.waitingGroupInFlightTargets, roomId)) {
+            scheduleWaitingGroupSync(context, roomId, 0);
+            return;
         }
+        delete state.waitingGroupInFlightTargets[roomId];
     }
 }
 // ★新規追加: イベント情報をレジストリに書き込む関数
