@@ -171,10 +171,7 @@ service cloud.firestore {
       allow create, update: if isGlobalRoot()
         && request.resource.data.uid == uid
         && request.resource.data.isActive == true
-        && (
-          request.resource.data.role == 'root'
-          || request.resource.data.role == 'admin'
-        );
+        && request.resource.data.role == 'root';
       allow delete: if false;
     }
 
