@@ -449,17 +449,37 @@
         align-items: start;
     }
 
-    .dashboard-grid-reception-masonry {
-        display: block;
-        column-width: 320px;
-        column-gap: 1rem;
+    .dashboard-grid-reception-layout {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .dashboard-grid-reception-masonry > * {
-        display: inline-block;
-        width: 100%;
-        margin: 0 0 1rem;
-        break-inside: avoid;
+    .room-dashboard-card-span-4,
+    .room-dashboard-card-span-6,
+    .room-dashboard-card-span-8,
+    .room-dashboard-card-span-12 {
+        grid-column: span 1;
+    }
+
+    @media (min-width: 980px) {
+        .dashboard-grid-reception-layout {
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+
+        .room-dashboard-card-span-4 {
+            grid-column: span 4;
+        }
+
+        .room-dashboard-card-span-6 {
+            grid-column: span 6;
+        }
+
+        .room-dashboard-card-span-8 {
+            grid-column: span 8;
+        }
+
+        .room-dashboard-card-span-12 {
+            grid-column: span 12;
+        }
     }
 
     .room-dashboard-card {
@@ -505,7 +525,38 @@
 
     .room-dashboard-grid-reception {
         padding: 0;
-        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+        grid-template-columns: repeat(var(--lane-grid-columns-mobile, 2), minmax(0, 1fr));
+    }
+
+    .room-dashboard-grid-reception-cols-1 {
+        --lane-grid-columns-mobile: 1;
+        --lane-grid-columns-desktop: 1;
+    }
+
+    .room-dashboard-grid-reception-cols-2 {
+        --lane-grid-columns-mobile: 2;
+        --lane-grid-columns-desktop: 2;
+    }
+
+    .room-dashboard-grid-reception-cols-3 {
+        --lane-grid-columns-mobile: 2;
+        --lane-grid-columns-desktop: 3;
+    }
+
+    .room-dashboard-grid-reception-cols-4 {
+        --lane-grid-columns-mobile: 2;
+        --lane-grid-columns-desktop: 4;
+    }
+
+    .room-dashboard-grid-reception-cols-5 {
+        --lane-grid-columns-mobile: 2;
+        --lane-grid-columns-desktop: 5;
+    }
+
+    @media (min-width: 980px) {
+        .room-dashboard-grid-reception {
+            grid-template-columns: repeat(var(--lane-grid-columns-desktop, 3), minmax(0, 1fr));
+        }
     }
 
     .room-dashboard-summary {

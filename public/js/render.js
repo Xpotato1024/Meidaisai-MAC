@@ -126,6 +126,33 @@ function buildReceptionMetricMarkup(label, count, variantClass, icon) {
         </span>
     `;
 }
+function getReceptionCardSpanClass(totalLanes) {
+    if (totalLanes >= 12) {
+        return "room-dashboard-card-span-12";
+    }
+    if (totalLanes >= 8) {
+        return "room-dashboard-card-span-8";
+    }
+    if (totalLanes >= 5) {
+        return "room-dashboard-card-span-6";
+    }
+    return "room-dashboard-card-span-4";
+}
+function getReceptionLaneGridClass(totalLanes) {
+    if (totalLanes >= 12) {
+        return "room-dashboard-grid-reception-cols-5";
+    }
+    if (totalLanes >= 8) {
+        return "room-dashboard-grid-reception-cols-4";
+    }
+    if (totalLanes >= 3) {
+        return "room-dashboard-grid-reception-cols-3";
+    }
+    if (totalLanes === 2) {
+        return "room-dashboard-grid-reception-cols-2";
+    }
+    return "room-dashboard-grid-reception-cols-1";
+}
 function getPendingWaitingGroupDelta(context, roomId) {
     const localTarget = context.state.waitingGroupLocalTargets[roomId];
     if (typeof localTarget === "number") {
@@ -458,10 +485,10 @@ function renderReceptionList(context) {
         dom.receptionList.innerHTML = '<div class="app-surface col-span-full px-6 py-10 text-center text-slate-500">部屋設定がありません。「管理設定」で部屋を登録してください。</div>';
         return;
     }
-    dom.receptionList.className = "dashboard-grid dashboard-grid-reception-masonry";
+    dom.receptionList.className = "dashboard-grid dashboard-grid-reception-layout";
     getVisibleRooms(context).forEach((room) => {
         const roomElement = document.createElement("div");
-        roomElement.className = "room-dashboard-card";
+        roomElement.className = `room-dashboard-card ${getReceptionCardSpanClass(room.lanes)}`;
         const roomState = getRoomStateSnapshot(context, room.id, room.lanes);
         const waitingGroups = Number(roomState.waitingGroups || 0);
         const availableLanes = Number(roomState.availableLanes || 0);
@@ -494,7 +521,7 @@ function renderReceptionList(context) {
                 </div>
             </div>
             <div class="room-dashboard-summary">
-                <div class="room-dashboard-grid room-dashboard-grid-reception">
+                <div class="room-dashboard-grid room-dashboard-grid-reception ${getReceptionLaneGridClass(room.lanes)}">
                     ${laneVisuals.map((lane, index) => `
                         <div class="lane-tile lane-tile-summary ${lane.tileClass}">
                             <span class="lane-tile-number">レーン ${index + 1}</span>
