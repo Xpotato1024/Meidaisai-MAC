@@ -2,6 +2,7 @@ import { collection, doc, documentId, getDocs, onSnapshot, query, where } from "
 import { getAllowedRoomIds, hasRole } from "./access.js";
 import { APP_CONFIG } from "./default-config.js";
 import { cloneConfig } from "./context.js";
+import { UI_ICON_SVGS } from "./icons.js";
 import { normalizeReceptionLayoutConfig } from "./reception-layout.js";
 import { normalizeRoomStateData } from "./room-state.js";
 import { scheduleRender, updateGlobalHeader } from "./render.js";
@@ -42,12 +43,26 @@ function mergeNamedCollection(defaults, currentValue) {
 }
 function normalizeConfig(rawConfig) {
     const rooms = Array.isArray(rawConfig.rooms) ? rawConfig.rooms : APP_CONFIG.rooms;
+    const laneStatuses = mergeNamedCollection(APP_CONFIG.laneStatuses, rawConfig.laneStatuses)
+        .map((status) => {
+        const fallback = APP_CONFIG.laneStatuses.find((item) => item.id === status.id);
+        return fallback
+            ? { ...status, icon: fallback.icon, colorClass: fallback.colorClass }
+            : status;
+    });
+    const receptionStatuses = mergeNamedCollection(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses)
+        .map((status) => {
+        const fallback = APP_CONFIG.receptionStatuses.find((item) => item.id === status.id);
+        return fallback
+            ? { ...status, icon: fallback.icon, colorClass: fallback.colorClass }
+            : status;
+    });
     return {
         ...APP_CONFIG,
         ...rawConfig,
         rooms,
-        laneStatuses: mergeNamedCollection(APP_CONFIG.laneStatuses, rawConfig.laneStatuses),
-        receptionStatuses: mergeNamedCollection(APP_CONFIG.receptionStatuses, rawConfig.receptionStatuses),
+        laneStatuses,
+        receptionStatuses,
         pauseReasons: mergeNamedCollection(APP_CONFIG.pauseReasons, rawConfig.pauseReasons),
         options: Array.isArray(rawConfig.options) ? rawConfig.options : APP_CONFIG.options,
         receptionLayout: normalizeReceptionLayoutConfig(rawConfig.receptionLayout, rooms)
@@ -264,7 +279,7 @@ function listenToAccessMembersChanges(context) {
 }
 export async function fetchRegistryItems(context) {
     const { db, dom, paths, state } = context;
-    dom.dbEventList.innerHTML = '<p class="p-4 text-center text-gray-400 text-sm"><i class="fa-solid fa-spinner fa-spin"></i> 読み込み中...</p>';
+    dom.dbEventList.innerHTML = `<p class="p-4 text-center text-gray-400 text-sm"><span class="inline-flex align-middle text-slate-500">${UI_ICON_SVGS.spinner}</span><span class="ml-2 align-middle">読み込み中...</span></p>`;
     try {
         const snapshotQuery = query(collection(db, paths.registryCollectionPath));
         const querySnapshot = await getDocs(snapshotQuery);

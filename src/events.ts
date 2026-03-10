@@ -9,6 +9,7 @@ import {
 import { canAccessTab, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
 import { fetchRegistryItems } from "./firestore.js";
+import { UI_ICON_SVGS } from "./icons.js";
 import { importMemberDirectoryFromFile } from "./member-directory-writes.js";
 import { openReceptionRoomModal, renderAdminSettings, renderAllUI, renderStaffLaneDashboard } from "./render.js";
 import { showToast } from "./toast.js";
@@ -45,7 +46,7 @@ function renderEventList(context: AppContext, dataList: RegistryItem[]): void {
     const { currentAppId, dom } = context;
 
     if (dataList.length === 0) {
-        dom.dbEventList.innerHTML = '<p class="p-4 text-center text-gray-400 text-sm">イベントが見つかりません。設定を保存するとここに表示されます。</p>';
+        dom.dbEventList.innerHTML = '<p class="db-event-empty">イベントが見つかりません。設定を保存するとここに表示されます。</p>';
         return;
     }
 
@@ -54,30 +55,30 @@ function renderEventList(context: AppContext, dataList: RegistryItem[]): void {
     dataList.forEach((item) => {
         const isCurrent = item.appId === currentAppId;
         const row = document.createElement("div");
-        row.className = `px-4 py-3 flex items-center border-b border-gray-100 hover:bg-gray-50 transition ${isCurrent ? "bg-blue-50" : ""}`;
+        row.className = `db-event-row ${isCurrent ? "is-current" : ""}`;
 
         row.innerHTML = `
-            <div class="w-1/3 pr-2">
-                <div class="font-bold text-gray-800 text-sm truncate" title="${item.appId}">
+            <div class="db-event-cell db-event-cell-app">
+                <div class="db-event-appid" title="${item.appId}">
                     ${item.appId}
-                    ${isCurrent ? '<span class="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">現在の選択</span>' : ""}
+                    ${isCurrent ? '<span class="db-event-current-badge">現在の選択</span>' : ""}
                 </div>
             </div>
-            <div class="w-1/3 pr-2">
-                <div class="text-xs text-gray-600 truncate" title="${item.roomSummary || ""}">
+            <div class="db-event-cell db-event-cell-summary">
+                <div class="db-event-summary" title="${item.roomSummary || ""}">
                     ${item.roomSummary || ""}
                 </div>
-                <div class="text-xs text-gray-400">
+                <div class="db-event-meta">
                     計 ${item.totalLanes || 0} レーン
                 </div>
             </div>
-            <div class="w-1/3 text-right">
-                <div class="text-xs text-gray-500 mb-1">${item.dateStr || ""}</div>
+            <div class="db-event-cell db-event-cell-actions">
+                <div class="db-event-date">${item.dateStr || ""}</div>
                 ${!isCurrent ? `
-                    <button data-action="switch-app-id" data-id="${item.appId}" class="text-xs px-2 py-1 bg-white border border-blue-500 text-blue-600 rounded hover:bg-blue-50">
+                    <button data-action="switch-app-id" data-id="${item.appId}" class="db-event-switch-button">
                         切替
                     </button>
-                ` : '<span class="text-xs text-gray-400">選択中</span>'}
+                ` : '<span class="db-event-selected-label">選択中</span>'}
             </div>
         `;
         dom.dbEventList.appendChild(row);
@@ -287,7 +288,7 @@ async function copyAndSwitchAppId(context: AppContext, newId: string): Promise<v
 
     const originalHtml = dom.btnCopySwitch.innerHTML;
     dom.btnCopySwitch.disabled = true;
-    dom.btnCopySwitch.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 複製中...';
+    dom.btnCopySwitch.innerHTML = `<span class="mr-2 inline-flex">${UI_ICON_SVGS.spinner}</span>複製中...`;
 
     try {
         // --- データの読み出し (Copy Source) ---

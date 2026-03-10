@@ -10,6 +10,7 @@ import {
     packReceptionRoomLayout,
     RECEPTION_LAYOUT_EDITOR_GAP_PX
 } from "./reception-layout.js";
+import { UI_ICON_SVGS } from "./icons.js";
 import type { ReceptionLayoutConfig, ReceptionRoomLayout, RoomConfig } from "./types.js";
 
 interface ReceptionLayoutEditorProps {
@@ -292,7 +293,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                                         onDragStart={(event) => handleDragStart(item.roomId, event)}
                                         onDragEnd={clearDragState}
                                     >
-                                        <span className="inline-flex"><i className="fa-solid fa-grip-vertical"></i></span>
+                                        <span className="inline-flex" dangerouslySetInnerHTML={{ __html: UI_ICON_SVGS.grip }} />
                                         <span>移動</span>
                                     </div>
                                     <span className="admin-layout-editor-card-span">幅 {formatReceptionWidthRatio(item.widthRatio)}</span>

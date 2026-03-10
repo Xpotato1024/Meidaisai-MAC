@@ -1,7 +1,9 @@
 import { setupAuthListener } from "./auth.js";
 import { createAppContext } from "./context.js";
+import { initializeThemeToggle } from "./theme.js";
 
 const context = createAppContext();
+initializeThemeToggle(context);
 
 // --- アプリケーションの開始 ---
 (() => {

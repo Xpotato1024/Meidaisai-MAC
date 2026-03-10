@@ -123,10 +123,7 @@ function setChevronToggleState(button, expanded) {
 }
 function setMenuToggleState(button, expanded) {
     button.setAttribute("aria-expanded", String(expanded));
-    const icon = button.querySelector("i");
-    if (icon) {
-        icon.className = `fa-solid fa-${expanded ? "xmark" : "bars"}`;
-    }
+    button.innerHTML = expanded ? UI_ICON_SVGS.close : UI_ICON_SVGS.menu;
 }
 // --- UI描画 (Render) ---
 export function scheduleRender(context) {
@@ -261,23 +258,23 @@ function renderAccessManagement(context) {
     }
     else {
         dom.adminAccessRequestList.innerHTML = pendingRequests.map((request) => `
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm" data-request-card data-uid="${request.uid}">
+            <div class="member-request-card" data-request-card data-uid="${request.uid}">
                 <div class="mb-3">
-                    <p class="text-sm font-bold text-slate-800">${escapeHtml(request.displayName || "名称未設定")}</p>
-                    <p class="text-xs text-slate-500">${escapeHtml(request.email || request.uid)}</p>
+                    <p class="member-card-name">${escapeHtml(request.displayName || "名称未設定")}</p>
+                    <p class="member-card-email">${escapeHtml(request.email || request.uid)}</p>
                 </div>
                 <div class="grid gap-3">
-                    <label class="text-xs font-bold text-slate-600">
+                    <label class="member-card-label">
                         付与ロール
-                        <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
+                        <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
                             ${getRoleOptions("staff")}
                         </select>
                     </label>
                     <div class="flex flex-wrap gap-2">
-                        <button data-action="approve-access-request" data-uid="${request.uid}" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
+                        <button data-action="approve-access-request" data-uid="${request.uid}" class="ui-button ui-button-success member-card-action">
                             承認
                         </button>
-                        <button data-action="reject-access-request" data-uid="${request.uid}" class="rounded-md bg-rose-600 px-4 py-2 text-sm font-bold text-white hover:bg-rose-700">
+                        <button data-action="reject-access-request" data-uid="${request.uid}" class="ui-button member-card-action member-card-action-danger">
                             却下
                         </button>
                     </div>
@@ -290,30 +287,30 @@ function renderAccessManagement(context) {
         return;
     }
     dom.adminMemberList.innerHTML = state.accessMembersCache.map((member) => `
-        <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-member-card data-uid="${member.uid}">
+        <div class="member-access-card" data-member-card data-uid="${member.uid}">
             <div class="mb-3 flex items-start justify-between gap-3">
                 <div>
-                    <p class="flex flex-wrap items-center gap-2 text-sm font-bold text-slate-800">
+                    <p class="member-card-name flex flex-wrap items-center gap-2">
                         ${escapeHtml(member.displayName || "名称未設定")}
                         ${state.userId === member.uid ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
                         ${getAuthorizationSourceBadge(member)}
                         ${member.grade ? `<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">${escapeHtml(member.grade)}</span>` : ""}
                     </p>
-                    <p class="text-xs text-slate-500">${escapeHtml(member.email || member.uid)}</p>
+                    <p class="member-card-email">${escapeHtml(member.email || member.uid)}</p>
                 </div>
-                <label class="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                <label class="member-card-label inline-flex items-center gap-2">
                     <input type="checkbox" data-active-input data-uid="${member.uid}" ${member.isActive ? "checked" : ""}>
                     有効
                 </label>
             </div>
             <div class="grid gap-3">
-                <label class="text-xs font-bold text-slate-600">
+                <label class="member-card-label">
                     ロール
-                    <select class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
+                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
                         ${getRoleOptions(member.role)}
                     </select>
                 </label>
-                <button data-action="save-access-member" data-uid="${member.uid}" class="rounded-md bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700">
+                <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action">
                     権限を保存
                 </button>
             </div>
@@ -623,7 +620,7 @@ export async function openReceptionRoomModal(context, roomId) {
 
             <button
                 id="reception-modal-start-btn"
-                class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                class="ui-button ui-button-primary ui-button-block reception-modal-submit disabled:cursor-not-allowed disabled:opacity-50"
                 ${selectedLaneIds.size > 0 ? "" : "disabled"}>
                 <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>選択レーンを案内中にする
             </button>
@@ -663,7 +660,7 @@ export async function openReceptionRoomModal(context, roomId) {
                     return;
                 }
                 startButton.disabled = true;
-                startButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 処理中...';
+                startButton.innerHTML = `<span class="mr-2 inline-flex">${UI_ICON_SVGS.spinner}</span>処理中...`;
                 const results = await Promise.all(targetLaneIds.map((laneId) => updateReceptionStatus(context, laneId, "guiding", null, selectedOptions, receptionNotes.trim() || null, true)));
                 const failedCount = results.filter((result) => !result).length;
                 if (failedCount > 0) {
@@ -718,11 +715,11 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
     if (!selectedRoomId) {
         dom.staffLaneDashboard.innerHTML = getVisibleRooms(context).length === 0
             ? '<div class="app-surface px-6 py-10 text-center text-slate-500">操作できる部屋がありません。管理設定で部屋を確認してください。</div>'
-            : '<div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから担当する部屋を選択してください。</div>';
+            : '<div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから操作する部屋を選択してください。</div>';
         return;
     }
     if (!canManageRoom(context, selectedRoomId)) {
-        dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。割り当て設定を確認してください。</div>';
+        dom.staffLaneDashboard.innerHTML = '<div class="app-surface px-6 py-10 text-center text-slate-500">この部屋は操作できません。権限設定を確認してください。</div>';
         return;
     }
     const selectedRoom = config.rooms.find((room) => room.id === selectedRoomId);
@@ -760,7 +757,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         const roomPicker = document.createElement("div");
         roomPicker.className = "wait-control-room";
         roomPicker.innerHTML = `
-            <div class="wait-control-panel-title">担当する部屋</div>
+            <div class="wait-control-panel-title">操作する部屋</div>
         `;
         dom.staffRoomSelect.className = "wait-control-select";
         roomPicker.appendChild(dom.staffRoomSelect);
@@ -799,7 +796,7 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
             receptionStatusDisplay = "受付状態: お客様 案内中";
             arrivalButton = `
                 <button data-action="confirm-arrival" data-docid="${docId}"
-                        class="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
+                        class="ui-button ui-button-success ui-button-block">
                     <span class="mr-2 inline-flex">${UI_ICON_SVGS.arrival}</span>お客様 到着確認
                 </button>
             `;
@@ -862,8 +859,8 @@ export function renderStaffLaneDashboard(context, selectedRoomId) {
         ` : "";
         const pauseReasonsOptionsHtml = (config.pauseReasons || []).map((reason) => `<option value="${reason.id}" ${laneData.pauseReasonId === reason.id ? "selected" : ""}>${escapeHtml(reason.name)}</option>`).join("");
         const pauseReasonSelect = `
-            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "rounded-xl border border-slate-200/80 bg-slate-50/80 p-4" : "hidden"}">
-                <label for="pause-reason-select-${docId}" class="mb-2 block text-sm font-bold text-slate-700">休止理由</label>
+            <div id="pause-reason-div-${docId}" class="${laneData.status === "paused" ? "lane-pause-panel" : "hidden"}">
+                <label for="pause-reason-select-${docId}" class="lane-pause-label">休止理由</label>
                 <select id="pause-reason-select-${docId}" data-action="set-pause-reason" data-docid="${docId}" 
                         class="block w-full px-4 py-3 text-sm">
                     <option value="">--- 理由を選択 ---</option>
@@ -919,22 +916,22 @@ export function renderAdminSettings(context) {
     }
     config.rooms.forEach((room) => {
         const roomElement = document.createElement("div");
-        roomElement.className = "flex items-center gap-2 p-2 bg-gray-50 rounded hover:bg-gray-100 transition";
+        roomElement.className = "admin-inline-row";
         roomElement.innerHTML = `
             <input type="text" data-action="edit-room-name" data-id="${room.id}" value="${room.name}" 
-                   class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                   class="admin-inline-input flex-grow min-w-0 sm:text-sm"
                    placeholder="部屋名">
             
-            <div class="flex items-center flex-shrink-0">
-                <span class="text-xs text-gray-500 mr-1 hidden sm:inline">レーン数:</span>
+            <div class="admin-inline-meta flex items-center flex-shrink-0">
+                <span class="text-xs text-slate-500 mr-1 hidden sm:inline">レーン数:</span>
                 <input type="number" data-action="edit-room-lanes" data-id="${room.id}" value="${room.lanes}" min="1" 
-                       class="w-12 sm:w-16 px-1 sm:px-2 py-1 border border-gray-300 rounded-md sm:text-sm text-center focus:ring-indigo-500 focus:border-indigo-500">
+                       class="admin-inline-input w-12 sm:w-16 px-1 sm:px-2 sm:text-sm text-center">
             </div>
 
             <button data-action="delete-room" data-id="${room.id}" 
                     class="admin-delete-button ml-1 sm:ml-2"
                     title="削除">
-                <i class="fa-solid fa-trash"></i>
+                ${UI_ICON_SVGS.trash}
             </button>
         `;
         dom.adminRoomList.appendChild(roomElement);
@@ -945,11 +942,11 @@ export function renderAdminSettings(context) {
     }
     config.options.forEach((option) => {
         const optionElement = document.createElement("div");
-        optionElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
+        optionElement.className = "admin-inline-row";
         optionElement.innerHTML = `
-            <input type="text" data-action="edit-option-name" data-id="${option.id}" value="${option.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
+            <input type="text" data-action="edit-option-name" data-id="${option.id}" value="${option.name}" class="admin-inline-input flex-grow min-w-0 sm:text-sm">
             <button data-action="delete-option" data-id="${option.id}" class="admin-delete-button">
-                <i class="fa-solid fa-trash"></i>
+                ${UI_ICON_SVGS.trash}
             </button>
         `;
         dom.adminOptionsList.appendChild(optionElement);
@@ -960,11 +957,11 @@ export function renderAdminSettings(context) {
     }
     config.pauseReasons.forEach((reason) => {
         const reasonElement = document.createElement("div");
-        reasonElement.className = "flex items-center space-x-2 p-2 bg-gray-50 rounded";
+        reasonElement.className = "admin-inline-row";
         reasonElement.innerHTML = `
-            <input type="text" data-action="edit-pause-reason-name" data-id="${reason.id}" value="${reason.name}" class="flex-grow min-w-0 px-2 py-1 border border-gray-300 rounded-md sm:text-sm">
+            <input type="text" data-action="edit-pause-reason-name" data-id="${reason.id}" value="${reason.name}" class="admin-inline-input flex-grow min-w-0 sm:text-sm">
             <button data-action="delete-pause-reason" data-id="${reason.id}" class="admin-delete-button">
-                <i class="fa-solid fa-trash"></i>
+                ${UI_ICON_SVGS.trash}
             </button>
         `;
         dom.adminPauseReasonsList.appendChild(reasonElement);
@@ -1004,21 +1001,21 @@ export function renderAdminLaneNames(context) {
         }
         const roomGroupElement = document.createElement("div");
         roomGroupElement.className = "mb-3";
-        roomGroupElement.innerHTML = `<h4 class="font-medium text-gray-800 mb-2">${room.name}</h4>`;
+        roomGroupElement.innerHTML = `<h4 class="admin-lane-room-title mb-2">${room.name}</h4>`;
         const lanesList = document.createElement("div");
         lanesList.className = "space-y-2 pl-2";
         roomLanes.forEach((lane) => {
             const laneElement = document.createElement("div");
-            laneElement.className = "flex items-center space-x-2";
+            laneElement.className = "admin-inline-row admin-inline-row-tight";
             laneElement.innerHTML = `
-                    <label class="w-20 text-sm text-gray-600">レーン ${lane.data.laneNum}:</label>
+                    <label class="w-20 text-sm text-slate-600">レーン ${lane.data.laneNum}:</label>
                     <input type="text" data-action="edit-custom-name" data-docid="${lane.docId}" 
                             value="${lane.data.customName || ""}" 
-                            class="flex-grow px-2 py-1 border border-gray-300 rounded-md sm:text-sm" 
+                            class="admin-inline-input flex-grow sm:text-sm" 
                             placeholder="カスタム名 (例: 小学生レーン)">
                     <button data-action="save-custom-name" data-docid="${lane.docId}" 
-                            class="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xs font-medium">
-                        保存
+                            class="ui-button ui-button-primary admin-inline-save-button">
+                        <span class="inline-flex">${UI_ICON_SVGS.save}</span>保存
                     </button>
                 `;
             lanesList.appendChild(laneElement);

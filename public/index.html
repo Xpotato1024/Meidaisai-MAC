@@ -7,7 +7,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        (() => {
+            try {
+                const stored = localStorage.getItem("lineomega-theme");
+                const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                const theme = stored === "dark" || stored === "light" ? stored : (prefersDark ? "dark" : "light");
+                document.documentElement.dataset.theme = theme;
+            } catch (_) {
+                document.documentElement.dataset.theme = "light";
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="./styles.css">
     <script type="importmap">
         {
@@ -39,9 +50,20 @@
                     </div>
                     <div id="header-tabs-shell" class="tabs-menu-shell tabs-menu-shell-hero hidden">
                         <div class="tabs-menu-bar">
-                            <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
-                                <i class="fa-solid fa-bars"></i>
-                            </button>
+                            <span class="tabs-menu-controls">
+                                <button id="theme-toggle-btn" class="tabs-menu-toggle theme-toggle-button" type="button" aria-label="ダークモード切替" aria-pressed="false">
+                                    <span id="theme-toggle-icon" class="inline-flex">
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-xl" aria-hidden="true">
+                                            <path d="M14.8 4.8a6.7 6.7 0 1 0 4.4 11.7A7.4 7.4 0 0 1 14.8 4.8Z" fill="currentColor"></path>
+                                        </svg>
+                                    </span>
+                                </button>
+                                <button id="tabs-menu-toggle" class="tabs-menu-toggle" type="button" aria-expanded="false" aria-controls="tabs" aria-label="メニューを開く">
+                                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-xl" aria-hidden="true">
+                                        <path d="M6.5 8.2h11M6.5 12h11M6.5 15.8h11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+                                    </svg>
+                                </button>
+                            </span>
                             <span class="tabs-menu-labels">
                                 <span class="tabs-menu-kicker">Navigation</span>
                                 <span id="tabs-menu-label" class="tabs-menu-label">レーン担当</span>
@@ -102,10 +124,18 @@
                                     <div id="auth-user-name" class="text-sm font-bold">未ログイン</div>
                                     <div id="auth-user-email" class="text-xs text-slate-300">アクセス権が必要です</div>
                                 </div>
-                                <button id="auth-sign-in-btn" class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-lg shadow-slate-950/10 hover:bg-slate-100">
-                                    <i class="fa-brands fa-google"></i> Googleでログイン
+                                <button id="auth-sign-in-btn" class="ui-button ui-button-hero">
+                                    <span class="inline-flex">
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                            <path d="M20.2 12.3c0-.72-.06-1.22-.18-1.74H12v3.02h4.7c-.1.75-.66 1.88-1.9 2.64l-.02.1 2.76 2.1.2.02c1.81-1.64 2.86-4.04 2.86-6.14Z" fill="#4285F4"></path>
+                                            <path d="M12 20.5c2.3 0 4.22-.74 5.62-2.02l-2.94-2.22c-.78.54-1.82.92-2.68.92-2.24 0-4.14-1.46-4.82-3.48l-.1.01-2.87 2.18-.03.1C5.57 18.7 8.55 20.5 12 20.5Z" fill="#34A853"></path>
+                                            <path d="M7.18 13.7A5.19 5.19 0 0 1 6.9 12c0-.6.1-1.17.26-1.7l-.01-.11-2.9-2.21-.1.04A8.3 8.3 0 0 0 3.3 12c0 1.4.34 2.72.95 3.88l2.93-2.18Z" fill="#FBBC05"></path>
+                                            <path d="M12 6.82c1.1 0 2.08.37 2.86 1.08l2.09-2.02C15.74 4.78 14.3 4 12 4 8.55 4 5.57 5.8 4.15 8.49l3.02 2.28c.7-2.02 2.58-3.95 4.83-3.95Z" fill="#EA4335"></path>
+                                        </svg>
+                                    </span>
+                                    Googleでログイン
                                 </button>
-                                <button id="auth-sign-out-btn" class="hidden rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-slate-100 hover:bg-white/10">
+                                <button id="auth-sign-out-btn" class="ui-button ui-button-subtle hidden text-slate-100 border-white/15 bg-white/5 hover:bg-white/10">
                                     ログアウト
                                 </button>
                             </div>
@@ -128,7 +158,7 @@
             </p>
         </div>
 
-        <div id="auth-pending-card" class="app-surface mt-5 hidden border border-amber-200/70 bg-amber-50/80 p-6 shadow-[0_24px_60px_rgba(245,158,11,0.12)]">
+        <div id="auth-pending-card" class="app-surface auth-pending-surface mt-5 hidden border border-amber-200/70 bg-amber-50/80 p-6 shadow-[0_24px_60px_rgba(245,158,11,0.12)]">
             <p class="pill-eyebrow bg-amber-100/80 text-amber-700">Pending</p>
             <h2 class="mt-3 text-2xl font-black tracking-tight text-amber-950">承認待ち</h2>
             <p id="auth-pending-message" class="mt-3 text-sm leading-7 text-amber-900">
@@ -160,7 +190,12 @@
                     </div>
                     <div id="reception-list" class="dashboard-grid">
                         <div class="app-surface px-6 py-10 text-center text-slate-500">
-                            <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+                            <span class="inline-flex text-slate-500">
+                                <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-xl icon-spin" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="2" opacity=".22"></circle>
+                                    <path d="M12 5a7 7 0 0 1 6.1 3.55" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                </svg>
+                            </span>
                             <p class="mt-3">データベースから設定を読み込んでいます...</p>
                         </div>
                     </div>
@@ -180,7 +215,7 @@
                     </div>
 
                     <div id="staff-lane-dashboard" class="mt-6 space-y-6">
-                        <div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから担当する部屋を選択してください。</div>
+                        <div class="app-surface px-6 py-10 text-center text-slate-500">上部のセレクトから操作する部屋を選択してください。</div>
                     </div>
                 </div>
 
@@ -195,7 +230,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">イベント基本設定</h3>
                             <p class="mt-1 text-sm text-slate-500">画面上部に表示されるイベント名を設定します。</p>
-                            <div class="mt-4 flex flex-col gap-2 rounded-2xl bg-slate-50/80 p-4 md:flex-row md:items-center">
+                            <div class="admin-form-row mt-4 flex flex-col gap-2 rounded-2xl bg-slate-50/80 p-4 md:flex-row md:items-center">
                                 <label for="admin-event-name-input" class="w-32 text-sm font-bold text-slate-700">イベント表示名</label>
                                 <input type="text" id="admin-event-name-input" class="min-w-0 flex-1 px-4 py-3 text-sm" placeholder="例: 2026年度 明大祭">
                             </div>
@@ -210,8 +245,13 @@
                             <div class="mt-4 flex flex-col gap-2 md:flex-row">
                                 <input type="text" id="admin-new-room-input" class="min-w-0 flex-1 px-4 py-3 text-sm" placeholder="新しい部屋名 (例: D部屋)">
                                 <input type="number" id="admin-new-room-lanes-input" class="w-full px-4 py-3 text-center text-sm md:w-24" placeholder="レーン" min="1" value="1">
-                                <button id="admin-add-room-btn" class="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700">
-                                    <i class="fa-solid fa-plus mr-2"></i> 部屋追加
+                                <button id="admin-add-room-btn" class="ui-button ui-button-primary">
+                                    <span class="inline-flex">
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                            <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+                                        </svg>
+                                    </span>
+                                    部屋追加
                                 </button>
                             </div>
 
@@ -234,8 +274,13 @@
                             <div id="admin-options-list" class="mt-4 space-y-2"></div>
                             <div class="mt-4 flex flex-col gap-2 md:flex-row">
                                 <input type="text" id="admin-new-option-input" class="min-w-0 flex-1 px-4 py-3 text-sm" placeholder="新しいオプション名 (例: プランD)">
-                                <button id="admin-add-option-btn" class="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700">
-                                    <i class="fa-solid fa-plus mr-2"></i> オプション追加
+                                <button id="admin-add-option-btn" class="ui-button ui-button-primary">
+                                    <span class="inline-flex">
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                            <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+                                        </svg>
+                                    </span>
+                                    オプション追加
                                 </button>
                             </div>
                         </div>
@@ -248,8 +293,13 @@
                             <div id="admin-pause-reasons-list" class="mt-4 space-y-2"></div>
                             <div class="mt-4 flex flex-col gap-2 md:flex-row">
                                 <input type="text" id="admin-new-pause-reason-input" class="min-w-0 flex-1 px-4 py-3 text-sm" placeholder="新しい休止理由 (例: 機材トラブル)">
-                                <button id="admin-add-pause-reason-btn" class="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700">
-                                    <i class="fa-solid fa-plus mr-2"></i> 理由追加
+                                <button id="admin-add-pause-reason-btn" class="ui-button ui-button-primary">
+                                    <span class="inline-flex">
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                            <path d="M12 7.5v9M7.5 12h9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+                                        </svg>
+                                    </span>
+                                    理由追加
                                 </button>
                             </div>
                         </div>
@@ -259,7 +309,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">レーン名カスタム設定</h3>
                             <p class="mt-1 text-sm text-slate-500">各レーンに固有の名前を設定できます。</p>
-                            <div id="admin-lane-list" class="mt-4 max-h-96 space-y-4 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-4">
+                            <div id="admin-lane-list" class="admin-lane-list mt-4 max-h-96 space-y-4 overflow-y-auto rounded-[1.4rem] bg-slate-50/80 p-4">
                                 <p class="text-sm text-slate-400">レーン情報を読み込み中です...</p>
                             </div>
                         </div>
@@ -267,8 +317,15 @@
                         <hr class="border-slate-200/80">
 
                         <div>
-                            <button id="admin-save-settings-btn" class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-600 hover:to-teal-700">
-                                <i class="fa-solid fa-save mr-2"></i> 各種設定を保存
+                            <button id="admin-save-settings-btn" class="ui-button ui-button-primary ui-button-block ui-button-large">
+                                <span class="inline-flex">
+                                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                        <path d="M7.3 5.5h8.3l2 2v11H6.4v-13Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+                                        <path d="M9 5.5v4.3h5.4V5.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"></path>
+                                        <path d="M9.1 15.4h5.8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"></path>
+                                    </svg>
+                                </span>
+                                各種設定を保存
                             </button>
                             <p id="admin-save-status" class="mt-3 h-4 text-center text-sm"></p>
                         </div>
@@ -286,15 +343,21 @@
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">名簿インポート</h3>
                             <p class="mt-1 text-sm text-slate-500">Google スプレッドシートから出力した CSV の `名前`, `Gmail`, `学年` を取り込みます。role はこのタブで付与してください。</p>
-                            <div class="mt-4 rounded-[1.4rem] border border-emerald-200 bg-emerald-50/90 p-4 shadow-sm shadow-emerald-100/50">
+                            <div class="members-panel members-panel-import mt-4 rounded-[1.4rem] border border-emerald-200 bg-emerald-50/90 p-4 shadow-sm shadow-emerald-100/50">
                                 <input type="file" id="admin-directory-import-file" class="hidden" accept=".csv,text/csv">
                                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div class="text-sm leading-6 text-emerald-900">
                                         <p class="font-bold">名簿登録済みの Gmail はログイン時に自動承認されます。</p>
                                         <p>名簿外の技術者や dev 用アカウントは、この下の承認待ちリクエストから手動承認してください。</p>
                                     </div>
-                                    <button id="admin-directory-import-btn" class="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-700">
-                                        <i class="fa-solid fa-file-arrow-up mr-2"></i> CSVを取り込む
+                                    <button id="admin-directory-import-btn" class="ui-button ui-button-primary">
+                                        <span class="inline-flex">
+                                            <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                                <path d="M8 4.8h6l3 3v10.4a1.8 1.8 0 0 1-1.8 1.8H8a1.8 1.8 0 0 1-1.8-1.8V6.6A1.8 1.8 0 0 1 8 4.8Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path>
+                                                <path d="M12 15.3V9.1m0 0 2.2 2.2M12 9.1l-2.2 2.2" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg>
+                                        </span>
+                                        CSVを取り込む
                                     </button>
                                 </div>
                                 <p id="admin-directory-import-status" class="mt-3 text-sm text-emerald-700">今年度名簿をまだ読み込んでいません。</p>
@@ -308,14 +371,14 @@
                             <p class="mt-1 text-sm text-slate-500">Google ログイン済みメンバーの承認、role 付与、有効化設定を行います。名簿外の特別アカウントはここで手動承認します。</p>
 
                             <div class="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-2">
-                                <div class="rounded-[1.4rem] border border-amber-200 bg-amber-50/85 p-4 shadow-sm">
+                                <div class="members-panel members-panel-pending rounded-[1.4rem] border border-amber-200 bg-amber-50/85 p-4 shadow-sm">
                                     <h4 class="mb-3 text-sm font-bold text-amber-900">承認待ちリクエスト</h4>
                                     <div id="admin-access-request-list" class="space-y-3">
                                         <p class="text-sm text-amber-700">承認待ちメンバーを読み込み中です...</p>
                                     </div>
                                 </div>
 
-                                <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
+                                <div class="members-panel members-panel-active rounded-[1.4rem] border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
                                     <h4 class="mb-3 text-sm font-bold text-slate-900">登録済みメンバー</h4>
                                     <div id="admin-member-list" class="space-y-3">
                                         <p class="text-sm text-slate-500">メンバー一覧を読み込み中です...</p>
@@ -341,22 +404,27 @@
                             <div class="mt-4 flex flex-col gap-2 md:flex-row">
                                 <div class="relative flex-1">
                                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                                        <i class="fa-solid fa-search"></i>
+                                        <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                            <circle cx="10.4" cy="10.4" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                                            <path d="m14 14 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                                        </svg>
                                     </span>
                                     <input type="text" id="db-search-input" class="w-full pl-11 pr-4 py-3 text-sm" placeholder="イベントIDや部屋名で検索...">
                                 </div>
-                                <button id="db-refresh-btn" class="rounded-2xl bg-slate-100 px-4 py-3 text-slate-600 hover:bg-slate-200">
-                                    <i class="fa-solid fa-rotate"></i>
+                                <button id="db-refresh-btn" class="ui-button ui-button-secondary ui-button-icon" aria-label="再読み込み">
+                                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                        <path d="M17.1 10.1A5.4 5.4 0 0 0 7.7 8.4M6.9 13.9a5.4 5.4 0 0 0 9.4 1.7M16.8 7.4v2.9h-2.9M7.2 16.6v-2.9h2.9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    </svg>
                                 </button>
                             </div>
 
-                            <div class="mt-4 overflow-hidden rounded-[1.4rem] border border-slate-200/80">
-                                <div class="flex bg-slate-50/90 px-4 py-3 text-xs font-bold text-slate-500">
+                            <div class="db-event-table mt-4 overflow-hidden rounded-[1.4rem] border border-slate-200/80">
+                                <div class="db-event-table-header flex px-4 py-3 text-xs font-bold text-slate-500">
                                     <div class="w-1/3">イベントID (App ID)</div>
                                     <div class="w-1/3">情報 (部屋数など)</div>
                                     <div class="w-1/3 text-right">最終更新 / 操作</div>
                                 </div>
-                                <div id="db-event-list" class="max-h-64 divide-y divide-slate-100 overflow-y-auto bg-white/80">
+                                <div id="db-event-list" class="db-event-list max-h-64 divide-y divide-slate-100 overflow-y-auto bg-white/80">
                                     <p class="p-4 text-center text-sm text-slate-400">データを読み込み中...</p>
                                 </div>
                             </div>
@@ -364,12 +432,18 @@
 
                         <hr class="border-slate-200/80">
 
-                        <div class="rounded-[1.5rem] border border-orange-200 bg-orange-50/90 p-5 shadow-sm">
+                        <div class="db-switch-panel rounded-[1.5rem] border border-orange-200 bg-orange-50/90 p-5 shadow-sm">
                             <h3 class="text-lg font-bold text-orange-900">
-                                <i class="fa-solid fa-signature mr-1"></i> イベントID (App ID) の変更・新規作成
+                                <span class="mr-1 inline-flex align-middle text-orange-700">
+                                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                        <path d="M5.8 16.8c1.7-2.7 3.1-4 4.3-4 .92 0 1.14.87 1.83.87 1 0 1.65-2.6 3.2-2.6 1 0 1.7.86 2.28 2.55" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        <path d="M5.8 19h12.4" stroke="currentColor" stroke-width="1.65" stroke-linecap="round"></path>
+                                    </svg>
+                                </span>
+                                イベントID (App ID) の変更・新規作成
                             </h3>
                             <p class="mt-2 text-sm text-orange-700">
-                                現在表示しているイベント（<span class="rounded bg-white px-2 py-1 font-mono text-orange-900" id="lbl-current-appid"></span>）を操作します。
+                                現在表示しているイベント（<span class="db-current-appid-badge rounded bg-white px-2 py-1 font-mono text-orange-900" id="lbl-current-appid"></span>）を操作します。
                             </p>
 
                             <div class="mt-4 flex flex-col gap-4 md:flex-row md:items-end">
@@ -379,12 +453,23 @@
                                 </div>
 
                                 <div class="flex w-full gap-2 md:w-auto">
-                                    <button id="btn-switch-only" class="flex-1 rounded-2xl border border-orange-300 bg-white px-4 py-3 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-100 md:flex-none">
-                                        <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> 空で移動
+                                    <button id="btn-switch-only" class="ui-button ui-button-warm-secondary flex-1 md:flex-none">
+                                        <span class="inline-flex">
+                                            <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                                <path d="M5.5 6.6h4.2m0 0L8.1 5m1.6 1.6L8.1 8.2M18.5 17.4h-4.2m0 0 1.6 1.6m-1.6-1.6 1.6-1.6M7.8 12h8.4" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg>
+                                        </span>
+                                        空で移動
                                     </button>
 
-                                    <button id="btn-copy-switch" class="flex-1 rounded-2xl bg-orange-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-orange-500/20 hover:bg-orange-700 md:flex-none">
-                                        <i class="fa-solid fa-copy mr-2"></i> コピーして移動
+                                    <button id="btn-copy-switch" class="ui-button ui-button-warm flex-1 md:flex-none">
+                                        <span class="inline-flex">
+                                            <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                                                <rect x="8.1" y="7.1" width="8.8" height="10.2" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"></rect>
+                                                <path d="M7.2 14.8H6.5a1.9 1.9 0 0 1-1.9-1.9V6.5a1.9 1.9 0 0 1 1.9-1.9h6.4A1.9 1.9 0 0 1 14.8 6v.7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+                                            </svg>
+                                        </span>
+                                        コピーして移動
                                     </button>
                                 </div>
                             </div>
@@ -400,20 +485,20 @@
                         <div>
                             <h3 class="text-lg font-bold text-slate-900">設定バックアップ・復元</h3>
                             <div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <div class="rounded-[1.4rem] border border-indigo-100 bg-indigo-50/90 p-4">
-                                    <h4 class="font-bold text-indigo-800"><i class="fa-solid fa-file-export mr-1"></i> エクスポート (保存)</h4>
+                                <div class="db-backup-card db-backup-card-export rounded-[1.4rem] border border-indigo-100 bg-indigo-50/90 p-4">
+                                    <h4 class="font-bold text-indigo-800"><span class="mr-1 inline-flex align-middle text-indigo-700"><svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true"><path d="M12 5.7v8.1m0-8.1 2.8 2.8M12 5.7 9.2 8.5M6.7 15.8v1.1c0 .74.6 1.35 1.35 1.35h7.9c.75 0 1.35-.61 1.35-1.35v-1.1" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg></span> エクスポート (保存)</h4>
                                     <p class="mt-2 text-xs leading-6 text-indigo-600">現在の設定をJSONファイルとしてダウンロードします。ファイル名には日時が自動付与されます。</p>
-                                    <button id="db-export-btn" class="mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-700">
+                                    <button id="db-export-btn" class="ui-button ui-button-primary ui-button-block mt-4">
                                         設定をダウンロード
                                     </button>
                                 </div>
 
-                                <div class="rounded-[1.4rem] border border-slate-200 bg-slate-50/90 p-4">
-                                    <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-import mr-1"></i> インポート (復元)</h4>
+                                <div class="db-backup-card db-backup-card-import rounded-[1.4rem] border border-slate-200 bg-slate-50/90 p-4">
+                                    <h4 class="font-bold text-slate-800"><span class="mr-1 inline-flex align-middle text-slate-700"><svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true"><path d="M12 18.3v-8.1m0 8.1 2.8-2.8M12 18.3l-2.8-2.8M6.7 8.2V7.1c0-.74.6-1.35 1.35-1.35h7.9c.75 0 1.35.61 1.35 1.35v1.1" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"></path></svg></span> インポート (復元)</h4>
                                     <p class="mt-2 text-xs leading-6 text-slate-600">バックアップファイルを読み込み、現在の設定を上書きします。</p>
                                     <div class="mt-4">
                                         <input type="file" id="db-import-file" accept=".json" class="hidden">
-                                        <button onclick="document.getElementById('db-import-file').click()" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                                        <button onclick="document.getElementById('db-import-file').click()" class="ui-button ui-button-secondary ui-button-block">
                                             ファイルを選択...
                                         </button>
                                     </div>
@@ -427,8 +512,10 @@
 
         <div id="reception-lane-modal" class="modal-scrim fixed inset-0 z-50 hidden flex items-center justify-center p-4">
             <div class="modal-card relative w-full max-w-lg p-6 md:p-7">
-                <button id="reception-modal-close-btn" class="absolute right-4 top-4 rounded-full bg-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-200 hover:text-slate-700">
-                    <i class="fa-solid fa-xmark"></i>
+                <button id="reception-modal-close-btn" class="ui-button ui-button-subtle ui-button-icon absolute right-4 top-4" aria-label="閉じる">
+                    <svg viewBox="0 0 24 24" fill="none" class="status-svg status-svg-lg" aria-hidden="true">
+                        <path d="m8 8 8 8M16 8l-8 8" stroke="currentColor" stroke-width="1.95" stroke-linecap="round"></path>
+                    </svg>
                 </button>
                 <p class="pill-eyebrow">Reception Action</p>
                 <h3 id="reception-modal-title" class="mt-3 text-2xl font-black tracking-tight text-slate-900"></h3>

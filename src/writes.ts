@@ -2,6 +2,7 @@ import * as FirebaseFirestore from "https://www.gstatic.com/firebasejs/11.6.1/fi
 
 import { canManageRoom, getActorDisplayName, hasRole } from "./access.js";
 import { checkAndInitDatabase } from "./db-sync.js";
+import { STATUS_ICON_SVGS } from "./icons.js";
 import { scheduleRender } from "./render.js";
 import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStateData } from "./room-state.js";
 import { showToast } from "./toast.js";
@@ -309,14 +310,12 @@ export async function updateLaneCustomName(context: AppContext, docId: string, n
             `button[data-action='save-custom-name'][data-docid='${docId}']`
         ) as HTMLButtonElement | null;
         if (button) {
-            const originalText = button.textContent;
-            button.textContent = "保存済";
-            button.classList.add("bg-green-500", "hover:bg-green-500");
-            button.classList.remove("bg-blue-500", "hover:bg-blue-600");
+            const originalHtml = button.innerHTML;
+            button.innerHTML = `<span class="inline-flex">${STATUS_ICON_SVGS.available}</span>保存済`;
+            button.classList.add("is-saved");
             setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove("bg-green-500", "hover:bg-green-500");
-                button.classList.add("bg-blue-500", "hover:bg-blue-600");
+                button.innerHTML = originalHtml;
+                button.classList.remove("is-saved");
             }, 1500);
         }
     } catch (error) {

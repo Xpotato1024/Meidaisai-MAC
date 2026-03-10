@@ -156,6 +156,8 @@ export interface FirestorePaths {
 export interface DomRefs {
     appShell: HTMLElement;
     headerTabsShell: HTMLElement;
+    themeToggleBtn: HTMLButtonElement;
+    themeToggleIcon: HTMLElement;
     authLoginCard: HTMLElement;
     authPendingCard: HTMLElement;
     tabsMenuToggle: HTMLButtonElement;
