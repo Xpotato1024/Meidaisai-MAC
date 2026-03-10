@@ -459,37 +459,28 @@
 
     .room-dashboard-header {
         display: grid;
-        gap: 0.72rem;
+        gap: 0.5rem;
         padding: 1rem 1rem 0.9rem;
         border-bottom: 1px solid rgba(226, 232, 240, 0.9);
         background: linear-gradient(180deg, #ffffff, #f8fafc);
-    }
-
-    .room-dashboard-header-topline {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: center;
-        gap: 0.45rem;
     }
 
     .room-dashboard-header-main {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: start;
-        gap: 0.9rem;
+        gap: 0.7rem;
     }
 
-    .room-dashboard-meta-label {
-        font-size: 0.62rem;
-        font-weight: 700;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: #94a3b8;
-        white-space: nowrap;
+    .room-dashboard-title-block {
+        display: grid;
+        gap: 0.12rem;
     }
 
-    .room-dashboard-meta-label-end {
-        justify-self: end;
+    .room-dashboard-submeta {
+        display: flex;
+        align-items: baseline;
+        gap: 0.3rem;
     }
 
     .room-dashboard-grid {
@@ -517,7 +508,7 @@
     }
 
     .room-dashboard-metrics-header {
-        justify-content: center;
+        justify-content: flex-start;
         gap: 0.28rem;
     }
 

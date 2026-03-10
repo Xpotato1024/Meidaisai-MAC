@@ -472,20 +472,17 @@ function renderReceptionList(context) {
         const waitBadgeClass = waitingGroups > 0 ? "wait-exists" : "wait-zero";
         roomElement.innerHTML = `
             <div class="room-dashboard-header">
-                <div class="room-dashboard-header-topline">
-                    <span class="room-dashboard-meta-label">Room</span>
-                    <div class="room-dashboard-metrics room-dashboard-metrics-header">
-                        ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
-                        ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
-                        ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
-                        ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
-                        ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
-                    </div>
+                <div class="room-dashboard-metrics room-dashboard-metrics-header">
+                    ${buildReceptionMetricMarkup("空き", availableLanes, "room-dashboard-metric-available", STATUS_ICON_SVGS.available)}
+                    ${buildReceptionMetricMarkup("案内中", guidingLanes, "room-dashboard-metric-guiding", STATUS_ICON_SVGS.guiding)}
+                    ${buildReceptionMetricMarkup("使用中", occupiedLanes, "room-dashboard-metric-occupied", STATUS_ICON_SVGS.occupied)}
+                    ${buildReceptionMetricMarkup("準備中", preparingLanes, "room-dashboard-metric-preparing", STATUS_ICON_SVGS.preparing)}
+                    ${buildReceptionMetricMarkup("休止中", pausedLanes, "room-dashboard-metric-paused", STATUS_ICON_SVGS.paused)}
                 </div>
                 <div class="room-dashboard-header-main">
-                    <div>
+                    <div class="room-dashboard-title-block">
                         <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
-                        <div class="mt-2 flex items-baseline gap-2">
+                        <div class="room-dashboard-submeta">
                             <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
                         </div>
                     </div>
