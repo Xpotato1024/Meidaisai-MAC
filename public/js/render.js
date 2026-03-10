@@ -546,15 +546,9 @@ export async function openReceptionRoomModal(context, roomId) {
         data: laneDoc.data()
     }))
         .sort((left, right) => left.data.laneNum - right.data.laneNum);
-    let selectedLaneId = roomLanes.find((lane) => getEffectiveLaneState(lane.data) === "available")?.docId || "";
+    let selectedLaneIds = new Set();
     let selectedOptions = [];
     let receptionNotes = "";
-    const hydrateDraftFromLane = () => {
-        const selectedLane = roomLanes.find((lane) => lane.docId === selectedLaneId);
-        selectedOptions = selectedLane?.data.selectedOptions ? [...selectedLane.data.selectedOptions] : [];
-        receptionNotes = selectedLane?.data.receptionNotes || "";
-    };
-    hydrateDraftFromLane();
     dom.receptionModalTitle.textContent = `${room.name} のレーン選択`;
     const closeModal = () => {
         dom.receptionLaneModal.classList.add("hidden");
@@ -594,7 +588,7 @@ export async function openReceptionRoomModal(context, roomId) {
                             ? STATUS_ICON_SVGS.preparing
                             : STATUS_ICON_SVGS.paused;
             const isSelectable = effectiveState === "available";
-            const isSelected = selectedLaneId === lane.docId;
+            const isSelected = selectedLaneIds.has(lane.docId);
             return `
                                 <button
                                     type="button"
@@ -641,17 +635,31 @@ export async function openReceptionRoomModal(context, roomId) {
                     value="${escapeHtml(receptionNotes)}">
             </div>
 
+            <div class="reception-modal-selection-meta">
+                <span class="reception-modal-selection-count">
+                    選択中 ${selectedLaneIds.size} レーン
+                </span>
+            </div>
+
             <button
                 id="reception-modal-start-btn"
                 class="w-full rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-                ${selectedLaneId ? "" : "disabled"}>
-                <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>案内中にする
+                ${selectedLaneIds.size > 0 ? "" : "disabled"}>
+                <span class="mr-2 inline-flex">${STATUS_ICON_SVGS.guiding}</span>選択レーンを案内中にする
             </button>
         `;
         dom.receptionModalContent.querySelectorAll("[data-reception-select-lane]").forEach((button) => {
             button.onclick = () => {
-                selectedLaneId = button.dataset.receptionSelectLane || "";
-                hydrateDraftFromLane();
+                const laneId = button.dataset.receptionSelectLane || "";
+                if (!laneId) {
+                    return;
+                }
+                if (selectedLaneIds.has(laneId)) {
+                    selectedLaneIds.delete(laneId);
+                }
+                else {
+                    selectedLaneIds.add(laneId);
+                }
                 renderModalContent();
             };
         });
@@ -670,13 +678,20 @@ export async function openReceptionRoomModal(context, roomId) {
         const startButton = dom.receptionModalContent.querySelector("#reception-modal-start-btn");
         if (startButton) {
             startButton.onclick = async () => {
-                if (!selectedLaneId) {
+                const targetLaneIds = Array.from(selectedLaneIds);
+                if (targetLaneIds.length === 0) {
                     return;
                 }
                 startButton.disabled = true;
                 startButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> 処理中...';
-                await updateReceptionStatus(context, selectedLaneId, "guiding", null, selectedOptions, receptionNotes.trim() || null);
-                closeModal();
+                const results = await Promise.all(targetLaneIds.map((laneId) => updateReceptionStatus(context, laneId, "guiding", null, selectedOptions, receptionNotes.trim() || null, true)));
+                const failedCount = results.filter((result) => !result).length;
+                if (failedCount > 0) {
+                    alert(`${targetLaneIds.length}レーン中 ${failedCount}レーンの案内開始に失敗しました。最新状態を確認して再度実行してください。`);
+                }
+                else {
+                    closeModal();
+                }
             };
         }
     };

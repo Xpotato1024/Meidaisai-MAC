@@ -120,7 +120,7 @@ export async function updateLaneStatus(context, docId, newStatus) {
         console.error("Failed to update lane status:", error);
     }
 }
-export async function updateReceptionStatus(context, docId, newStatus, staffName = null, options = [], notes = null) {
+export async function updateReceptionStatus(context, docId, newStatus, staffName = null, options = [], notes = null, silent = false) {
     const currentLane = context.state.currentLanesState[docId];
     if (!currentLane) {
         // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
@@ -129,15 +129,19 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
     const canGuide = hasRole(context, ["admin", "reception"]);
     const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
     if (newStatus === "guiding" && !canGuide) {
-        alert("受付権限を持つメンバーのみ案内操作できます。");
-        return;
+        if (!silent) {
+            alert("受付権限を持つメンバーのみ案内操作できます。");
+        }
+        return false;
     }
     if (newStatus === "available" && !canConfirmArrival) {
-        alert("このレーンの到着確認を行う権限がありません。");
-        return;
+        if (!silent) {
+            alert("このレーンの到着確認を行う権限がありません。");
+        }
+        return false;
     }
     if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
-        return;
+        return false;
     }
     try {
         await mutateLaneWithRoomState(context, docId, (liveLane) => {
@@ -187,12 +191,14 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
                 receptionStatus: newStatus
             };
         });
+        return true;
     }
     catch (error) {
         console.error("Failed to update reception status:", error);
-        if (error instanceof Error) {
+        if (!silent && error instanceof Error) {
             alert(error.message);
         }
+        return false;
     }
 }
 export async function updateLanePauseReason(context, docId, reasonId) {
