@@ -553,6 +553,28 @@ function renderReceptionList(context: AppContext): void {
                 </div>
             </div>
             <div class="room-dashboard-summary">
+                <div class="room-dashboard-metrics">
+                    <span class="room-dashboard-metric room-dashboard-metric-available" title="空き ${availableLanes}" aria-label="空き ${availableLanes}">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
+                        <span class="room-dashboard-metric-count">${availableLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric room-dashboard-metric-guiding" title="案内中 ${guidingLanes}" aria-label="案内中 ${guidingLanes}">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.guiding}</span>
+                        <span class="room-dashboard-metric-count">${guidingLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric room-dashboard-metric-occupied" title="使用中 ${occupiedLanes}" aria-label="使用中 ${occupiedLanes}">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.occupied}</span>
+                        <span class="room-dashboard-metric-count">${occupiedLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric room-dashboard-metric-preparing" title="準備中 ${preparingLanes}" aria-label="準備中 ${preparingLanes}">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.preparing}</span>
+                        <span class="room-dashboard-metric-count">${preparingLanes}</span>
+                    </span>
+                    <span class="room-dashboard-metric room-dashboard-metric-paused" title="休止中 ${pausedLanes}" aria-label="休止中 ${pausedLanes}">
+                        <span class="inline-flex">${STATUS_ICON_SVGS.paused}</span>
+                        <span class="room-dashboard-metric-count">${pausedLanes}</span>
+                    </span>
+                </div>
                 <div class="room-dashboard-grid room-dashboard-grid-reception">
                     ${laneVisuals.map((lane, index) => `
                         <div class="lane-tile lane-tile-summary ${lane.tileClass}">
@@ -563,28 +585,6 @@ function renderReceptionList(context: AppContext): void {
                             </span>
                         </div>
                     `).join("")}
-                </div>
-                <div class="room-dashboard-metrics">
-                    <span class="room-dashboard-metric room-dashboard-metric-positive" title="空き ${availableLanes}" aria-label="空き ${availableLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.available}</span>
-                        <span class="room-dashboard-metric-count">${availableLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric room-dashboard-metric-guiding" title="案内中 ${guidingLanes}" aria-label="案内中 ${guidingLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.guiding}</span>
-                        <span class="room-dashboard-metric-count">${guidingLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric" title="使用中 ${occupiedLanes}" aria-label="使用中 ${occupiedLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.occupied}</span>
-                        <span class="room-dashboard-metric-count">${occupiedLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric" title="準備中 ${preparingLanes}" aria-label="準備中 ${preparingLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.preparing}</span>
-                        <span class="room-dashboard-metric-count">${preparingLanes}</span>
-                    </span>
-                    <span class="room-dashboard-metric" title="休止中 ${pausedLanes}" aria-label="休止中 ${pausedLanes}">
-                        <span class="inline-flex">${STATUS_ICON_SVGS.paused}</span>
-                        <span class="room-dashboard-metric-count">${pausedLanes}</span>
-                    </span>
                 </div>
                 <button
                     data-action="open-room-guiding"

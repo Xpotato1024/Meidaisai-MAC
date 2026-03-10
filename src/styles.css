@@ -511,7 +511,7 @@
         text-align: center;
     }
 
-    .room-dashboard-metric-positive {
+    .room-dashboard-metric-available {
         border-color: rgba(5, 150, 105, 0.18);
         background: #ecfdf5;
         color: #047857;
@@ -521,6 +521,24 @@
         border-color: rgba(37, 99, 235, 0.16);
         background: #eff6ff;
         color: #1d4ed8;
+    }
+
+    .room-dashboard-metric-occupied {
+        border-color: rgba(225, 29, 72, 0.18);
+        background: #fff1f2;
+        color: #be123c;
+    }
+
+    .room-dashboard-metric-preparing {
+        border-color: rgba(217, 119, 6, 0.2);
+        background: #fffbeb;
+        color: #b45309;
+    }
+
+    .room-dashboard-metric-paused {
+        border-color: rgba(71, 85, 105, 0.2);
+        background: #f1f5f9;
+        color: #475569;
     }
 
     .reception-room-action {
