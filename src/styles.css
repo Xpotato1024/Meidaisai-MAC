@@ -679,10 +679,12 @@
     }
 
     .admin-layout-editor-grid {
+        position: relative;
         min-height: 12rem;
     }
 
     .admin-layout-editor-grid .react-grid-item {
+        position: absolute;
         transition: width 200ms ease, height 200ms ease;
     }
 
