@@ -86,7 +86,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
         });
     };
 
-    const handleGridLayoutChange = (nextGridLayout: Layout[]) => {
+    const applyGridLayout = (nextGridLayout: Layout[]) => {
         updateDraftLayout(mergeLayoutPositions(draftLayout, rooms, nextGridLayout));
     };
 
@@ -141,10 +141,17 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                 rowHeight={24}
                 margin={[12, 12]}
                 containerPadding={[0, 0]}
-                compactType="vertical"
+                compactType={null}
                 preventCollision={false}
-                draggableHandle=".admin-layout-editor-card-handle"
-                onLayoutChange={handleGridLayoutChange}
+                draggableHandle=".admin-layout-editor-card-header"
+                draggableCancel=".admin-layout-editor-field,.admin-layout-editor-field *,select,option,.react-resizable-handle"
+                isBounded
+                onDragStop={(nextGridLayout) => {
+                    applyGridLayout(nextGridLayout);
+                }}
+                onResizeStop={(nextGridLayout) => {
+                    applyGridLayout(nextGridLayout);
+                }}
             >
                 {draftLayout.rooms.map((item) => {
                     const room = rooms.find((candidate) => candidate.id === item.roomId);
