@@ -683,7 +683,13 @@
     }
 
     .admin-layout-editor-grid .react-grid-item {
-        transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+        transition: width 200ms ease, height 200ms ease;
+    }
+
+    .admin-layout-editor-grid .react-grid-item.react-draggable-dragging,
+    .admin-layout-editor-grid .react-grid-item.resizing {
+        transition: none;
+        z-index: 10;
     }
 
     .admin-layout-editor-grid .react-grid-placeholder {

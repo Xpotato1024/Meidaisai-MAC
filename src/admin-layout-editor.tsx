@@ -173,6 +173,7 @@ function ReceptionLayoutEditor({ rooms, layout, onChange }: ReceptionLayoutEdito
                 containerPadding={[0, 0]}
                 compactType={null}
                 preventCollision={false}
+                useCSSTransforms={false}
                 draggableHandle=".admin-layout-editor-card-handle"
                 draggableCancel=".admin-layout-editor-field,.admin-layout-editor-field *,select,option,.react-resizable-handle"
                 isBounded
