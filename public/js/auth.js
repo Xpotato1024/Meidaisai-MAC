@@ -167,12 +167,31 @@ async function ensureAccessRequest(context, user, directoryProfile, manualDispla
     const { db, paths } = context;
     const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
     const requestSnapshot = await getDoc(requestRef);
-    const displayName = String(manualDisplayName || requestSnapshot.data()?.displayName || "").trim();
+    const requestData = requestSnapshot.exists()
+        ? requestSnapshot.data()
+        : null;
+    const existingStatus = String(requestData?.status || "pending");
+    const displayName = String(manualDisplayName || requestData?.displayName || "").trim();
     const email = String(directoryProfile?.email || user.email || "");
     if (!displayName) {
         throw new Error("表示名を入力してください。");
     }
+    if (existingStatus === "rejected") {
+        throw new Error("このアカウントの申請は停止または却下されています。管理者へ連絡してください。");
+    }
     if (requestSnapshot.exists()) {
+        if (existingStatus === "approved") {
+            await setDoc(requestRef, {
+                email,
+                displayName,
+                status: "pending",
+                note: null,
+                requestedAt: serverTimestamp(),
+                lastSeenAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            return;
+        }
         await setDoc(requestRef, {
             email,
             displayName,
@@ -238,13 +257,20 @@ async function bootstrapSelfAccess(context, user) {
     const memberSnapshot = await getDoc(doc(db, paths.accessMembersCollectionPath, user.uid));
     if (memberSnapshot.exists()) {
         const existing = memberSnapshot.data();
-        await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), {
-            email: String(existing.email || directoryProfile?.email || user.email || ""),
-            displayName: String(existing.displayName || directoryProfile?.displayName || "").trim() || resolveFallbackDisplayName(user, directoryProfile),
-            grade: directoryProfile?.grade || null,
+        const nextPayload = {
             lastLoginAt: serverTimestamp(),
             updatedAt: serverTimestamp()
-        }, { merge: true });
+        };
+        const authorizationSource = typeof existing.authorizationSource === "string"
+            ? existing.authorizationSource
+            : null;
+        // 名簿連携メンバーだけ、CSV正本で表示名と学年を同期する。
+        if (authorizationSource === "roster" && directoryProfile) {
+            nextPayload.email = directoryProfile.email;
+            nextPayload.displayName = resolveFallbackDisplayName(user, directoryProfile);
+            nextPayload.grade = directoryProfile.grade;
+        }
+        await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), nextPayload, { merge: true });
         return;
     }
     const provisionedFromRoster = await ensureRosterAccessMember(context, user, directoryProfile);

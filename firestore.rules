@@ -122,14 +122,39 @@ service cloud.firestore {
         );
     }
 
-    function isSelfSafeProfileUpdate(appId, uid) {
+    function canTouchOwnAccessMember(appId, uid) {
       return signedIn()
         && request.auth.uid == uid
         && isActiveMember(appId)
-        && changedKeys().hasOnly(['email', 'displayName', 'grade', 'lastLoginAt', 'updatedAt'])
+        && changedKeys().hasOnly(['lastLoginAt', 'updatedAt'])
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.grade == resource.data.grade
         && request.resource.data.role == resource.data.role
         && request.resource.data.isActive == resource.data.isActive
-        && request.resource.data.authorizationSource == resource.data.authorizationSource;
+        && request.resource.data.authorizationSource == resource.data.authorizationSource
+        && request.resource.data.assignedRoomIds == resource.data.assignedRoomIds;
+    }
+
+    function canSyncRosterProfile(appId, uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && isActiveMember(appId)
+        && selfDirectoryExists(appId)
+        && resource.data.authorizationSource == 'roster'
+        && changedKeys().hasOnly(['email', 'displayName', 'grade', 'lastLoginAt', 'updatedAt'])
+        && request.resource.data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.displayName == selfDirectory(appId).data.displayName
+        && request.resource.data.grade == selfDirectory(appId).data.grade
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.isActive == resource.data.isActive
+        && request.resource.data.authorizationSource == resource.data.authorizationSource
+        && request.resource.data.assignedRoomIds == resource.data.assignedRoomIds;
+    }
+
+    function isSelfSafeProfileUpdate(appId, uid) {
+      return canTouchOwnAccessMember(appId, uid)
+        || canSyncRosterProfile(appId, uid);
     }
 
     function canAdminCreateMember(appId, uid) {
@@ -163,6 +188,52 @@ service cloud.firestore {
         && request.resource.data.isActive == true
         && request.resource.data.assignedRoomIds.size() == 0
         && request.resource.data.authorizationSource == 'roster';
+    }
+
+    function isValidSelfAccessRequestPayload(uid) {
+      return hasVerifiedEmail()
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'status',
+          'note',
+          'requestedAt',
+          'lastSeenAt',
+          'updatedAt'
+        ])
+        && request.resource.data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 64;
+    }
+
+    function canCreateOwnAccessRequest(uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == null;
+    }
+
+    function canRefreshOwnPendingAccessRequest(uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && resource.data.uid == request.resource.data.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == resource.data.note
+        && request.resource.data.requestedAt == resource.data.requestedAt
+        && changedKeys().hasOnly(['email', 'displayName', 'lastSeenAt', 'updatedAt']);
+    }
+
+    function canResubmitOwnApprovedAccessRequest(appId, uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && resource.data.uid == request.resource.data.uid
+        && resource.data.status == 'approved'
+        && !exists(memberPath(appId, request.auth.uid))
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == null
+        && changedKeys().hasOnly(['email', 'displayName', 'status', 'note', 'requestedAt', 'lastSeenAt', 'updatedAt']);
     }
 
     match /sys_globalAccessMembers/{uid} {
@@ -233,18 +304,12 @@ service cloud.firestore {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
 
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status == 'pending';
+      allow create: if canCreateOwnAccessRequest(uid);
 
       allow update: if isAdmin(appId)
         || (
-          signedIn()
-          && request.auth.uid == uid
-          && request.resource.data.uid == resource.data.uid
-          && request.resource.data.status == resource.data.status
-          && changedKeys().hasOnly(['email', 'displayName', 'lastSeenAt', 'updatedAt'])
+          canRefreshOwnPendingAccessRequest(uid)
+          || canResubmitOwnApprovedAccessRequest(appId, uid)
         );
 
       allow delete: if isAdmin(appId);

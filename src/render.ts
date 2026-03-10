@@ -283,7 +283,7 @@ function renderAuthShell(context: AppContext): void {
     const { dom, state } = context;
     const member = state.accessMember;
     const request = state.selfAccessRequest;
-    const needsManualRequestName = Boolean(state.authUser && !member && (!request || request.status === "pending"));
+    const needsManualRequestName = Boolean(state.authUser && !member && (!request || request.status !== "rejected"));
 
     dom.authUserName.textContent = state.accessMember?.displayName
         || state.selfAccessRequest?.displayName
@@ -336,7 +336,11 @@ function renderAuthShell(context: AppContext): void {
             if (!dom.authManualDisplayNameInput.value.trim()) {
                 dom.authManualDisplayNameInput.value = String(request?.displayName || "").trim();
             }
-            dom.authManualRequestSubmitBtn.textContent = request ? "表示名を更新する" : "承認リクエストを送信";
+            dom.authManualRequestSubmitBtn.textContent = status === "approved"
+                ? "承認リクエストを再送信"
+                : request
+                    ? "表示名を更新する"
+                    : "承認リクエストを送信";
         }
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
