@@ -18,6 +18,7 @@ export function cloneConfig(config: AppConfig): AppConfig {
 function createDomRefs(): DomRefs {
     return {
         appShell: requireElement("app-shell"),
+        headerTabsShell: requireElement("header-tabs-shell"),
         authLoginCard: requireElement("auth-login-card"),
         authPendingCard: requireElement("auth-pending-card"),
         tabsMenuToggle: requireElement("tabs-menu-toggle"),

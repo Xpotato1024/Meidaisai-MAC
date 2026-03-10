@@ -73,7 +73,7 @@ export function configureDataSubscriptions(context) {
     }
     listenToConfigChanges(context);
     listenToRoomStateChanges(context);
-    if (hasRole(context, ["admin", "staff"])) {
+    if (hasRole(context, ["admin", "staff", "reception"])) {
         listenToLaneChanges(context);
     }
     else {
