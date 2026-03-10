@@ -10,14 +10,20 @@ export function createEmptyRoomState(totalLanes, waitingGroups = 0) {
     };
 }
 export function normalizeRoomStateData(rawData, totalLanes) {
+    const normalizedTotalLanes = Number(rawData?.totalLanes || totalLanes || 0);
+    const availableLanes = Math.max(0, Number(rawData?.availableLanes || 0));
+    const occupiedLanes = Math.max(0, Number(rawData?.occupiedLanes || 0));
+    const preparingLanes = Math.max(0, Number(rawData?.preparingLanes || 0));
+    const guidingLanes = Math.max(0, Number(rawData?.guidingLanes || 0));
+    const inferredPausedLanes = Math.max(0, normalizedTotalLanes - (availableLanes + occupiedLanes + preparingLanes + guidingLanes));
     return {
         waitingGroups: Number(rawData?.waitingGroups || 0),
-        totalLanes: Number(rawData?.totalLanes || totalLanes || 0),
-        availableLanes: Number(rawData?.availableLanes || 0),
-        occupiedLanes: Number(rawData?.occupiedLanes || 0),
-        preparingLanes: Number(rawData?.preparingLanes || 0),
-        pausedLanes: Number(rawData?.pausedLanes || 0),
-        guidingLanes: Number(rawData?.guidingLanes || 0),
+        totalLanes: normalizedTotalLanes,
+        availableLanes,
+        occupiedLanes,
+        preparingLanes,
+        pausedLanes: inferredPausedLanes,
+        guidingLanes,
         updatedAt: rawData?.updatedAt
     };
 }
