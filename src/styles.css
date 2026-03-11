@@ -1365,6 +1365,22 @@ html[data-theme="dark"] {
         color: #1d4ed8;
     }
 
+    @media (max-width: 767px) {
+        .modal-scrim {
+            align-items: flex-start;
+            padding-inline: 0.75rem;
+        }
+
+        .modal-card {
+            margin-top: max(0.25rem, env(safe-area-inset-top));
+            max-height: calc(100dvh - max(1rem, env(safe-area-inset-top)) - max(1rem, env(safe-area-inset-bottom)));
+        }
+
+        #reception-modal-content {
+            padding-bottom: 0.25rem;
+        }
+    }
+
     .reception-modal-options {
         max-height: 12rem;
         overflow-y: auto;
@@ -2185,13 +2201,30 @@ html[data-theme="dark"] {
     .modal-scrim {
         background: rgba(15, 23, 42, 0.42);
         backdrop-filter: blur(4px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        -webkit-overflow-scrolling: touch;
     }
 
     .modal-card {
+        display: flex;
+        max-height: calc(100dvh - max(2rem, env(safe-area-inset-top)) - max(2rem, env(safe-area-inset-bottom)));
+        min-height: 0;
+        flex-direction: column;
         border-radius: 16px;
         border: 1px solid var(--border-strong);
         background: #ffffff;
+        overflow: hidden;
         box-shadow: 0 22px 48px rgba(15, 23, 42, 0.18);
+    }
+
+    #reception-modal-content {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 0.125rem;
     }
 
     .db-event-table {
