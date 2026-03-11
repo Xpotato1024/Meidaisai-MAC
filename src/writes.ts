@@ -177,8 +177,8 @@ export async function updateReceptionStatus(
     }
 
     const roomId = currentLane?.roomId || "";
-    const canGuide = hasRole(context, ["admin", "reception"]);
-    const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
+    const canGuide = hasRole(context, ["root", "admin", "reception"]);
+    const canConfirmArrival = hasRole(context, ["root", "admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
 
     if (newStatus === "guiding" && !canGuide) {
         if (!silent) {
@@ -194,14 +194,14 @@ export async function updateReceptionStatus(
         return false;
     }
 
-    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
+    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["root", "admin", "reception"])) {
         return false;
     }
 
     try {
         await mutateLaneWithRoomState(context, docId, (liveLane) => {
             const liveRoomId = liveLane.roomId;
-            const canLiveConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, liveRoomId);
+            const canLiveConfirmArrival = hasRole(context, ["root", "admin"]) || canManageRoom(context, liveRoomId);
 
             if (newStatus === "guiding") {
                 if (!canGuide) {
@@ -246,7 +246,7 @@ export async function updateReceptionStatus(
                 return nextLane;
             }
 
-            if (!hasRole(context, ["admin", "reception"])) {
+            if (!hasRole(context, ["root", "admin", "reception"])) {
                 throw new Error("この受付状態を変更する権限がありません。");
             }
 

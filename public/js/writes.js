@@ -140,8 +140,8 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
         // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
     }
     const roomId = currentLane?.roomId || "";
-    const canGuide = hasRole(context, ["admin", "reception"]);
-    const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
+    const canGuide = hasRole(context, ["root", "admin", "reception"]);
+    const canConfirmArrival = hasRole(context, ["root", "admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
     if (newStatus === "guiding" && !canGuide) {
         if (!silent) {
             showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ案内操作できます。", tone: "warning" });
@@ -154,13 +154,13 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
         }
         return false;
     }
-    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
+    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["root", "admin", "reception"])) {
         return false;
     }
     try {
         await mutateLaneWithRoomState(context, docId, (liveLane) => {
             const liveRoomId = liveLane.roomId;
-            const canLiveConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, liveRoomId);
+            const canLiveConfirmArrival = hasRole(context, ["root", "admin"]) || canManageRoom(context, liveRoomId);
             if (newStatus === "guiding") {
                 if (!canGuide) {
                     throw new Error("受付権限を持つメンバーのみ案内操作できます。");
@@ -197,7 +197,7 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
                 }
                 return nextLane;
             }
-            if (!hasRole(context, ["admin", "reception"])) {
+            if (!hasRole(context, ["root", "admin", "reception"])) {
                 throw new Error("この受付状態を変更する権限がありません。");
             }
             return {
