@@ -18,7 +18,7 @@ import {
 import { getEffectiveLaneState, normalizeRoomStateData } from "./room-state.js";
 import { showToast } from "./toast.js";
 import { updateReceptionStatus } from "./writes.js";
-import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, RoleId, TabId } from "./types.js";
+import type { AccessMember, AccessRequest, AppConfig, AppContext, LaneData, MemberSortMode, RoleId, TabId } from "./types.js";
 
 const TAB_LABELS: Record<TabId, string> = {
     reception: "受付",
@@ -44,17 +44,78 @@ function escapeHtml(value: string): string {
         .replaceAll("'", "&#39;");
 }
 
-function getRoleOptions(selectedRole: RoleId): string {
-    return (["staff", "reception", "admin"] as RoleId[]).map((role) => {
+function getRoleOptions(context: AppContext, selectedRole: RoleId): string {
+    const availableRoles = ["staff", "reception", "admin"] as RoleId[];
+    if (selectedRole === "root") {
+        availableRoles.push("root");
+    }
+
+    return availableRoles.map((role) => {
         return `<option value="${role}" ${selectedRole === role ? "selected" : ""}>${ROLE_LABELS[role]}</option>`;
     }).join("");
 }
 
 function getAuthorizationSourceBadge(member: AccessMember): string {
+    if (member.role === "root" || member.authorizationSource === "global") {
+        return '<span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700">Root</span>';
+    }
     if (member.authorizationSource === "roster") {
         return '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">名簿連携</span>';
     }
     return '<span class="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700">手動承認</span>';
+}
+
+function getRoleRank(role: RoleId): number {
+    if (role === "root") {
+        return 0;
+    }
+    if (role === "admin") {
+        return 1;
+    }
+    if (role === "reception") {
+        return 2;
+    }
+    return 3;
+}
+
+function getGradeSortKey(grade: string | null | undefined): number {
+    const value = String(grade || "").trim();
+    if (!value) {
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+    const normalized = value
+        .replaceAll("年", "")
+        .replaceAll("回", "")
+        .replaceAll("生", "")
+        .trim();
+    const numericValue = Number.parseInt(normalized, 10);
+    if (!Number.isNaN(numericValue)) {
+        return numericValue;
+    }
+
+    const kanjiMap: Record<string, number> = {
+        "一": 1,
+        "二": 2,
+        "三": 3,
+        "四": 4,
+        "五": 5,
+        "六": 6
+    };
+    return kanjiMap[normalized] || Number.MAX_SAFE_INTEGER;
+}
+
+function getMemberSortLabel(sortMode: MemberSortMode): string {
+    if (sortMode === "grade-desc") {
+        return "学年降順";
+    }
+    if (sortMode === "role") {
+        return "権限順";
+    }
+    if (sortMode === "name") {
+        return "名前順";
+    }
+    return "学年昇順";
 }
 
 function getRoomSummaryState(waiting: number, availableCount: number): {
@@ -222,10 +283,15 @@ function renderAuthShell(context: AppContext): void {
     const { dom, state } = context;
     const member = state.accessMember;
     const request = state.selfAccessRequest;
+    const needsManualRequestName = Boolean(state.authUser && !member && (!request || request.status !== "rejected"));
 
-    dom.authUserName.textContent = state.authUser?.displayName || "未ログイン";
+    dom.authUserName.textContent = state.accessMember?.displayName
+        || state.selfAccessRequest?.displayName
+        || state.authUser?.email?.split("@")[0]
+        || "未ログイン";
     dom.authUserEmail.textContent = state.authUser?.email || "アクセス権が必要です";
     dom.authStatusText.classList.remove("hidden");
+    dom.authManualRequestForm.classList.add("hidden");
 
     dom.authSignInBtn.classList.toggle("hidden", Boolean(state.authUser));
     dom.authSignOutBtn.classList.toggle("hidden", !state.authUser);
@@ -255,7 +321,7 @@ function renderAuthShell(context: AppContext): void {
         const status = request?.status || "pending";
         const pendingMessage = status === "rejected"
             ? "このアカウントの利用は停止または却下されています。管理者へ連絡してください。"
-            : "ログインは完了しました。名簿登録済みなら自動承認、名簿外アカウントは管理者承認後に利用できます。";
+            : "ログインは完了しました。名簿外アカウントは、下の表示名を入力して承認リクエストを送信してください。";
 
         dom.authStatusText.textContent = "承認待ちのため、操作はロックされています。";
         dom.authRoleBadge.textContent = status === "rejected" ? "利用停止" : "承認待ち";
@@ -265,6 +331,17 @@ function renderAuthShell(context: AppContext): void {
                 : "bg-amber-300/15 text-amber-100 border-amber-200/30"
         }`;
         dom.authPendingMessage.textContent = pendingMessage;
+        if (status !== "rejected" && needsManualRequestName) {
+            dom.authManualRequestForm.classList.remove("hidden");
+            if (!dom.authManualDisplayNameInput.value.trim()) {
+                dom.authManualDisplayNameInput.value = String(request?.displayName || "").trim();
+            }
+            dom.authManualRequestSubmitBtn.textContent = status === "approved"
+                ? "承認リクエストを再送信"
+                : request
+                    ? "表示名を更新する"
+                    : "承認リクエストを送信";
+        }
         dom.authLoginCard.classList.add("hidden");
         dom.authPendingCard.classList.remove("hidden");
         dom.appShell.classList.add("hidden");
@@ -324,7 +401,7 @@ function renderTabVisibility(context: AppContext): void {
 function renderAccessManagement(context: AppContext): void {
     const { dom, state } = context;
 
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         dom.adminAccessRequestList.innerHTML = '<p class="text-sm text-slate-400">管理者のみ閲覧できます。</p>';
         dom.adminMemberList.innerHTML = '<p class="text-sm text-slate-400">管理者のみ閲覧できます。</p>';
         return;
@@ -344,15 +421,15 @@ function renderAccessManagement(context: AppContext): void {
                     <label class="member-card-label">
                         付与ロール
                         <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${request.uid}">
-                            ${getRoleOptions("staff")}
+                            ${getRoleOptions(context, "staff")}
                         </select>
                     </label>
                     <div class="flex flex-wrap gap-2">
                         <button data-action="approve-access-request" data-uid="${request.uid}" class="ui-button ui-button-success member-card-action">
-                            承認
+                            承認する
                         </button>
                         <button data-action="reject-access-request" data-uid="${request.uid}" class="ui-button member-card-action member-card-action-danger">
-                            却下
+                            却下する
                         </button>
                     </div>
                 </div>
@@ -360,41 +437,154 @@ function renderAccessManagement(context: AppContext): void {
         `).join("");
     }
 
-    if (state.accessMembersCache.length === 0) {
-        dom.adminMemberList.innerHTML = '<p class="text-sm text-slate-400">登録済みメンバーがまだいません。</p>';
+    const mergedMembersMap = new Map(state.accessMembersCache.map((member) => [member.uid, member]));
+    if (state.globalAccessMember?.isActive) {
+        const globalMember = state.globalAccessMember;
+        const existing = mergedMembersMap.get(globalMember.uid);
+        mergedMembersMap.set(globalMember.uid, {
+            ...(existing || {}),
+            ...globalMember,
+            role: "root",
+            authorizationSource: "global",
+            isActive: true
+        });
+    }
+
+    const mergedMembers = Array.from(mergedMembersMap.values());
+    const selectedMemberSet = new Set(state.memberBulkSelectedUids);
+
+    const sortedMembers = [...mergedMembers].sort((left, right) => {
+        if (state.memberSortMode === "name") {
+            return left.displayName.localeCompare(right.displayName, "ja");
+        }
+
+        if (state.memberSortMode === "role") {
+            const roleGap = getRoleRank(left.role) - getRoleRank(right.role);
+            if (roleGap !== 0) {
+                return roleGap;
+            }
+            return left.displayName.localeCompare(right.displayName, "ja");
+        }
+
+        const direction = state.memberSortMode === "grade-desc" ? -1 : 1;
+        const gradeGap = getGradeSortKey(left.grade) - getGradeSortKey(right.grade);
+        if (gradeGap !== 0) {
+            return gradeGap * direction;
+        }
+
+        const roleGap = getRoleRank(left.role) - getRoleRank(right.role);
+        if (roleGap !== 0) {
+            return roleGap;
+        }
+        return left.displayName.localeCompare(right.displayName, "ja");
+    });
+
+    const gradeOptions = Array.from(new Set(
+        mergedMembers
+            .map((member) => String(member.grade || "").trim())
+            .filter(Boolean)
+    )).sort((left, right) => getGradeSortKey(left) - getGradeSortKey(right));
+
+    const controlsMarkup = `
+        <div class="member-console-tools mb-4 grid gap-4 rounded-[1rem] border border-slate-200/80 bg-slate-50/80 p-4">
+            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem]">
+                <label class="member-card-label">
+                    並び順
+                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-action="member-sort-mode">
+                        <option value="grade-asc" ${state.memberSortMode === "grade-asc" ? "selected" : ""}>学年昇順</option>
+                        <option value="grade-desc" ${state.memberSortMode === "grade-desc" ? "selected" : ""}>学年降順</option>
+                        <option value="role" ${state.memberSortMode === "role" ? "selected" : ""}>権限順</option>
+                        <option value="name" ${state.memberSortMode === "name" ? "selected" : ""}>名前順</option>
+                    </select>
+                </label>
+                <div class="member-card-label flex items-end text-slate-500">現在: ${getMemberSortLabel(state.memberSortMode)}</div>
+            </div>
+            <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_12rem_10rem_auto_auto]">
+                <label class="member-card-label">
+                    一括対象の学年
+                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-action="member-bulk-grade">
+                        <option value="__all__" ${state.memberBulkGrade === "__all__" ? "selected" : ""}>全学年</option>
+                        ${gradeOptions.map((grade) => `<option value="${escapeHtml(grade)}" ${state.memberBulkGrade === grade ? "selected" : ""}>${escapeHtml(grade)}</option>`).join("")}
+                    </select>
+                </label>
+                <label class="member-card-label">
+                    一括付与ロール
+                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-action="member-bulk-role">
+                        ${getRoleOptions(context, state.memberBulkRole)}
+                    </select>
+                </label>
+                <label class="member-card-label flex items-end gap-2">
+                    <input type="checkbox" data-action="member-bulk-active" ${state.memberBulkIsActive ? "checked" : ""}>
+                    有効にする
+                </label>
+                <button data-action="apply-member-bulk" class="ui-button ui-button-primary member-card-action xl:self-end">
+                    学年で一括反映
+                </button>
+                <button data-action="apply-member-bulk-selected" class="ui-button ui-button-secondary member-card-action xl:self-end">
+                    選択メンバーに反映
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (sortedMembers.length === 0) {
+        dom.adminMemberList.innerHTML = `${controlsMarkup}<p class="text-sm text-slate-400">登録済みメンバーがまだいません。</p>`;
         return;
     }
 
-    dom.adminMemberList.innerHTML = state.accessMembersCache.map((member) => `
+    dom.adminMemberList.innerHTML = controlsMarkup + sortedMembers.map((member) => {
+        const isSelf = state.userId === member.uid;
+        const isRootMember = member.role === "root";
+        const isLocked = isSelf || isRootMember;
+        const helperText = isRootMember
+            ? "Root アカウントは変更できません。"
+            : isSelf
+                ? "自分自身のロール変更や無効化はできません。"
+                : "";
+
+        return `
         <div class="member-access-card" data-member-card data-uid="${member.uid}">
             <div class="mb-3 flex items-start justify-between gap-3">
                 <div>
                     <p class="member-card-name flex flex-wrap items-center gap-2">
+                        <label class="member-select-check ${isRootMember ? "is-disabled" : ""}">
+                            <input type="checkbox" data-select-member data-uid="${member.uid}" ${selectedMemberSet.has(member.uid) ? "checked" : ""} ${isRootMember ? "disabled" : ""}>
+                        </label>
                         ${escapeHtml(member.displayName || "名称未設定")}
-                        ${state.userId === member.uid ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
+                        ${isSelf ? '<span class="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">あなた</span>' : ""}
                         ${getAuthorizationSourceBadge(member)}
                         ${member.grade ? `<span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700">${escapeHtml(member.grade)}</span>` : ""}
                     </p>
                     <p class="member-card-email">${escapeHtml(member.email || member.uid)}</p>
                 </div>
                 <label class="member-card-label inline-flex items-center gap-2">
-                    <input type="checkbox" data-active-input data-uid="${member.uid}" ${member.isActive ? "checked" : ""}>
+                    <input type="checkbox" data-active-input data-uid="${member.uid}" ${member.isActive ? "checked" : ""} ${isLocked ? "disabled" : ""}>
                     有効
                 </label>
             </div>
             <div class="grid gap-3">
                 <label class="member-card-label">
                     ロール
-                    <select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}">
-                        ${getRoleOptions(member.role)}
-                    </select>
+                    ${isRootMember
+                        ? `<div class="member-card-static-role mt-1">${ROLE_LABELS.root}</div>`
+                        : `<select class="member-card-select mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" data-role-input data-uid="${member.uid}" ${isLocked ? "disabled" : ""}>
+                            ${getRoleOptions(context, member.role)}
+                        </select>`
+                    }
                 </label>
-                <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action">
-                    権限を保存
-                </button>
+                ${helperText ? `<p class="text-xs font-bold text-slate-500">${escapeHtml(helperText)}</p>` : ""}
+                <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <button data-action="save-access-member" data-uid="${member.uid}" class="ui-button ui-button-primary ui-button-block member-card-action" ${isLocked ? "disabled" : ""}>
+                        権限を保存
+                    </button>
+                    <button data-action="delete-access-member" data-uid="${member.uid}" class="ui-button member-card-action member-card-action-danger" ${isLocked ? "disabled" : ""}>
+                        削除
+                    </button>
+                </div>
             </div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 }
 
 /**

@@ -56,6 +56,14 @@ service cloud.firestore {
         && selfGlobalMember().data.role == 'admin';
     }
 
+    function isGlobalRoot() {
+      return isActiveGlobalMember()
+        && (
+          selfGlobalMember().data.role == 'root'
+          || selfGlobalMember().data.role == 'admin'
+        );
+    }
+
     function isActiveMember(appId) {
       return signedIn()
         && exists(memberPath(appId, request.auth.uid))
@@ -66,8 +74,12 @@ service cloud.firestore {
       return isActiveMember(appId) && selfMember(appId).data.role == role;
     }
 
+    function isRoot(appId) {
+      return hasRole(appId, 'root') || isGlobalRoot();
+    }
+
     function isAdmin(appId) {
-      return hasRole(appId, 'admin') || isGlobalAdmin();
+      return isRoot(appId) || hasRole(appId, 'admin') || isGlobalAdmin();
     }
 
     function isReception(appId) {
@@ -83,15 +95,80 @@ service cloud.firestore {
     }
 
     function assignedToRoom(appId, roomId) {
-      return isStaff(appId) && selfMember(appId).data.assignedRoomIds.hasAny([roomId]);
+      return isStaff(appId);
     }
 
     function canManageRoom(appId, roomId) {
-      return isAdmin(appId) || assignedToRoom(appId, roomId);
+      return isAdmin(appId) || isReception(appId) || assignedToRoom(appId, roomId);
     }
 
     function canOperateAssignedRoom(appId, roomId) {
-      return isAdmin(appId) || assignedToRoom(appId, roomId);
+      return isAdmin(appId) || isReception(appId) || assignedToRoom(appId, roomId);
+    }
+
+    function isTargetRootMember() {
+      return resource != null && resource.data.role == 'root';
+    }
+
+    function isCreatingRootMember() {
+      return request.resource.data.role == 'root';
+    }
+
+    function keepsOwnPrivilege(uid) {
+      return request.auth.uid != uid
+        || (
+          request.resource.data.role == resource.data.role
+          && request.resource.data.isActive == resource.data.isActive
+        );
+    }
+
+    function canTouchOwnAccessMember(appId, uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && isActiveMember(appId)
+        && changedKeys().hasOnly(['lastLoginAt', 'updatedAt'])
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.grade == resource.data.grade
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.isActive == resource.data.isActive
+        && request.resource.data.authorizationSource == resource.data.authorizationSource
+        && request.resource.data.assignedRoomIds == resource.data.assignedRoomIds;
+    }
+
+    function canSyncRosterProfile(appId, uid) {
+      return signedIn()
+        && request.auth.uid == uid
+        && isActiveMember(appId)
+        && selfDirectoryExists(appId)
+        && resource.data.authorizationSource == 'roster'
+        && changedKeys().hasOnly(['email', 'displayName', 'grade', 'lastLoginAt', 'updatedAt'])
+        && request.resource.data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.displayName == selfDirectory(appId).data.displayName
+        && request.resource.data.grade == selfDirectory(appId).data.grade
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.isActive == resource.data.isActive
+        && request.resource.data.authorizationSource == resource.data.authorizationSource
+        && request.resource.data.assignedRoomIds == resource.data.assignedRoomIds;
+    }
+
+    function isSelfSafeProfileUpdate(appId, uid) {
+      return canTouchOwnAccessMember(appId, uid)
+        || canSyncRosterProfile(appId, uid);
+    }
+
+    function canAdminCreateMember(appId, uid) {
+      return isAdmin(appId)
+        && request.resource.data.uid == uid
+        && !isCreatingRootMember();
+    }
+
+    function canAdminUpdateMember(appId, uid) {
+      return isAdmin(appId)
+        && request.resource.data.uid == uid
+        && keepsOwnPrivilege(uid)
+        && !isTargetRootMember()
+        && !isCreatingRootMember();
     }
 
     function changedKeys() {
@@ -113,10 +190,60 @@ service cloud.firestore {
         && request.resource.data.authorizationSource == 'roster';
     }
 
+    function isValidSelfAccessRequestPayload(uid) {
+      return hasVerifiedEmail()
+        && request.auth.uid == uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'status',
+          'note',
+          'requestedAt',
+          'lastSeenAt',
+          'updatedAt'
+        ])
+        && request.resource.data.email.lower().trim() == selfEmailKey()
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 64;
+    }
+
+    function canCreateOwnAccessRequest(uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == null;
+    }
+
+    function canRefreshOwnPendingAccessRequest(uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && resource.data.uid == request.resource.data.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == resource.data.note
+        && request.resource.data.requestedAt == resource.data.requestedAt
+        && changedKeys().hasOnly(['email', 'displayName', 'lastSeenAt', 'updatedAt']);
+    }
+
+    function canResubmitOwnApprovedAccessRequest(appId, uid) {
+      return isValidSelfAccessRequestPayload(uid)
+        && resource.data.uid == request.resource.data.uid
+        && resource.data.status == 'approved'
+        && !exists(memberPath(appId, request.auth.uid))
+        && request.resource.data.status == 'pending'
+        && request.resource.data.note == null
+        && changedKeys().hasOnly(['email', 'displayName', 'status', 'note', 'requestedAt', 'lastSeenAt', 'updatedAt']);
+    }
+
     match /sys_globalAccessMembers/{uid} {
-      allow get: if signedIn() && (request.auth.uid == uid || isGlobalAdmin());
-      allow list: if isGlobalAdmin();
-      allow create, update, delete: if isGlobalAdmin();
+      allow get: if signedIn() && (request.auth.uid == uid || isGlobalRoot());
+      allow list: if isGlobalRoot();
+      allow create, update: if isGlobalRoot()
+        && request.resource.data.uid == uid
+        && request.resource.data.isActive == true
+        && request.resource.data.role == 'root';
+      allow delete: if false;
     }
 
     match /artifacts/{appId}/public/data/config/{documentId} {
@@ -158,8 +285,9 @@ service cloud.firestore {
     match /artifacts/{appId}/private/data/accessMembers/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
-      allow create: if isAdmin(appId) || canProvisionSelfFromRoster(appId, uid);
-      allow update, delete: if isAdmin(appId);
+      allow create: if canAdminCreateMember(appId, uid) || canProvisionSelfFromRoster(appId, uid);
+      allow update: if canAdminUpdateMember(appId, uid) || isSelfSafeProfileUpdate(appId, uid);
+      allow delete: if isAdmin(appId) && !isTargetRootMember() && request.auth.uid != uid;
     }
 
     match /artifacts/{appId}/private/data/memberDirectory/{emailKey} {
@@ -176,18 +304,12 @@ service cloud.firestore {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin(appId));
       allow list: if isAdmin(appId);
 
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status == 'pending';
+      allow create: if canCreateOwnAccessRequest(uid);
 
       allow update: if isAdmin(appId)
         || (
-          signedIn()
-          && request.auth.uid == uid
-          && request.resource.data.uid == resource.data.uid
-          && request.resource.data.status == resource.data.status
-          && changedKeys().hasOnly(['email', 'displayName', 'lastSeenAt', 'updatedAt'])
+          canRefreshOwnPendingAccessRequest(uid)
+          || canResubmitOwnApprovedAccessRequest(appId, uid)
         );
 
       allow delete: if isAdmin(appId);

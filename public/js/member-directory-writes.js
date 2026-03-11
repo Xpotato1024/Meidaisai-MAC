@@ -36,8 +36,13 @@ class BatchWriter {
         await this.commit();
     }
 }
+function isProtectedMember(data) {
+    const role = String(data.role || "staff");
+    const authorizationSource = String(data.authorizationSource || "");
+    return role === "root" || role === "admin" || role === "reception" || authorizationSource === "manual" || authorizationSource === "global";
+}
 export async function importMemberDirectoryFromFile(context, file) {
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         throw new Error("管理者のみ名簿を更新できます。");
     }
     const text = await file.text();
@@ -51,10 +56,13 @@ export async function importMemberDirectoryFromFile(context, file) {
     ]);
     const writer = new BatchWriter(db);
     const existingMembersByUid = new Map();
+    const existingMembersByEmail = new Map();
     let removedDirectoryCount = 0;
     let syncedMemberCount = 0;
     let autoApprovedCount = 0;
     let deactivatedCount = 0;
+    let protectedExistingCount = 0;
+    let skippedExistingCount = 0;
     for (const entry of parsed.entries) {
         await writer.set(doc(db, paths.memberDirectoryCollectionPath, entry.emailKey), {
             ...entry,
@@ -75,34 +83,40 @@ export async function importMemberDirectoryFromFile(context, file) {
         await writer.delete(doc(db, paths.memberDirectoryCollectionPath, directoryDoc.id));
     }
     for (const memberDoc of accessMembersSnapshot.docs) {
-        existingMembersByUid.set(memberDoc.id, memberDoc.data());
         const data = memberDoc.data();
+        existingMembersByUid.set(memberDoc.id, data);
         const emailKey = normalizeEmail(String(data.email || ""));
-        if (!emailKey) {
-            continue;
+        if (emailKey) {
+            existingMembersByEmail.set(emailKey, {
+                uid: memberDoc.id,
+                ...data
+            });
         }
         const directoryEntry = importedByEmail.get(emailKey);
-        if (directoryEntry) {
-            syncedMemberCount += 1;
-            const patch = {
-                email: directoryEntry.email,
-                displayName: directoryEntry.displayName,
-                grade: directoryEntry.grade,
-                updatedAt: serverTimestamp()
-            };
-            if ((data.authorizationSource || null) === "roster") {
-                patch.isActive = true;
+        if (!directoryEntry) {
+            if ((data.authorizationSource || null) === "roster" && data.isActive !== false) {
+                deactivatedCount += 1;
+                await writer.set(doc(db, paths.accessMembersCollectionPath, memberDoc.id), {
+                    isActive: false,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
             }
-            await writer.set(doc(db, paths.accessMembersCollectionPath, memberDoc.id), patch, { merge: true });
             continue;
         }
-        if ((data.authorizationSource || null) === "roster" && data.isActive !== false) {
-            deactivatedCount += 1;
-            await writer.set(doc(db, paths.accessMembersCollectionPath, memberDoc.id), {
-                isActive: false,
-                updatedAt: serverTimestamp()
-            }, { merge: true });
+        syncedMemberCount += 1;
+        const patch = {
+            email: directoryEntry.email,
+            displayName: directoryEntry.displayName,
+            grade: directoryEntry.grade,
+            updatedAt: serverTimestamp()
+        };
+        if ((data.authorizationSource || null) === "roster") {
+            patch.isActive = true;
         }
+        else if (isProtectedMember(data)) {
+            protectedExistingCount += 1;
+        }
+        await writer.set(doc(db, paths.accessMembersCollectionPath, memberDoc.id), patch, { merge: true });
     }
     for (const requestDoc of accessRequestsSnapshot.docs) {
         const data = requestDoc.data();
@@ -116,6 +130,11 @@ export async function importMemberDirectoryFromFile(context, file) {
         }
         autoApprovedCount += 1;
         const existingMember = existingMembersByUid.get(requestDoc.id);
+        const existingMemberByEmail = existingMembersByEmail.get(emailKey) || null;
+        if (existingMemberByEmail && existingMemberByEmail.uid !== requestDoc.id && isProtectedMember(existingMemberByEmail)) {
+            skippedExistingCount += 1;
+            continue;
+        }
         if (existingMember) {
             const patch = {
                 email: directoryEntry.email,
@@ -125,6 +144,9 @@ export async function importMemberDirectoryFromFile(context, file) {
             };
             if ((existingMember.authorizationSource || null) === "roster") {
                 patch.isActive = true;
+            }
+            else if (isProtectedMember(existingMember)) {
+                skippedExistingCount += 1;
             }
             await writer.set(doc(db, paths.accessMembersCollectionPath, requestDoc.id), patch, { merge: true });
         }
@@ -155,6 +177,8 @@ export async function importMemberDirectoryFromFile(context, file) {
         removedDirectoryCount,
         syncedMemberCount,
         autoApprovedCount,
-        deactivatedCount
+        deactivatedCount,
+        protectedExistingCount,
+        skippedExistingCount
     };
 }

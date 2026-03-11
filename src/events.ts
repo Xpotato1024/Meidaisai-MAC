@@ -16,6 +16,8 @@ import { showToast } from "./toast.js";
 import type { AppContext, RegistryItem, RoleId, TabId } from "./types.js";
 import {
     approveAccessRequest,
+    bulkUpdateAccessMembers,
+    deleteAccessMember,
     rejectAccessRequest,
     saveAdminSettings,
     updateAccessMember,
@@ -107,12 +109,14 @@ function validateAppId(currentAppId: string, id: string): string | null {
     return null;
 }
 
-function setMemberDirectoryImportStatus(context: AppContext, message: string, tone: "info" | "success" | "error"): void {
+function setMemberDirectoryImportStatus(context: AppContext, message: string, tone: "info" | "success" | "warning" | "error"): void {
     const { adminDirectoryImportStatus } = context.dom;
     adminDirectoryImportStatus.textContent = message;
     adminDirectoryImportStatus.className = `text-sm ${
         tone === "success"
             ? "text-emerald-600"
+            : tone === "warning"
+                ? "text-amber-600 font-bold"
             : tone === "error"
                 ? "text-rose-600 font-bold"
                 : "text-slate-500"
@@ -420,7 +424,7 @@ export function setupEventListeners(context: AppContext): void {
         state.activeTab = tabId as TabId;
         state.isNavMenuOpen = false;
         renderAllUI(context);
-        if (state.activeTab === "database" && hasRole(context, ["admin"])) {
+        if (state.activeTab === "database" && hasRole(context, ["root", "admin"])) {
             void fetchAndRenderEventList(context);
         }
     });
@@ -700,10 +704,18 @@ export function setupEventListeners(context: AppContext): void {
 
         void importMemberDirectoryFromFile(context, file)
             .then((result) => {
+                const hasWarnings = result.protectedExistingCount > 0 || result.skippedExistingCount > 0;
                 setMemberDirectoryImportStatus(
                     context,
-                    `名簿を更新しました。${result.importedCount}件取込 / 既存メンバー同期 ${result.syncedMemberCount}件 / 自動承認 ${result.autoApprovedCount}件 / 名簿外停止 ${result.deactivatedCount}件`,
-                    "success"
+                    [
+                        `名簿を更新しました。${result.importedCount}件取込`,
+                        `既存メンバー同期 ${result.syncedMemberCount}件`,
+                        `自動承認 ${result.autoApprovedCount}件`,
+                        `名簿外停止 ${result.deactivatedCount}件`,
+                        result.protectedExistingCount > 0 ? `保護メンバー維持 ${result.protectedExistingCount}件` : null,
+                        result.skippedExistingCount > 0 ? `重複スキップ ${result.skippedExistingCount}件` : null
+                    ].filter(Boolean).join(" / "),
+                    hasWarnings ? "warning" : "success"
                 );
             })
             .catch((error: unknown) => {
@@ -759,6 +771,99 @@ export function setupEventListeners(context: AppContext): void {
             const isActive = activeInput?.checked ?? true;
             void updateAccessMember(context, uid, role, isActive);
             return;
+        }
+
+        if (actionButton === "delete-access-member" && button) {
+            const uid = button.dataset.uid;
+            if (!uid) {
+                return;
+            }
+            if (!confirm("このメンバー権限を削除しますか？")) {
+                return;
+            }
+            void deleteAccessMember(context, uid);
+            return;
+        }
+
+        if (actionButton === "apply-member-bulk" && button) {
+            const gradeSelect = dom.tabMembers.querySelector<HTMLSelectElement>('select[data-action="member-bulk-grade"]');
+            const roleSelect = dom.tabMembers.querySelector<HTMLSelectElement>('select[data-action="member-bulk-role"]');
+            const activeInput = dom.tabMembers.querySelector<HTMLInputElement>('input[data-action="member-bulk-active"]');
+            const grade = gradeSelect?.value || "__all__";
+            const role = (roleSelect?.value || "staff") as RoleId;
+            const isActive = activeInput?.checked ?? true;
+
+            void bulkUpdateAccessMembers(context, grade, role, isActive).then((updatedCount) => {
+                if (updatedCount > 0) {
+                    showToast({
+                        title: "一括更新完了",
+                        message: `${updatedCount} 件のメンバー権限を更新しました。`,
+                        tone: "success"
+                    });
+                }
+            });
+            return;
+        }
+
+        if (actionButton === "apply-member-bulk-selected" && button) {
+            const roleSelect = dom.tabMembers.querySelector<HTMLSelectElement>('select[data-action="member-bulk-role"]');
+            const activeInput = dom.tabMembers.querySelector<HTMLInputElement>('input[data-action="member-bulk-active"]');
+            const role = (roleSelect?.value || "staff") as RoleId;
+            const isActive = activeInput?.checked ?? true;
+
+            void bulkUpdateAccessMembers(context, "__selected__", role, isActive).then((updatedCount) => {
+                if (updatedCount > 0) {
+                    showToast({
+                        title: "一括更新完了",
+                        message: `${updatedCount} 件の選択メンバー権限を更新しました。`,
+                        tone: "success"
+                    });
+                }
+            });
+            return;
+        }
+    });
+
+    dom.tabMembers.addEventListener("change", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        const action = target.dataset.action;
+        if (action === "member-sort-mode") {
+            state.memberSortMode = target.value as any;
+            renderAllUI(context);
+            return;
+        }
+
+        if (action === "member-bulk-grade") {
+            state.memberBulkGrade = target.value;
+            return;
+        }
+
+        if (action === "member-bulk-role") {
+            state.memberBulkRole = target.value as RoleId;
+            return;
+        }
+
+        if (action === "member-bulk-active" && target instanceof HTMLInputElement) {
+            state.memberBulkIsActive = target.checked;
+        }
+
+        if (target instanceof HTMLInputElement && target.dataset.selectMember) {
+            const uid = target.dataset.uid;
+            if (!uid) {
+                return;
+            }
+
+            const nextSelection = new Set(state.memberBulkSelectedUids);
+            if (target.checked) {
+                nextSelection.add(uid);
+            } else {
+                nextSelection.delete(uid);
+            }
+            state.memberBulkSelectedUids = Array.from(nextSelection);
         }
     });
 

@@ -9,16 +9,38 @@ import { cleanupDataSubscriptions, configureDataSubscriptions } from "./firestor
 import { normalizeEmail } from "./member-directory.js";
 import { renderAllUI } from "./render.js";
 import { showToast } from "./toast.js";
+const ACCESS_CACHE_PREFIX = "meidaisai-mac:self-access:";
+function normalizeRole(rawRole, fallback) {
+    return rawRole === "root" || rawRole === "admin" || rawRole === "reception" || rawRole === "staff"
+        ? rawRole
+        : fallback;
+}
 function normalizeMember(uid, data) {
     return {
         uid,
         email: String(data.email || ""),
         displayName: String(data.displayName || ""),
         grade: typeof data.grade === "string" ? data.grade : null,
-        role: data.role || "staff",
+        role: normalizeRole(data.role, "staff"),
         isActive: data.isActive !== false,
         assignedRoomIds: Array.isArray(data.assignedRoomIds) ? data.assignedRoomIds.map(String) : [],
         authorizationSource: typeof data.authorizationSource === "string" ? data.authorizationSource : null,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        lastLoginAt: data.lastLoginAt
+    };
+}
+function normalizeGlobalMember(uid, data) {
+    const rawRole = data.role === "admin" ? "root" : data.role;
+    return {
+        uid,
+        email: String(data.email || ""),
+        displayName: String(data.displayName || ""),
+        grade: typeof data.grade === "string" ? data.grade : null,
+        role: normalizeRole(rawRole, "root"),
+        isActive: data.isActive !== false,
+        assignedRoomIds: [],
+        authorizationSource: "global",
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         lastLoginAt: data.lastLoginAt
@@ -35,6 +57,86 @@ function normalizeRequest(uid, data) {
         lastSeenAt: data.lastSeenAt,
         updatedAt: data.updatedAt
     };
+}
+function getCacheKey(appId, uid) {
+    return `${ACCESS_CACHE_PREFIX}${appId}:${uid}`;
+}
+function readCachedSelfAccess(context, uid) {
+    try {
+        const rawValue = window.localStorage.getItem(getCacheKey(context.currentAppId, uid));
+        if (!rawValue) {
+            return null;
+        }
+        const parsed = JSON.parse(rawValue);
+        if (!parsed || parsed.uid !== uid || parsed.appId !== context.currentAppId) {
+            return null;
+        }
+        return parsed;
+    }
+    catch (error) {
+        console.warn("Failed to read self access cache.", error);
+        return null;
+    }
+}
+function writeCachedSelfAccess(context) {
+    const uid = context.state.userId;
+    if (!uid) {
+        return;
+    }
+    const payload = {
+        appId: context.currentAppId,
+        uid,
+        eventAccessMember: context.state.eventAccessMember,
+        globalAccessMember: context.state.globalAccessMember,
+        selfAccessRequest: context.state.selfAccessRequest
+    };
+    try {
+        window.localStorage.setItem(getCacheKey(context.currentAppId, uid), JSON.stringify(payload));
+    }
+    catch (error) {
+        console.warn("Failed to persist self access cache.", error);
+    }
+}
+function clearCachedSelfAccess(context, uid) {
+    try {
+        window.localStorage.removeItem(getCacheKey(context.currentAppId, uid));
+    }
+    catch (error) {
+        console.warn("Failed to clear self access cache.", error);
+    }
+}
+function resolveEffectiveAccessMember(context) {
+    const globalMember = context.state.globalAccessMember;
+    if (globalMember?.isActive) {
+        return globalMember;
+    }
+    return context.state.eventAccessMember;
+}
+async function resolveDirectoryProfile(context, email) {
+    const emailKey = normalizeEmail(String(email || ""));
+    if (!emailKey) {
+        return null;
+    }
+    const directoryRef = doc(context.db, context.paths.memberDirectoryCollectionPath, emailKey);
+    const directorySnapshot = await getDoc(directoryRef);
+    if (!directorySnapshot.exists()) {
+        return null;
+    }
+    const data = directorySnapshot.data();
+    return {
+        email: String(data.email || emailKey),
+        displayName: String(data.displayName || ""),
+        grade: typeof data.grade === "string" ? data.grade : null
+    };
+}
+function resolveFallbackDisplayName(user, directoryProfile) {
+    const rosterName = String(directoryProfile?.displayName || "").trim();
+    if (rosterName) {
+        return rosterName;
+    }
+    const email = String(directoryProfile?.email || user.email || "").trim();
+    const [localPart] = email.split("@");
+    return localPart || email || "未設定";
 }
 function cleanupSelfAccessListeners(context) {
     context.state.unsubscribeGlobalAccessMember?.();
@@ -61,36 +163,38 @@ function resetAuthorizedData(context) {
     state.waitingGroupSyncTimers = {};
     state.waitingGroupSyncInFlight = {};
 }
-function normalizeGlobalMember(uid, data) {
-    return {
-        uid,
-        email: String(data.email || ""),
-        displayName: String(data.displayName || ""),
-        grade: typeof data.grade === "string" ? data.grade : null,
-        role: data.role || "admin",
-        isActive: data.isActive !== false,
-        assignedRoomIds: [],
-        authorizationSource: "global",
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        lastLoginAt: data.lastLoginAt
-    };
-}
-function resolveEffectiveAccessMember(context) {
-    const globalMember = context.state.globalAccessMember;
-    if (globalMember?.isActive && globalMember.role === "admin") {
-        return globalMember;
-    }
-    return context.state.eventAccessMember;
-}
-async function ensureAccessRequest(context, user) {
+async function ensureAccessRequest(context, user, directoryProfile, manualDisplayName) {
     const { db, paths } = context;
     const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
     const requestSnapshot = await getDoc(requestRef);
+    const requestData = requestSnapshot.exists()
+        ? requestSnapshot.data()
+        : null;
+    const existingStatus = String(requestData?.status || "pending");
+    const displayName = String(manualDisplayName || requestData?.displayName || "").trim();
+    const email = String(directoryProfile?.email || user.email || "");
+    if (!displayName) {
+        throw new Error("表示名を入力してください。");
+    }
+    if (existingStatus === "rejected") {
+        throw new Error("このアカウントの申請は停止または却下されています。管理者へ連絡してください。");
+    }
     if (requestSnapshot.exists()) {
+        if (existingStatus === "approved") {
+            await setDoc(requestRef, {
+                email,
+                displayName,
+                status: "pending",
+                note: null,
+                requestedAt: serverTimestamp(),
+                lastSeenAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+            return;
+        }
         await setDoc(requestRef, {
-            email: user.email || "",
-            displayName: user.displayName || "",
+            email,
+            displayName,
             lastSeenAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         }, { merge: true });
@@ -98,8 +202,8 @@ async function ensureAccessRequest(context, user) {
     }
     await setDoc(requestRef, {
         uid: user.uid,
-        email: user.email || "",
-        displayName: user.displayName || "",
+        email,
+        displayName,
         status: "pending",
         note: null,
         requestedAt: serverTimestamp(),
@@ -107,26 +211,16 @@ async function ensureAccessRequest(context, user) {
         updatedAt: serverTimestamp()
     }, { merge: true });
 }
-async function ensureRosterAccessMember(context, user) {
-    const { db, paths } = context;
-    const emailKey = normalizeEmail(String(user.email || ""));
-    if (!emailKey) {
+async function ensureRosterAccessMember(context, user, directoryProfile) {
+    const profile = directoryProfile || await resolveDirectoryProfile(context, user.email);
+    if (!profile) {
         return false;
     }
-    const directoryRef = doc(db, paths.memberDirectoryCollectionPath, emailKey);
-    const directorySnapshot = await getDoc(directoryRef);
-    if (!directorySnapshot.exists()) {
-        return false;
-    }
-    const directoryData = directorySnapshot.data();
-    const resolvedDisplayName = String(directoryData.displayName || user.displayName || "");
-    const resolvedEmail = String(directoryData.email || emailKey);
-    const resolvedGrade = typeof directoryData.grade === "string" ? directoryData.grade : null;
-    await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), {
+    await setDoc(doc(context.db, context.paths.accessMembersCollectionPath, user.uid), {
         uid: user.uid,
-        email: resolvedEmail,
-        displayName: resolvedDisplayName,
-        grade: resolvedGrade,
+        email: profile.email,
+        displayName: resolveFallbackDisplayName(user, profile),
+        grade: profile.grade,
         role: "staff",
         isActive: true,
         assignedRoomIds: [],
@@ -135,12 +229,12 @@ async function ensureRosterAccessMember(context, user) {
         updatedAt: serverTimestamp(),
         lastLoginAt: serverTimestamp()
     }, { merge: true });
-    const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
+    const requestRef = doc(context.db, context.paths.accessRequestsCollectionPath, user.uid);
     const requestSnapshot = await getDoc(requestRef);
     if (requestSnapshot.exists()) {
         await setDoc(requestRef, {
-            email: resolvedEmail,
-            displayName: resolvedDisplayName,
+            email: profile.email,
+            displayName: resolveFallbackDisplayName(user, profile),
             status: "approved",
             note: "名簿登録済みのため自動承認",
             lastSeenAt: serverTimestamp(),
@@ -151,22 +245,81 @@ async function ensureRosterAccessMember(context, user) {
 }
 async function bootstrapSelfAccess(context, user) {
     const { db, paths } = context;
+    const directoryProfile = await resolveDirectoryProfile(context, user.email);
     const globalMemberSnapshot = await getDoc(doc(db, paths.globalAccessMembersCollectionPath, user.uid));
     if (globalMemberSnapshot.exists()) {
         const globalData = globalMemberSnapshot.data();
-        if (globalData.role === "admin" && globalData.isActive !== false) {
+        const globalRole = globalData.role === "admin" ? "root" : globalData.role;
+        if ((globalRole === "root" || globalRole === "admin") && globalData.isActive !== false) {
             return;
         }
     }
     const memberSnapshot = await getDoc(doc(db, paths.accessMembersCollectionPath, user.uid));
     if (memberSnapshot.exists()) {
+        const existing = memberSnapshot.data();
+        const nextPayload = {
+            lastLoginAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        const authorizationSource = typeof existing.authorizationSource === "string"
+            ? existing.authorizationSource
+            : null;
+        // 名簿連携メンバーだけ、CSV正本で表示名と学年を同期する。
+        if (authorizationSource === "roster" && directoryProfile) {
+            nextPayload.email = directoryProfile.email;
+            nextPayload.displayName = resolveFallbackDisplayName(user, directoryProfile);
+            nextPayload.grade = directoryProfile.grade;
+        }
+        await setDoc(doc(db, paths.accessMembersCollectionPath, user.uid), nextPayload, { merge: true });
         return;
     }
-    const provisionedFromRoster = await ensureRosterAccessMember(context, user);
+    const provisionedFromRoster = await ensureRosterAccessMember(context, user, directoryProfile);
     if (provisionedFromRoster) {
         return;
     }
-    await ensureAccessRequest(context, user);
+    const requestRef = doc(db, paths.accessRequestsCollectionPath, user.uid);
+    const requestSnapshot = await getDoc(requestRef);
+    if (requestSnapshot.exists()) {
+        await setDoc(requestRef, {
+            lastSeenAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
+}
+export async function submitManualAccessRequest(context) {
+    const user = context.state.authUser;
+    if (!user) {
+        showToast({
+            title: "ログイン未完了",
+            message: "先に Google ログインしてください。",
+            tone: "warning"
+        });
+        return;
+    }
+    const manualDisplayName = context.dom.authManualDisplayNameInput.value.trim();
+    if (!manualDisplayName) {
+        showToast({
+            title: "入力不足",
+            message: "承認リクエスト用の表示名を入力してください。",
+            tone: "warning"
+        });
+        return;
+    }
+    const directoryProfile = await resolveDirectoryProfile(context, user.email);
+    if (directoryProfile) {
+        showToast({
+            title: "名簿登録済み",
+            message: "このアカウントは名簿登録済みです。再読み込み後に自動承認状態を確認してください。",
+            tone: "info"
+        });
+        return;
+    }
+    await ensureAccessRequest(context, user, null, manualDisplayName);
+    showToast({
+        title: "送信完了",
+        message: "承認リクエストを送信しました。",
+        tone: "success"
+    });
 }
 function bindAuthButtons(context) {
     const { auth, dom } = context;
@@ -181,7 +334,7 @@ function bindAuthButtons(context) {
             console.error("Google sign-in failed:", error);
             showToast({
                 title: "ログイン失敗",
-                message: "Google ログインに失敗しました。設定とブラウザのポップアップ制限を確認してください。",
+                message: "Google ログインに失敗しました。設定とブラウザのポップアップ状態を確認してください。",
                 tone: "error"
             });
         }
@@ -192,6 +345,20 @@ function bindAuthButtons(context) {
         }
         catch (error) {
             console.error("Sign-out failed:", error);
+        }
+    };
+    dom.authManualRequestSubmitBtn.onclick = async () => {
+        try {
+            await submitManualAccessRequest(context);
+        }
+        catch (error) {
+            console.error("Manual access request failed:", error);
+            const message = error instanceof Error ? error.message : String(error);
+            showToast({
+                title: "送信失敗",
+                message,
+                tone: "error"
+            });
         }
     };
 }
@@ -229,6 +396,7 @@ function attachSelfAccessListeners(context, user) {
             dom.firestoreStatus.className = "auth-runtime-status auth-runtime-status-pending";
             resetAuthorizedData(context);
         }
+        writeCachedSelfAccess(context);
         renderAllUI(context);
     };
     state.unsubscribeGlobalAccessMember = onSnapshot(globalMemberRef, (globalMemberSnap) => {
@@ -237,7 +405,7 @@ function attachSelfAccessListeners(context, user) {
             : null;
         syncEffectiveMember();
     });
-    state.unsubscribeAccessMember = onSnapshot(memberRef, async (memberSnap) => {
+    state.unsubscribeAccessMember = onSnapshot(memberRef, (memberSnap) => {
         state.eventAccessMember = memberSnap.exists()
             ? normalizeMember(user.uid, memberSnap.data())
             : null;
@@ -247,12 +415,10 @@ function attachSelfAccessListeners(context, user) {
         state.selfAccessRequest = requestSnap.exists()
             ? normalizeRequest(user.uid, requestSnap.data())
             : null;
+        writeCachedSelfAccess(context);
         renderAllUI(context);
     });
 }
-/**
- * 認証状態の監視とメインロジックの開始
- */
 export function setupAuthListener(context) {
     const { auth, dom, state } = context;
     bindAuthButtons(context);
@@ -261,6 +427,14 @@ export function setupAuthListener(context) {
         if (user) {
             state.authUser = user;
             state.userId = user.uid;
+            const cached = readCachedSelfAccess(context, user.uid);
+            if (cached) {
+                state.eventAccessMember = cached.eventAccessMember;
+                state.globalAccessMember = cached.globalAccessMember;
+                state.selfAccessRequest = cached.selfAccessRequest;
+                state.accessMember = cached.globalAccessMember || cached.eventAccessMember;
+                renderAllUI(context);
+            }
             dom.firestoreStatus.textContent = "名簿と権限を確認しています...";
             dom.firestoreStatus.className = "text-center text-xs text-slate-500";
             try {
@@ -269,12 +443,13 @@ export function setupAuthListener(context) {
             catch (error) {
                 console.error("Failed to ensure access request:", error);
                 dom.firestoreStatus.textContent = "アクセス申請の初期化に失敗しました。";
-                dom.firestoreStatus.className = "text-center text-xs text-red-500 font-bold";
+                dom.firestoreStatus.className = "text-center text-xs font-bold text-red-500";
             }
             attachSelfAccessListeners(context, user);
             renderAllUI(context);
             return;
         }
+        const previousUid = state.userId;
         state.authUser = null;
         state.userId = null;
         state.eventAccessMember = null;
@@ -285,15 +460,18 @@ export function setupAuthListener(context) {
         dom.firestoreStatus.className = "text-center text-xs text-slate-500";
         resetAuthorizedData(context);
         renderAllUI(context);
+        if (previousUid) {
+            clearCachedSelfAccess(context, previousUid);
+        }
         if (state.initialAuthToken) {
             try {
                 await signInWithCustomToken(auth, state.initialAuthToken);
             }
             catch (error) {
-                console.error("認証エラー:", error);
+                console.error("Custom token sign-in failed:", error);
                 const message = error instanceof Error ? error.message : String(error);
                 dom.firestoreStatus.textContent = `認証エラー: ${message}`;
-                dom.firestoreStatus.className = "text-center text-red-500 font-bold";
+                dom.firestoreStatus.className = "text-center font-bold text-red-500";
             }
         }
     });

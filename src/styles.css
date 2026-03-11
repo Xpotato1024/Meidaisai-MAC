@@ -2012,6 +2012,19 @@ html[data-theme="dark"] {
         color: #475569;
     }
 
+    .member-select-check {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1rem;
+        height: 1rem;
+        margin-right: 0.15rem;
+    }
+
+    .member-select-check.is-disabled {
+        opacity: 0.42;
+    }
+
     .member-card-select {
         min-height: 2.5rem;
     }
@@ -2783,6 +2796,60 @@ html[data-theme="dark"] #tab-members .text-slate-500,
 html[data-theme="dark"] #tab-members .text-slate-400,
 html[data-theme="dark"] #tab-members .section-copy {
     color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] #tab-members .text-slate-600,
+html[data-theme="dark"] #tab-admin .text-slate-500,
+html[data-theme="dark"] #tab-admin .text-slate-400,
+html[data-theme="dark"] #tab-admin .text-slate-600,
+html[data-theme="dark"] #tab-database .text-slate-500,
+html[data-theme="dark"] #tab-database .text-slate-400,
+html[data-theme="dark"] #tab-database .text-slate-600,
+html[data-theme="dark"] #tab-database .section-copy,
+html[data-theme="dark"] #tab-members .member-card-email,
+html[data-theme="dark"] #tab-members .member-card-label,
+html[data-theme="dark"] #tab-members .member-console-tools,
+html[data-theme="dark"] .admin-layout-editor-kicker,
+html[data-theme="dark"] .admin-layout-editor-copy,
+html[data-theme="dark"] .db-event-empty,
+html[data-theme="dark"] .db-event-meta,
+html[data-theme="dark"] .db-event-date,
+html[data-theme="dark"] .db-event-selected-label {
+    color: #d9e4f5 !important;
+}
+
+html[data-theme="dark"] #tab-members .text-emerald-600,
+html[data-theme="dark"] #tab-members .text-emerald-700,
+html[data-theme="dark"] .members-panel-import p,
+html[data-theme="dark"] .members-panel-import #admin-directory-import-status {
+    color: #a7f3d0 !important;
+}
+
+html[data-theme="dark"] #tab-members .text-amber-600,
+html[data-theme="dark"] #tab-members .text-amber-700,
+html[data-theme="dark"] .members-panel-pending h4,
+html[data-theme="dark"] .members-panel-pending p {
+    color: #fdba74 !important;
+}
+
+html[data-theme="dark"] .member-console-tools {
+    border-color: rgba(96, 165, 250, 0.18) !important;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94)) !important;
+    box-shadow: 0 18px 34px rgba(2, 6, 23, 0.28);
+}
+
+html[data-theme="dark"] .member-card-static-role {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.65rem;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 92, 246, 0.24);
+    background: linear-gradient(180deg, rgba(76, 29, 149, 0.24), rgba(15, 23, 42, 0.92));
+    padding: 0.7rem 0.9rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #ddd6fe;
 }
 
 html[data-theme="dark"] .db-backup-card-export {

@@ -7,6 +7,18 @@ import { applyLaneTransitionToRoomState, createEmptyRoomState, normalizeRoomStat
 import { showToast } from "./toast.js";
 const { doc, serverTimestamp, setDoc, updateDoc } = FirebaseFirestore;
 const runTransaction = FirebaseFirestore.runTransaction;
+function getRoleRank(role) {
+    if (role === "root") {
+        return 0;
+    }
+    if (role === "admin") {
+        return 1;
+    }
+    if (role === "reception") {
+        return 2;
+    }
+    return 3;
+}
 function getRoomLaneCount(context, roomId) {
     return context.state.dynamicAppConfig.rooms.find((room) => room.id === roomId)?.lanes
         || Number(context.state.currentRoomState[roomId]?.totalLanes || 0);
@@ -128,8 +140,8 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
         // 受付画面は常時 lanes を購読しないので、事前キャッシュが無くても処理は継続する。
     }
     const roomId = currentLane?.roomId || "";
-    const canGuide = hasRole(context, ["admin", "reception"]);
-    const canConfirmArrival = hasRole(context, ["admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
+    const canGuide = hasRole(context, ["root", "admin", "reception"]);
+    const canConfirmArrival = hasRole(context, ["root", "admin"]) || (roomId ? canManageRoom(context, roomId) : hasRole(context, ["staff"]));
     if (newStatus === "guiding" && !canGuide) {
         if (!silent) {
             showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ案内操作できます。", tone: "warning" });
@@ -142,13 +154,13 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
         }
         return false;
     }
-    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["admin", "reception"])) {
+    if (newStatus !== "guiding" && newStatus !== "available" && !hasRole(context, ["root", "admin", "reception"])) {
         return false;
     }
     try {
         await mutateLaneWithRoomState(context, docId, (liveLane) => {
             const liveRoomId = liveLane.roomId;
-            const canLiveConfirmArrival = hasRole(context, ["admin"]) || canManageRoom(context, liveRoomId);
+            const canLiveConfirmArrival = hasRole(context, ["root", "admin"]) || canManageRoom(context, liveRoomId);
             if (newStatus === "guiding") {
                 if (!canGuide) {
                     throw new Error("受付権限を持つメンバーのみ案内操作できます。");
@@ -185,7 +197,7 @@ export async function updateReceptionStatus(context, docId, newStatus, staffName
                 }
                 return nextLane;
             }
-            if (!hasRole(context, ["admin", "reception"])) {
+            if (!hasRole(context, ["root", "admin", "reception"])) {
                 throw new Error("この受付状態を変更する権限がありません。");
             }
             return {
@@ -402,12 +414,16 @@ export async function updateEventRegistry(context) {
 }
 export async function approveAccessRequest(context, uid, role) {
     const { db, paths, state } = context;
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         return;
     }
     const request = state.accessRequestsCache.find((item) => item.uid === uid);
     const memberRef = doc(db, paths.accessMembersCollectionPath, uid);
     const requestRef = doc(db, paths.accessRequestsCollectionPath, uid);
+    if (role === "root") {
+        showToast({ title: "変更不可", message: "Root への昇格はアプリから実行できません。", tone: "warning" });
+        return;
+    }
     await setDoc(memberRef, {
         uid,
         email: request?.email || "",
@@ -428,7 +444,7 @@ export async function approveAccessRequest(context, uid, role) {
 }
 export async function rejectAccessRequest(context, uid) {
     const { db, paths } = context;
-    if (!hasRole(context, ["admin"])) {
+    if (!hasRole(context, ["root", "admin"])) {
         return;
     }
     await setDoc(doc(db, paths.accessRequestsCollectionPath, uid), {
@@ -437,14 +453,135 @@ export async function rejectAccessRequest(context, uid) {
     }, { merge: true });
 }
 export async function updateAccessMember(context, uid, role, isActive) {
-    const { db, paths } = context;
-    if (!hasRole(context, ["admin"])) {
+    const { db, paths, state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return;
+    }
+    const currentMember = state.accessMembersCache.find((member) => member.uid === uid) || null;
+    const currentUserId = state.userId;
+    const effectiveRole = currentMember?.role || "staff";
+    if (uid === currentUserId && (!isActive || role !== effectiveRole)) {
+        showToast({
+            title: "変更不可",
+            message: "自分自身の無効化やロール変更はできません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (effectiveRole === "root") {
+        showToast({
+            title: "変更不可",
+            message: "Root アカウントはアプリから変更できません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (role === "root") {
+        showToast({
+            title: "変更不可",
+            message: "Root への昇格はアプリから実行できません。",
+            tone: "warning"
+        });
         return;
     }
     await setDoc(doc(db, paths.accessMembersCollectionPath, uid), {
         role,
         isActive,
         assignedRoomIds: [],
+        authorizationSource: currentMember?.authorizationSource || "manual",
         updatedAt: serverTimestamp()
     }, { merge: true });
+}
+export async function deleteAccessMember(context, uid) {
+    const { db, paths, state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return;
+    }
+    const currentMember = state.accessMembersCache.find((member) => member.uid === uid) || null;
+    if (uid === state.userId) {
+        showToast({
+            title: "変更不可",
+            message: "自分自身を削除することはできません。",
+            tone: "warning"
+        });
+        return;
+    }
+    if (currentMember?.role === "root" || currentMember?.authorizationSource === "global") {
+        showToast({
+            title: "変更不可",
+            message: "Root アカウントは削除できません。",
+            tone: "warning"
+        });
+        return;
+    }
+    await FirebaseFirestore.deleteDoc(doc(db, paths.accessMembersCollectionPath, uid));
+}
+export async function bulkUpdateAccessMembers(context, grade, role, isActive) {
+    const { state } = context;
+    if (!hasRole(context, ["root", "admin"])) {
+        return 0;
+    }
+    if (role === "root") {
+        showToast({
+            title: "変更不可",
+            message: "Root の一括付与はアプリから実行できません。",
+            tone: "warning"
+        });
+        return 0;
+    }
+    const normalizedGrade = grade.trim();
+    const selectedMemberSet = new Set(state.memberBulkSelectedUids);
+    let skippedProtectedCount = 0;
+    let skippedSelfCount = 0;
+    let skippedDowngradeCount = 0;
+    const targets = state.accessMembersCache.filter((member) => {
+        if (normalizedGrade === "__selected__" && !selectedMemberSet.has(member.uid)) {
+            return false;
+        }
+        if (normalizedGrade !== "__all__" && normalizedGrade !== "__selected__" && String(member.grade || "") !== normalizedGrade) {
+            return false;
+        }
+        if (member.uid === state.userId) {
+            skippedSelfCount += 1;
+            return false;
+        }
+        if (member.role === "root" || member.authorizationSource === "global") {
+            skippedProtectedCount += 1;
+            return false;
+        }
+        if (getRoleRank(role) > getRoleRank(member.role)) {
+            skippedDowngradeCount += 1;
+            return false;
+        }
+        return true;
+    });
+    if (normalizedGrade === "__selected__" && selectedMemberSet.size === 0) {
+        showToast({
+            title: "対象未選択",
+            message: "一括変更するメンバーをチェックしてください。",
+            tone: "warning"
+        });
+        return 0;
+    }
+    for (const member of targets) {
+        await updateAccessMember(context, member.uid, role, isActive);
+    }
+    if (skippedProtectedCount > 0 || skippedSelfCount > 0 || skippedDowngradeCount > 0) {
+        const warnings = [];
+        if (skippedProtectedCount > 0) {
+            warnings.push(`保護対象 ${skippedProtectedCount}件`);
+        }
+        if (skippedSelfCount > 0) {
+            warnings.push(`自分 ${skippedSelfCount}件`);
+        }
+        if (skippedDowngradeCount > 0) {
+            warnings.push(`権限降格防止 ${skippedDowngradeCount}件`);
+        }
+        showToast({
+            title: "一部スキップ",
+            message: `${warnings.join(" / ")} は権限変更しませんでした。`,
+            tone: "warning"
+        });
+    }
+    return targets.length;
 }
