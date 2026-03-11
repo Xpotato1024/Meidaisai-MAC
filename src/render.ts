@@ -796,7 +796,7 @@ function renderReceptionList(context: AppContext): void {
  * (レーン担当者画面のmodalと似た構造ですが、受付用は操作に特化させます)
  */
 export async function openReceptionRoomModal(context: AppContext, roomId: string): Promise<void> {
-    if (!hasRole(context, ["admin", "reception"])) {
+    if (!hasRole(context, ["root", "admin", "reception"])) {
         showToast({ title: "権限不足", message: "受付権限を持つメンバーのみ操作できます。", tone: "warning" });
         return;
     }
