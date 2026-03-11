@@ -871,6 +871,19 @@ html[data-theme="dark"] {
         gap: 0.12rem;
     }
 
+    .room-dashboard-title {
+        font-size: 1.65rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: #0f172a;
+    }
+
+    .room-dashboard-lane-count {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #94a3b8;
+    }
+
     .room-dashboard-submeta {
         display: flex;
         align-items: baseline;
@@ -2505,6 +2518,7 @@ html[data-theme="dark"] .pill-eyebrow {
 
 html[data-theme="dark"] .section-heading,
 html[data-theme="dark"] .lane-card-title,
+html[data-theme="dark"] .room-dashboard-title,
 html[data-theme="dark"] .summary-chip-room,
 html[data-theme="dark"] .summary-chip-mini-room,
 html[data-theme="dark"] .footer-title,
@@ -2528,6 +2542,7 @@ html[data-theme="dark"] .tab-button,
 html[data-theme="dark"] .lane-tile-status,
 html[data-theme="dark"] .lane-card-subtext,
 html[data-theme="dark"] .lane-card-aux,
+html[data-theme="dark"] .room-dashboard-lane-count,
 html[data-theme="dark"] .wait-control-panel-title,
 html[data-theme="dark"] .wait-control-panel-copy,
 html[data-theme="dark"] .wait-control-room-label,
