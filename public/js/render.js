@@ -637,9 +637,9 @@ function renderReceptionList(context) {
                 </div>
                 <div class="room-dashboard-header-main">
                     <div class="room-dashboard-title-block">
-                        <h3 class="text-[1.65rem] font-bold tracking-tight text-slate-900">${escapeHtml(room.name)}</h3>
+                        <h3 class="room-dashboard-title">${escapeHtml(room.name)}</h3>
                         <div class="room-dashboard-submeta">
-                            <span class="text-xs font-medium text-slate-400">全 ${room.lanes} レーン</span>
+                            <span class="room-dashboard-lane-count">全 ${room.lanes} レーン</span>
                         </div>
                     </div>
                     <div class="${waitBadgeClass} wait-badge-large">
