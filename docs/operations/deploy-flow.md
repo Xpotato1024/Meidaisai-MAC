@@ -15,6 +15,14 @@ Firebase Hosting と Firestore Rules の標準 deploy 経路を GitHub Actions �
 
 ## 初回セットアップ
 
+### 新規 Firebase project の Hosting site 作成
+
+2026-10-15 以降に作成する Firebase project では、default Hosting site の自動作成を前提にしません。新しい project ID を `FIREBASE_PROJECT_ID` に登録し、通常の preview / live deploy より先に、Actions の `Provision Firebase Hosting site` を手動実行してください。入力する `project_id` は `FIREBASE_PROJECT_ID` と同じ値に限ります。
+
+この workflow は既存の `FIREBASE_SERVICE_ACCOUNT` で site 一覧を取得し、project ID と同名の default site がない場合だけ `firebase hosting:sites:create <project-id> --project <project-id> --non-interactive` を実行します。一覧取得失敗・設定不足・project ID 不一致では停止します。production への deploy は行いません。service account に Hosting site の参照・作成権限がない場合も停止するので、権限は管理者が必要な範囲で確認してください。
+
+既存の `FIREBASE_PROJECT_ID` の site がある場合、再実行しても site を追加しません。通常の deploy gate、fork PR 制限、workflow の `permissions` はそのままです。
+
 ### 1. ローカル開発設定
 
 端末ごとに次を実施します。
