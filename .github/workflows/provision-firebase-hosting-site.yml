@@ -50,8 +50,7 @@ jobs:
           firebase hosting:sites:list --project "$REQUESTED_PROJECT_ID" --json > "$sites_file"
           jq -e '.result.sites | type == "array"' "$sites_file" > /dev/null
 
-          site_name="projects/$REQUESTED_PROJECT_ID/sites/$REQUESTED_PROJECT_ID"
-          if jq -e --arg name "$site_name" '.result.sites | any(.[]; .name == $name)' "$sites_file" > /dev/null; then
+          if jq -e --arg site_id "$REQUESTED_PROJECT_ID" '.result.sites | any(.[]; .name | endswith("/sites/" + $site_id))' "$sites_file" > /dev/null; then
             echo "Default Hosting site already exists."
           else
             firebase hosting:sites:create "$REQUESTED_PROJECT_ID" --project "$REQUESTED_PROJECT_ID" --non-interactive
