@@ -1,0 +1,57 @@
+name: Provision Firebase Hosting site
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: Firebase project ID (must match FIREBASE_PROJECT_ID)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      REQUESTED_PROJECT_ID: ${{ inputs.project_id }}
+
+    steps:
+      - name: Check provisioning configuration
+        run: |
+          if [ -z "$FIREBASE_PROJECT_ID" ] || [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "FIREBASE_PROJECT_ID and FIREBASE_SERVICE_ACCOUNT must be configured." >&2
+            exit 1
+          fi
+          if [ "$REQUESTED_PROJECT_ID" != "$FIREBASE_PROJECT_ID" ]; then
+            echo "Requested project ID does not match FIREBASE_PROJECT_ID." >&2
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Ensure default Hosting site exists
+        run: |
+          credentials_file="$RUNNER_TEMP/firebase-service-account.json"
+          trap 'rm -f "$credentials_file"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$credentials_file"
+          export GOOGLE_APPLICATION_CREDENTIALS="$credentials_file"
+
+          sites_file="$RUNNER_TEMP/hosting-sites.json"
+          firebase hosting:sites:list --project "$REQUESTED_PROJECT_ID" --json > "$sites_file"
+          jq -e '.result.sites | type == "array"' "$sites_file" > /dev/null
+
+          if jq -e --arg site_id "$REQUESTED_PROJECT_ID" '.result.sites | any(.[]; .name | endswith("/sites/" + $site_id))' "$sites_file" > /dev/null; then
+            echo "Default Hosting site already exists."
+          else
+            firebase hosting:sites:create "$REQUESTED_PROJECT_ID" --project "$REQUESTED_PROJECT_ID" --non-interactive
+          fi
